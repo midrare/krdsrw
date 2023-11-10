@@ -760,7 +760,7 @@ ARRAY_FLOAT_TEMPLATE: Template[Array[Float]] = Template(Array, FLOAT_TEMPLATE)
 ARRAY_DOUBLE_TEMPLATE: Template[Array[Double]
                                 ] = Template(Array,
                                              DOUBLE_TEMPLATE)
-ARRAY_UTF8STR_TEMPLATE: Template[Array[UTF8STR_TEMPLATE]
+ARRAY_UTF8STR_TEMPLATE: Template[Array[Utf8Str]
                                  ] = Template(Array,
                                               UTF8STR_TEMPLATE)
 
