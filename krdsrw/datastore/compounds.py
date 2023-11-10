@@ -731,15 +731,6 @@ class NameMap(Value):
         return NamedValue(name)
 
 
-MIN_PYTHON_VERSION = (3, 7)
-if sys.version_info < MIN_PYTHON_VERSION:
-    print(
-        "Python must be at least version %s to use this module. (Dict ordering is required.)"
-        % ".".join([str(i) for i in MIN_PYTHON_VERSION]),
-        file=sys.stderr,
-    )
-    sys.exit(1)
-
 # basics
 BYTE_TEMPLATE: Template[Byte] = Template(Byte)
 CHAR_TEMPLATE: Template[Char] = Template(Char)
