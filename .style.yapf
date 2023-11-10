@@ -1,0 +1,18 @@
+[style]
+based_on_style = pep8
+allow_multiline_lambdas = true
+allow_multiline_dictionary_keys = true
+arithmetic_precedence_indication = true
+allow_split_before_dict_value = true
+allow_split_before_default_or_named_assigns = true
+blank_line_before_nested_class_or_def = false
+coalesce_brackets = true
+column_limit = 80
+dedent_closing_brackets = true
+indent_dictionary_value = true
+spaces_around_dict_delimiters = true
+spaces_around_list_delimiters = true
+spaces_before_comment = 2
+split_all_comma_separated_values = true
+split_before_dot = true
+split_complex_comprehension = true

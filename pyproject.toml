@@ -1,0 +1,39 @@
+[project]
+name = "krdsrw"
+version = "0.1.0"
+description = "Read and write Kindle sidecar files"
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [
+    { name = "midrare", email = "midrare9@gmail.com" },
+]
+license = { file = "LICENSE.md" }
+keywords = [ "kindle", "e-reader", "amazon" ]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "pytest >= 7.2.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pre-commit >= 3.5.0",
+    "pylint >= 3.0.2",
+    "yapf >= 0.40.2",
+]
+test = [
+    "pytest >= 7.4.3",
+    "pytest-cov >= 4.1.0",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/midrare/krds.py"
+"Bug Tracker" = "https://github.com/midrare/krds.py/issues"
+
+[build-system]
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"
