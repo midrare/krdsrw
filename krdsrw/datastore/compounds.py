@@ -11,15 +11,15 @@ from .constants import UTF8STR_TYPE_INDICATOR
 from .constants import BYTE_TYPE_INDICATOR
 from .cursor import Cursor
 from .error import *
-from .primitives import Bool
-from .primitives import Byte
-from .primitives import Char
-from .primitives import Short
-from .primitives import Int
-from .primitives import Long
-from .primitives import Float
-from .primitives import Double
-from .primitives import Utf8Str
+from .basics import Bool
+from .basics import Byte
+from .basics import Char
+from .basics import Short
+from .basics import Int
+from .basics import Long
+from .basics import Float
+from .basics import Double
+from .basics import Utf8Str
 from .template import Template
 from .templatized import CheckedDict
 from .templatized import TemplatizedDict
@@ -740,7 +740,7 @@ if sys.version_info < MIN_PYTHON_VERSION:
     )
     sys.exit(1)
 
-# primitives
+# basics
 BYTE_TEMPLATE: Template[Byte] = Template(Byte)
 CHAR_TEMPLATE: Template[Char] = Template(Char)
 BOOL_TEMPLATE: Template[Bool] = Template(Bool)

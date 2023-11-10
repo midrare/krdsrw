@@ -1,6 +1,6 @@
 from __future__ import annotations
 from .constants import *
-from .primitives import *
+from .basics import *
 from .value import Value
 
 
