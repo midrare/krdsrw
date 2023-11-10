@@ -1,4 +1,5 @@
 from __future__ import annotations
+import typing
 
 from .compounds import *
 from .cursor import Cursor
@@ -7,8 +8,8 @@ from .value import Value
 
 
 class DataStore(Value):
-    SIGNATURE: bytes = b"\x00\x00\x00\x00\x00\x1A\xB1\x26"
-    FIXED_MYSTERY_NUM: int = (
+    SIGNATURE: typing.Final[bytes] = b"\x00\x00\x00\x00\x00\x1A\xB1\x26"
+    FIXED_MYSTERY_NUM: typing.Final[int] = (
         1  # present after the signature; unknown what this number means
     )
 

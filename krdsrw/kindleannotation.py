@@ -1,5 +1,7 @@
+import typing
+
 # noinspection SpellCheckingInspection
-_TEMPLATE: str = "0\ufffc0"
+_TEMPLATE: typing.Final[str] = "0\ufffc0"
 
 
 class KindleAnnotation:

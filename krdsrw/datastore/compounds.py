@@ -26,11 +26,11 @@ from .templatized import TemplatizedDict
 from .templatized import TemplatizedList
 from .value import Value
 
-MIN_PYTHON_VERSION = (3, 7)
+MIN_PYTHON_VERSION: typing.Final[typing.Tuple[int, int]] = (3, 7)
 if sys.version_info < MIN_PYTHON_VERSION:
     print(
-        "Python must be at least version %s to use this module. (Dict ordering is required.)"
-        % ".".join([str(i) for i in MIN_PYTHON_VERSION]),
+        "Requires Python >= %s. (Ordered dicts is required.)" %
+        ".".join([str(i) for i in MIN_PYTHON_VERSION]),
         file=sys.stderr,
     )
     sys.exit(1)
