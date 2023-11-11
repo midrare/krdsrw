@@ -37,7 +37,7 @@ class Position:
 
     @property
     def char_pos(self) -> int:
-        return self._value.value
+        return self._value.value if self._value.value is not None else -1
 
     @char_pos.setter
     def char_pos(self, value: int):
@@ -45,20 +45,25 @@ class Position:
 
     def __str__(self) -> str:
         s = ""
-        if self._value.chunk_eid >= 0 and self._value.chunk_pos >= 0:
+        if self._value.chunk_eid is not None \
+        and self._value.chunk_eid >= 0 \
+        and self._value.chunk_pos is not None \
+        and self._value.chunk_pos >= 0:
             s = f" eid:{self._value.chunk_eid}+{self._value.chunk_pos}"
         return f"{self.__class__.__name__}{{@{self._value.value}%s}}" % s
 
     def __repr__(self) -> str:
-        return f"{self.__class__.__name__}" + str({
+        return f"{self.__class__.__name__}" + str(
+            {
             "pos": self._value.value,
             "chunk_eid": self._value.chunk_eid,
             "chunk_pos": self._value.chunk_pos,
-        })
+            }
+        )
 
 
 class Annotation(abc.ABC):
-    def __init__(self, _name: str, _value: NamedValue = None):
+    def __init__(self, _name: str, _value: None | NamedValue = None):
         if _value is None:
             _value = NamedValue(_name)
             _value.value.value.compute_if_absent(
@@ -140,12 +145,12 @@ class Annotation(abc.ABC):
 
 
 class Bookmark(Annotation):
-    def __init__(self, _value: NamedValue = None):
+    def __init__(self, _value: None | NamedValue = None):
         super().__init__(names.ANNOTATION_PERSONAL_BOOKMARK, _value)
 
 
 class Note(Annotation):
-    def __init__(self, _value: NamedValue = None):
+    def __init__(self, _value: None | NamedValue = None):
         super().__init__(names.ANNOTATION_PERSONAL_NOTE, _value)
 
     @property
@@ -171,17 +176,17 @@ class Note(Annotation):
 
 
 class ClipArticle(Annotation):
-    def __init__(self, _value: NamedValue = None):
+    def __init__(self, _value: None | NamedValue = None):
         super().__init__(names.ANNOTATION_PERSONAL_CLIP_ARTICLE, _value)
 
 
 class Highlight(Annotation):
-    def __init__(self, _value: NamedValue = None):
+    def __init__(self, _value: None | NamedValue = None):
         super().__init__(names.ANNOTATION_PERSONAL_HIGHLIGHT, _value)
 
 
 class AnnotationCache:
-    def __init__(self, _value: NamedValue[SwitchMap] = None):
+    def __init__(self, _value: None | NamedValue[SwitchMap] = None):
         if _value is None:
             _value = NamedValue(names.ANNOTATION_CACHE_OBJECT)
         assert _value.name == names.ANNOTATION_CACHE_OBJECT, "wrong value class"
@@ -215,10 +220,7 @@ class AnnotationCache:
             assert isinstance(backing, NamedValue)
             assert backing.name == names.SAVED_AVL_INTERVAL_TREE
             self._bookmarks = WrappedList(
-                Bookmark,
-                backing.value,
-                self._from_obj,
-                self._to_obj
+                Bookmark, backing.value, self._from_obj, self._to_obj
             )
         return self._bookmarks
 
@@ -230,10 +232,7 @@ class AnnotationCache:
             assert isinstance(backing, NamedValue)
             assert backing.name == names.SAVED_AVL_INTERVAL_TREE
             self._notes = WrappedList(
-                Note,
-                backing.value,
-                self._from_obj,
-                self._to_obj
+                Note, backing.value, self._from_obj, self._to_obj
             )
         return self._notes
 
@@ -245,10 +244,7 @@ class AnnotationCache:
             assert isinstance(backing, NamedValue)
             assert backing.name == names.SAVED_AVL_INTERVAL_TREE
             self._highlights = WrappedList(
-                Highlight,
-                backing.value,
-                self._from_obj,
-                self._to_obj
+                Highlight, backing.value, self._from_obj, self._to_obj
             )
         return self._highlights
 
@@ -260,17 +256,12 @@ class AnnotationCache:
             assert isinstance(backing, NamedValue)
             assert backing.name == names.SAVED_AVL_INTERVAL_TREE
             self._clip_articles = WrappedList(
-                ClipArticle,
-                backing.value,
-                self._from_obj,
-                self._to_obj
+                ClipArticle, backing.value, self._from_obj, self._to_obj
             )
         return self._clip_articles
 
     def _get_or_compute(
-        self,
-        name_id: int,
-        compute_if_absent: bool = False
+        self, name_id: int, compute_if_absent: bool = False
     ) -> Value:
         wrapper = None
         if compute_if_absent:
@@ -312,8 +303,7 @@ class AnnotationStore:
         return self._annotation_cache
 
     def _get_annotation_cache(
-        self,
-        compute_if_absent: bool = False
+        self, compute_if_absent: bool = False
     ) -> None | NamedValue:
         root = self._get_datastore_map()
 
