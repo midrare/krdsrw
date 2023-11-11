@@ -13,7 +13,8 @@ from .constants import SHORT_TYPE_INDICATOR
 from .constants import FLOAT_TYPE_INDICATOR
 from .constants import BYTE_TYPE_INDICATOR
 from .constants import CHAR_TYPE_INDICATOR
-from .error import MagicStrNotFoundError, UnexpectedDataTypeError
+from .error import MagicStrNotFoundError
+from .error import UnexpectedDataTypeError
 from .types import Byte
 from .types import Char
 from .types import Bool
