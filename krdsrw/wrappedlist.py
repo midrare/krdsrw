@@ -12,10 +12,8 @@ class WrappedList(collections.UserList[T]):
         self,
         cls: typing.Type[T],
         array: datastore.Array,
-        unwrap: typing.Callable[T,
-                                datastore.Value],
-        wrap: typing.Callable[datastore.Value,
-                              T],
+        unwrap: typing.Callable[T, datastore.Value],
+        wrap: typing.Callable[datastore.Value, T],
     ):
         super().__init__()
 
@@ -75,9 +73,7 @@ class WrappedList(collections.UserList[T]):
 
     def _copy(self):
         copy = WrappedList(
-            datastore.Array(self._array.template),
-            self._wrap,
-            self._unwrap
+            datastore.Array(self._array.template), self._wrap, self._unwrap
         )
         copy.data[:] = self.data
         copy._array.value[:] = self._array.value
