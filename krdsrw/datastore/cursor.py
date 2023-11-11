@@ -1,6 +1,5 @@
 from __future__ import annotations
 import io
-import re
 import struct
 import typing
 
@@ -351,10 +350,30 @@ class Cursor:
             self._write_raw_bytes(encoded)
 
 
-    def read_auto(self) -> Byte | Char | Bool | Short | Int \
+    def read_auto(self, cls_: None|typing.Type[Byte]| typing.Type[Char] | typing.Type[Bool] | typing.Type[Short] | typing.Type[Int] \
+        | typing.Type[Long] | typing.Type[Float] | typing.Type[Double] | typing.Type[Utf8Str] = None) -> Byte | Char | Bool | Short | Int \
         | Long | Float | Double | Utf8Str:
-        type_byte = self.peek()
 
+        if isinstance(cls_, Byte):
+            return self.read_byte()
+        elif isinstance(cls_, Char):
+            return self.read_char()
+        elif isinstance(cls_, Bool):
+            return self.read_bool()
+        elif isinstance(cls_, Short):
+            return self.read_short()
+        elif isinstance(cls_, Int):
+            return self.read_int()
+        elif isinstance(cls_, Long):
+            return self.read_long()
+        elif isinstance(cls_, Float):
+            return self.read_float()
+        elif isinstance(cls_, Double):
+            return self.read_double()
+        elif isinstance(cls_, Utf8Str):
+            return self.read_utf8str()
+
+        type_byte = self.peek()
         if type_byte == BYTE_TYPE_INDICATOR:
             return self.read_byte()
         elif type_byte == CHAR_TYPE_INDICATOR:

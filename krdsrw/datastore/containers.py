@@ -12,10 +12,9 @@ from .constants import UTF8STR_TYPE_INDICATOR
 from .constants import BYTE_TYPE_INDICATOR
 from .cursor import Cursor
 from .error import *
-from .factory import ValueFactory
 from .templatized import CheckedDict
 from .templatized import TemplatizedDict
-from .templatized import TemplatizedList
+from .types import ALL_PRIMITIVE_TYPES
 from .types import Byte
 from .types import Char
 from .types import Bool
@@ -39,39 +38,158 @@ if sys.version_info < MIN_PYTHON_VERSION:
 T = typing.TypeVar("T", bound=Value)
 
 
-class Array(Value, typing.Generic[T]):
-    def __init__(self, template: ValueFactory[T]):
-        self._template: ValueFactory[T] = template
-        self._value: TemplatizedList[T] = TemplatizedList(template)
+class ValueFactory(typing.Generic[T]):
+    def __init__(self, cls: typing.Type, *args, **kwargs):
+        self.cls: typing.Type = cls
+        self._constructor_args: typing.List[typing.Any] = list(args)
+        self._constructor_kwargs: typing.Dict[str, typing.Any] = dict(kwargs)
 
-    @property
-    def value(self) -> TemplatizedList[T]:
-        return self._value
+    def instantiate(self) -> T:
+        return self.cls(*self._constructor_args, **self._constructor_kwargs)
 
-    @property
-    def template(self) -> ValueFactory[T]:
-        return self._template
+    def __eq__(self, o: object) -> bool:
+        if isinstance(o, self.__class__):
+            return (
+                self.cls == o.cls
+                and self._constructor_args == o._constructor_args
+                and self._constructor_kwargs == o._constructor_kwargs
+            )
+
+        return super().__eq__(o)
+
+    def __str__(self) -> str:
+        args = []
+        for arg in self._constructor_args:
+            args.append(str(arg))
+        for key, value in self._constructor_kwargs.items():
+            args.append(str(key) + ":" + str(value))
+        return "%s{%s[%s]}" % (
+            self.__class__.__name__,
+            self.cls.__name__,
+            ", ".join(args),
+        )
+
+
+class Array(list[T], Value):
+    def __init__(self, cls_: typing.Type[T]):
+        super().__init__()
+        self._cls: typing.Type[T] = cls_
 
     def read(self, cursor: Cursor):
-        self._value.clear()
+        self.clear()
+
+        is_primitive = any(
+            issubclass(self._cls, c) for c in ALL_PRIMITIVE_TYPES
+        )
+        is_serializable = issubclass(self._cls, Value)
+
         size = cursor.read_int()
         for _ in range(size):
-            e = self._template.instantiate()
-            e.read(cursor)
-            self._value.append(e)
+            if is_primitive:
+                self.append(cursor.read_auto(self._cls))  # type: ignore
+            elif is_serializable:
+                e = self._cls()
+                e.read(cursor)
+                self.append(e)
+            else:
+                raise TypeError(
+                    "Unrecognized type " + f"\"{self._cls.__name__}\"."
+                )
 
     def write(self, cursor: Cursor):
-        cursor.write_int(len(self._value))
-        for e in self._value:
-            e.write(cursor)
+        is_primitive = any(
+            issubclass(self._cls, c) for c in ALL_PRIMITIVE_TYPES
+        )
+        is_serializable = issubclass(self._cls, Value)
 
-    def __eq__(self, other: Array) -> bool:
-        if isinstance(other, self.__class__):
-            return (
-                self._value == other._value
-                and self._template == other._template
+        cursor.write_int(len(self))
+        for e in self:
+            if is_primitive:
+                cursor.write_auto(e)  # type: ignore
+            elif is_serializable:
+                e.write(cursor)
+            else:
+                raise TypeError(
+                    "Unrecognized type " + f"\"{self._cls.__name__}\"."
+                )
+
+    @property
+    def cls(self) -> typing.Type[T]:
+        return self._cls
+
+    def __eq__(self, o: object) -> bool:
+        if isinstance(o, self.__class__):
+            return self._cls == o._cls and list(self) == list(o)
+        return super().__eq__(o)
+
+    def __contains__(self, item: object) -> bool:
+        if not isinstance(item, self._cls):
+            raise TypeError(f"Value is of wrong class for this container")
+        return super().__contains__(item)
+
+    def __setitem__(self, i: int, o: T):
+        if not isinstance(o, self._cls):
+            raise TypeError(f"Value is of wrong class for this container")
+        super().__setitem__(i, o)
+
+    def __add__(self, other: typing.Iterable[T]) -> Array[T]:
+        lst = list(other)
+        if any(not isinstance(e, self._cls) for e in lst):
+            raise TypeError(
+                f"One or more value(s) is of wrong class for this container"
             )
-        return False
+
+        o = Array(self._cls)
+        o.extend(self)
+        o.extend(lst)
+        return o
+
+    def __iadd__(self, other: typing.Iterable[T]) -> Array[T]:
+        lst = list(other)
+        if any(not isinstance(e, self._cls) for e in lst):
+            raise TypeError(
+                f"One or more value(s) is of wrong class for this container"
+            )
+        super().extend(lst)
+        return self
+
+    def append(self, item: T):
+        if not isinstance(item, self._cls):
+            raise TypeError(f"Value is of wrong class for this container")
+        super().append(item)
+
+    def insert(self, i: int, item: T):
+        if not isinstance(item, self._cls):
+            raise TypeError(f"Value is of wrong class for this container")
+        super().insert(i, item)
+
+    def remove(self, item: T):
+        if not isinstance(item, self._cls):
+            raise TypeError(f"Value is of wrong class for this container")
+        super().remove(item)
+
+    def copy(self) -> Array[T]:
+        o = Array(self._cls)
+        o.extend(self)
+        return o
+
+    def count(self, item: T) -> int:
+        if not isinstance(item, self._cls):
+            raise TypeError(f"Value is of wrong class for this container")
+        return super().count(item)
+
+    def index(self, item: T, *args: typing.Any) -> int:
+        if not isinstance(item, self._cls):
+            raise TypeError(f"Value is of wrong class for this container")
+        return super().index(item, *args)
+
+    def extend(self, other: typing.Iterable[T]):
+        lst = list(other)
+        if any(not isinstance(e, self._cls) for e in lst):
+            raise TypeError(
+                f"One or more value(s) is of wrong class for this container"
+            )
+        super().extend(lst)
 
 
 class DateTime(Value):

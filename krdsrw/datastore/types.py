@@ -1,7 +1,10 @@
 import re
+import typing
 
 
 class Byte(int):
+    base: typing.Final[typing.Type] = int
+
     def __str__(self) -> str:
         return f"0x{hex(self)}"
 
@@ -10,6 +13,8 @@ class Byte(int):
 
 
 class Char(int):
+    base: typing.Final[typing.Type] = int
+
     def __str__(self) -> str:
         return str(chr(self))
 
@@ -18,6 +23,8 @@ class Char(int):
 
 
 class Bool(int):
+    base: typing.Final[typing.Type] = int
+
     def __str__(self) -> str:
         return str(bool(self))
 
@@ -26,6 +33,8 @@ class Bool(int):
 
 
 class Short(int):
+    base: typing.Final[typing.Type] = int
+
     def __str__(self) -> str:
         return str(self)
 
@@ -34,6 +43,8 @@ class Short(int):
 
 
 class Int(int):
+    base: typing.Final[typing.Type] = int
+
     def __str__(self) -> str:
         return str(self)
 
@@ -42,6 +53,8 @@ class Int(int):
 
 
 class Long(int):
+    base: typing.Final[typing.Type] = int
+
     def __str__(self) -> str:
         return str(self)
 
@@ -50,6 +63,8 @@ class Long(int):
 
 
 class Float(float):
+    base: typing.Final[typing.Type] = float
+
     def __str__(self) -> str:
         return str(self)
 
@@ -58,6 +73,8 @@ class Float(float):
 
 
 class Double(float):
+    base: typing.Final[typing.Type] = float
+
     def __str__(self) -> str:
         return str(self)
 
@@ -66,7 +83,22 @@ class Double(float):
 
 
 class Utf8Str(str):
+    base: typing.Final[typing.Type] = str
+
     def __repr__(self) -> str:
         s = re.sub(r"\\s+", " ", self) if self is not None else None
         s2 = f'"{s.strip()}"' if s is not None else ""
         return f"{self.__class__.__name__}{{{s2}}}"
+
+
+ALL_PRIMITIVE_TYPES: typing.Final[tuple[typing.Type, ...]] = (
+    Byte,
+    Char,
+    Bool,
+    Short,
+    Int,
+    Long,
+    Float,
+    Double,
+    Utf8Str,
+)
