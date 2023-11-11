@@ -16,6 +16,15 @@ from .factory import ValueFactory
 from .templatized import CheckedDict
 from .templatized import TemplatizedDict
 from .templatized import TemplatizedList
+from .types import Byte
+from .types import Char
+from .types import Bool
+from .types import Short
+from .types import Int
+from .types import Long
+from .types import Float
+from .types import Double
+from .types import Utf8Str
 from .value import Value
 
 MIN_PYTHON_VERSION: typing.Final[typing.Tuple[int, int]] = (3, 7)
