@@ -2,6 +2,7 @@ from __future__ import annotations
 import typing
 
 from .types import *
+from .containers import *
 from .cursor import Cursor
 from .error import *
 from .value import Value
@@ -27,9 +28,9 @@ class DataStore(Value):
         if not cursor.eat(DataStore.SIGNATURE):
             raise MagicStrNotFoundError(
                 "Expected signature 0x%s at pos %d but got 0x%s" % (
-                    DataStore.SIGNATURE.hex(),
-                    cursor.tell(),
-                    cursor.peek(len(DataStore.SIGNATURE)),
+                DataStore.SIGNATURE.hex(),
+                cursor.tell(),
+                cursor.peek(len(DataStore.SIGNATURE)),
                 )
             )
 

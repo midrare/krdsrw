@@ -1,4 +1,5 @@
 from . import cursor
+from . import factory
 from . import types
 
 
@@ -126,3 +127,13 @@ def test_char_write():
     o = types.Char(70)
     o.write(csr)
     assert csr.dump() == b'\x09\x46'
+
+
+def test_array_read():
+    csr = cursor.Cursor(b'\x01\x00\x00\x00\x03\x07\x0a\x07\x0b\x07\x0c')
+    fact = factory.ValueFactory(types.Byte)
+    o = types.Array(fact)
+    o.read(csr)
+
+    assert len(o.value) == 3 and o.value[0].value == 0x0a \
+        and o.value[1].value == 0x0b and o.value[2].value == 0x0c

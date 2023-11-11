@@ -33,9 +33,9 @@ class UnexpectedDataTypeError(Exception):
         super().__init__(
             "@%d expected data type indicator byte with value of 0x%02x but got %s"
             % (
-                pos,
-                expected,
-                hex(actual) if isinstance(actual, int) else str(actual),
+            pos,
+            expected,
+            hex(actual) if isinstance(actual, int) else str(actual),
             )
         )
         self.pos: int = pos

@@ -56,8 +56,8 @@ class CheckedDict(dict[K, V]):
 
     @classmethod
     def fromkeys(cls,
-                 iterable: typing.Iterable[K],
-                 value: None | V = None) -> TemplatizedDict[K, V]:
+        iterable: typing.Iterable[K],
+        value: None | V = None) -> TemplatizedDict[K, V]:
         raise NotImplementedError("Unsupported operation for this container")
 
     def pop(self, key: K) -> V:
@@ -117,9 +117,8 @@ class TemplatizedDict(dict[K, V]):
         self._key_to_template: typing.Dict[K, ValueFactory[V]] = (
             template.copy() if isinstance(template, dict) else {}
         )
-        self._default_instantiate: None | typing.Callable[[K], V] = (
-            template if callable(template) else None
-        )
+        self._default_instantiate: None | typing.Callable[[K],
+            V] = (template if callable(template) else None)
 
     def _instantiate(self, key: K) -> V:
         if template := self._key_to_template.get(key):
@@ -143,7 +142,7 @@ class TemplatizedDict(dict[K, V]):
 
     def instantiate_and_put_all(self, keys: typing.List[K]) -> typing.List[V]:
         if any(k not in self._key_to_template and not self._default_instantiate
-               for k in keys):
+            for k in keys):
             raise KeyError(f"One or more key(s) is invalid for this container")
         values = []
         for key in keys:
@@ -164,9 +163,8 @@ class TemplatizedDict(dict[K, V]):
     def __setitem__(self, key: K, item: V):
         if key not in self._key_to_template and not self._default_instantiate:
             raise KeyError(f'Key "{key}" is invalid for this container')
-        if not self._default_instantiate and (
-                key not in self._key_to_template
-                or not isinstance(item, self._key_to_template[key].cls)):
+        if not self._default_instantiate and (key not in self._key_to_template
+            or not isinstance(item, self._key_to_template[key].cls)):
             raise TypeError(
                 f'Value of class "{item.__class__.__name__}"'
                 + ' is of invalid class for this container'
@@ -186,8 +184,8 @@ class TemplatizedDict(dict[K, V]):
 
     @classmethod
     def fromkeys(cls,
-                 iterable: typing.Iterable[K],
-                 value: None | V = ...) -> TemplatizedDict[K, V]:
+        iterable: typing.Iterable[K],
+        value: None | V = ...) -> TemplatizedDict[K, V]:
         raise NotImplementedError(
             "Unsupported operation. (Cannot instantiate without template)"
         )
@@ -203,9 +201,8 @@ class TemplatizedDict(dict[K, V]):
     def setdefault(self, key: K, default: V) -> V:
         if key not in self._key_to_template and not self._default_instantiate:
             raise KeyError(f'Key "{key}" is invalid for this container')
-        if not self._default_instantiate and (
-                key not in self._key_to_template
-                or not isinstance(default, self._key_to_template[key].cls)):
+        if not self._default_instantiate and (key not in self._key_to_template
+            or not isinstance(default, self._key_to_template[key].cls)):
             raise TypeError(f"Value is of wrong class for this container")
 
         return super().setdefault(key, default)
@@ -215,9 +212,8 @@ class TemplatizedDict(dict[K, V]):
         for k, v in d.items():
             if k not in self._key_to_template and not self._default_instantiate:
                 raise KeyError(f'Key "{k}" is invalid for this container')
-            if not self._default_instantiate and (
-                    k not in self._key_to_template
-                    or not isinstance(v, self._key_to_template[k].cls)):
+            if not self._default_instantiate and (k not in self._key_to_template
+                or not isinstance(v, self._key_to_template[k].cls)):
                 raise TypeError(f"A value is of wrong class for this container")
 
         super().update(m, **kwargs)
