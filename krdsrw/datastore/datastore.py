@@ -1,7 +1,7 @@
 from __future__ import annotations
 import typing
 
-from .compounds import *
+from .types import *
 from .cursor import Cursor
 from .error import *
 from .value import Value
@@ -41,9 +41,7 @@ class DataStore(Value):
             cursor.restore()
             raise MagicStrNotFoundError(
                 "Expected fixed num 0x%08x at pos %d but got 0x%08x" %
-                (DataStore.FIXED_MYSTERY_NUM,
-                 cursor.tell(),
-                 value)
+                (DataStore.FIXED_MYSTERY_NUM, cursor.tell(), value)
             )
         cursor.unsave()
 

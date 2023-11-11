@@ -5,7 +5,7 @@ from .value import Value
 T = typing.TypeVar("T", bound=Value)
 
 
-class Template(typing.Generic[T]):
+class ValueFactory(typing.Generic[T]):
     def __init__(self, cls: typing.Type, *args, **kwargs):
         self.cls: typing.Type = cls
         self._constructor_args: typing.List[typing.Any] = list(args)

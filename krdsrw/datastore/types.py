@@ -1,6 +1,7 @@
 from __future__ import annotations
 import base64
 import json
+import re
 import sys
 import typing
 
@@ -11,16 +12,7 @@ from .constants import UTF8STR_TYPE_INDICATOR
 from .constants import BYTE_TYPE_INDICATOR
 from .cursor import Cursor
 from .error import *
-from .basics import Bool
-from .basics import Byte
-from .basics import Char
-from .basics import Short
-from .basics import Int
-from .basics import Long
-from .basics import Float
-from .basics import Double
-from .basics import Utf8Str
-from .template import Template
+from .factory import ValueFactory
 from .templatized import CheckedDict
 from .templatized import TemplatizedDict
 from .templatized import TemplatizedList
@@ -29,8 +21,8 @@ from .value import Value
 MIN_PYTHON_VERSION: typing.Final[typing.Tuple[int, int]] = (3, 7)
 if sys.version_info < MIN_PYTHON_VERSION:
     print(
-        "Requires Python >= %s. (Ordered dicts is required.)" %
-        ".".join([str(i) for i in MIN_PYTHON_VERSION]),
+        "Requires Python >= %s. (Ordered dicts is required.)"
+        % ".".join([str(i) for i in MIN_PYTHON_VERSION]),
         file=sys.stderr,
     )
     sys.exit(1)
@@ -38,9 +30,209 @@ if sys.version_info < MIN_PYTHON_VERSION:
 T = typing.TypeVar("T", bound=Value)
 
 
+class Byte(Value):
+    def __init__(self, value: None | int = None):
+        self.value: int = value if value is not None else 0
+
+    def read(self, cursor: Cursor):
+        self.value = cursor.read_byte()
+
+    def write(self, cursor: Cursor):
+        cursor.write_byte(self.value)
+
+    def __eq__(self, other: Byte) -> bool:
+        if isinstance(other, self.__class__):
+            return self.value == other.value
+        return False
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}{{0x{hex(self.value)}}}"
+
+    def __str__(self) -> str:
+        return f"0x{hex(self.value)}"
+
+
+class Char(Value):
+    def __init__(self, value: None | int = None):
+        self.value: int = value if value is not None else 0
+
+    def read(self, cursor: Cursor):
+        self.value = cursor.read_char()
+
+    def write(self, cursor: Cursor):
+        cursor.write_char(self.value)
+
+    def __eq__(self, other: Bool) -> bool:
+        if isinstance(other, self.__class__):
+            return self.value == other.value
+        return False
+
+    def __str__(self) -> str:
+        return str(chr(self.value))
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}{{{chr(self.value)}}}"
+
+
+class Bool(Value):
+    def __init__(self, value: None | bool = None):
+        self.value: bool = value if value is not None else False
+
+    def read(self, cursor: Cursor):
+        self.value = cursor.read_bool()
+
+    def write(self, cursor: Cursor):
+        cursor.write_bool(self.value)
+
+    def __eq__(self, other: Bool) -> bool:
+        if isinstance(other, self.__class__):
+            return self.value == other.value
+        return False
+
+    def __str__(self) -> str:
+        return str(bool(self.value))
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}{{{bool(self.value)}}}"
+
+
+class Short(Value):
+    def __init__(self, value: None | int = None):
+        self.value: int = value if value is not None else 0
+
+    def read(self, cursor: Cursor):
+        self.value = cursor.read_short()
+
+    def write(self, cursor: Cursor):
+        cursor.write_short(self.value)
+
+    def __eq__(self, other: Short) -> bool:
+        if isinstance(other, self.__class__):
+            return self.value == other.value
+        return False
+
+    def __str__(self) -> str:
+        return str(self.value)
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}{{{self.value}}}"
+
+
+class Int(Value):
+    def __init__(self, value: None | int = None):
+        self.value: int = value if value is not None else 0
+
+    def read(self, cursor: Cursor):
+        self.value = cursor.read_int()
+
+    def write(self, cursor: Cursor):
+        cursor.write_int(self.value)
+
+    def __eq__(self, other: Int) -> bool:
+        if isinstance(other, self.__class__):
+            return self.value == other.value
+        return False
+
+    def __str__(self) -> str:
+        return str(self.value)
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}{{{self.value}}}"
+
+
+class Long(Value):
+    def __init__(self, value: None | int = None):
+        self.value: int = value if value is not None else 0
+
+    def read(self, cursor: Cursor):
+        self.value = cursor.read_long()
+
+    def write(self, cursor: Cursor):
+        cursor.write_long(self.value)
+
+    def __eq__(self, other: Long) -> bool:
+        if isinstance(other, self.__class__):
+            return self.value == other.value
+        return False
+
+    def __str__(self) -> str:
+        return str(self.value)
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}{{{self.value}}}"
+
+
+class Float(Value):
+    def __init__(self, value: None | float = None):
+        self.value: float = value if value is not None else 0.0
+
+    def read(self, cursor: Cursor):
+        self.value = cursor.read_float()
+
+    def write(self, cursor: Cursor):
+        cursor.write_float(self.value)
+
+    def __eq__(self, other: Float) -> bool:
+        if isinstance(other, self.__class__):
+            return self.value == other.value
+        return False
+
+    def __str__(self) -> str:
+        return str(self.value)
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}{{{self.value}}}"
+
+
+class Double(Value):
+    def __init__(self, value: None | float = None):
+        self.value: float = value if value is not None else 0.0
+
+    def read(self, cursor: Cursor):
+        self.value = cursor.read_double()
+
+    def write(self, cursor: Cursor):
+        cursor.write_double(self.value)
+
+    def __eq__(self, other: Double) -> bool:
+        if isinstance(other, self.__class__):
+            return self.value == other.value
+        return False
+
+    def __str__(self) -> str:
+        return str(self.value)
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}{{{self.value}}}"
+
+
+class Utf8Str(Value):
+    def __init__(self, value: None | str = None):
+        self.value: None | str = value if value is not None else None
+
+    def read(self, cursor: Cursor):
+        self.value = cursor.read_utf8str()
+
+    def write(self, cursor: Cursor):
+        cursor.write_utf8str(self.value)
+
+    def __eq__(self, other: Utf8Str) -> bool:
+        if isinstance(other, self.__class__):
+            return self.value == other.value
+        return False
+
+    def __str__(self) -> str:
+        return self.value if self.value is not None else ""
+
+    def __repr__(self) -> str:
+        s = re.sub(r"\\s+", " ", self.value) if self.value is not None else None
+        s2 = f'"{s.strip()}"' if s is not None else ""
+        return f"{self.__class__.__name__}{{{s2}}}"
+
+
 class Array(Value, typing.Generic[T]):
-    def __init__(self, template: Template[T]):
-        self._template: Template[T] = template
+    def __init__(self, template: ValueFactory[T]):
+        self._template: ValueFactory[T] = template
         self._value: TemplatizedList[T] = TemplatizedList(template)
 
     @property
@@ -48,7 +240,7 @@ class Array(Value, typing.Generic[T]):
         return self._value
 
     @property
-    def template(self) -> Template[T]:
+    def template(self) -> ValueFactory[T]:
         return self._template
 
     def read(self, cursor: Cursor):
@@ -140,15 +332,13 @@ class DynamicMap(Value):
 class FixedMap(Value):
     def __init__(
         self,
-        required: typing.Dict[str,
-                              Template],
-        optional: None | typing.Dict[str,
-                                     Template] = None,
+        required: typing.Dict[str, ValueFactory],
+        optional: None | typing.Dict[str, ValueFactory] = None,
     ):
-        self._required_templates: typing.Dict[str, Template] = dict(required)
+        self._required_templates: typing.Dict[str,
+                                              ValueFactory] = dict(required)
         self._optional_templates: typing.Dict[
-            str,
-            Template] = (dict(optional) if optional else {})
+            str, ValueFactory] = (dict(optional) if optional else {})
 
         templates = (required or {}) | (optional or {})
         self._value: TemplatizedDict[str, Value] = TemplatizedDict(templates)
@@ -173,8 +363,8 @@ class FixedMap(Value):
         for field_name, field_template in self._required_templates.items():
             if not self._read_next_field(cursor, field_name, field_template):
                 raise FieldNotFoundError(
-                    'Expected field with name "%s" but was not found' %
-                    field_name
+                    'Expected field with name "%s" but was not found'
+                    % field_name
                 )
 
         for field_name, field_template in self._optional_templates.items():
@@ -182,10 +372,7 @@ class FixedMap(Value):
                 break
 
     def _read_next_field(
-        self,
-        cursor: Cursor,
-        field_name: str,
-        field_template: Template
+        self, cursor: Cursor, field_name: str, field_template: ValueFactory
     ) -> bool:
         cursor.save()
         try:
@@ -235,9 +422,7 @@ class Json(Value):
     @value.setter
     def value(self, value: None | bool | int | float | str | list | dict):
         if value is not None and not isinstance(
-            value,
-            (bool | int | float | str | list | dict)
-        ):
+                value, (bool | int | float | str | list | dict)):
             class_names = [
                 c.__name__ for c in [bool | int | float | str | list | dict]
             ]
@@ -401,10 +586,8 @@ class Position(Value):
 
     def write(self, cursor: Cursor):
         s = ""
-        if (
-            self._chunk_eid is not None and self._chunk_eid >= 0
-            and self._chunk_pos is not None and self._chunk_pos >= 0
-        ):
+        if (self._chunk_eid is not None and self._chunk_eid >= 0
+                and self._chunk_pos is not None and self._chunk_pos >= 0):
             b_version = self.PREFIX_VERSION1.to_bytes(1, "little", signed=False)
             b_eid = self._chunk_eid.to_bytes(4, "little", signed=False)
             b_pos = self._chunk_pos.to_bytes(4, "little", signed=False)
@@ -452,10 +635,8 @@ class Position(Value):
         }
         d = {
             k: v
-            for k,
-            v in d.items()
-            if v is not None and not (isinstance(v,
-                                                 int) or v >= 0)
+            for k, v in d.items()
+            if v is not None and not (isinstance(v, int) or v >= 0)
         }
         return f"{self.__class__.__name__}{str(d)}"
 
@@ -463,25 +644,20 @@ class Position(Value):
 class SwitchMap(Value):
     def __init__(
         self,
-        id_to_name: typing.Dict[int,
-                                str],
-        id_to_template: typing.Dict[int,
-                                    Template],
+        id_to_name: typing.Dict[int, str],
+        id_to_template: typing.Dict[int, ValueFactory],
     ):
         self._id_to_name: typing.Dict[int, str] = dict(id_to_name)
-        self._id_to_template: typing.Dict[int, Template] = dict(id_to_template)
-        self._name_to_id: typing.Dict[str,
-                                      int] = {
-                                          v: k
-                                          for k,
-                                          v in id_to_name.items()
-                                      }
+        self._id_to_template: typing.Dict[int,
+                                          ValueFactory] = dict(id_to_template)
+        self._name_to_id: typing.Dict[str, int] = {
+            v: k
+            for k, v in id_to_name.items()
+        }
 
         ids = set(id_to_name.keys()) | set(id_to_template.keys())
         templates = {
-            k: Template(NamedValue,
-                        id_to_name[k],
-                        id_to_template[k])
+            k: ValueFactory(NamedValue, id_to_name[k], id_to_template[k])
             for k in ids
         }
         self._value: TemplatizedDict[int,
@@ -509,8 +685,7 @@ class SwitchMap(Value):
             if self._id_to_name[field_id] != name:
                 raise UnexpectedFieldError(
                     'Expected name "%s" but got "%s"' %
-                    (name,
-                     self._id_to_name[field_id])
+                    (name, self._id_to_name[field_id])
                 )
             template = self._id_to_template.get(field_id)
             value = NamedValue(name, template)
@@ -520,8 +695,7 @@ class SwitchMap(Value):
     def write(self, cursor: Cursor):
         id_to_non_null_value = {
             k: v
-            for k,
-            v in self._value.items()
+            for k, v in self._value.items()
             if v is not None
         }
         cursor.write_int(len(id_to_non_null_value))
@@ -533,14 +707,12 @@ class SwitchMap(Value):
         if isinstance(other, self.__class__):
             id_to_non_null_value1 = {
                 k: v
-                for k,
-                v in self._value.items()
+                for k, v in self._value.items()
                 if v is not None
             }
             id_to_non_null_value2 = {
                 k: v
-                for k,
-                v in other._value.items()
+                for k, v in other._value.items()
                 if v is not None
             }
             return (
@@ -603,9 +775,9 @@ class NamedValue(Value, typing.Generic[T]):
     DEMARCATION_BEGIN: int = 254
     DEMARCATION_END: int = 255
 
-    def __init__(self, name: str, template: None | Template[T] = None):
+    def __init__(self, name: str, template: None | ValueFactory[T] = None):
         self._name: str = name
-        self._template: Template[T] = template or NAME_TO_TEMPLATE.get(name)
+        self._template: ValueFactory[T] = template or NAME_TO_TEMPLATE.get(name)
         self._value: T = self._template.instantiate()
 
     @property
@@ -613,7 +785,7 @@ class NamedValue(Value, typing.Generic[T]):
         return self._name
 
     @property
-    def template(self) -> Template[T]:
+    def template(self) -> ValueFactory[T]:
         return self._template
 
     @property
@@ -659,8 +831,7 @@ class NamedValue(Value, typing.Generic[T]):
         name = cursor.read_utf8str(False)
         if name != self._name:
             raise UnexpectedNameError(
-                'Expected named value "%s" but got "%s"' % (self._name,
-                                                            name)
+                'Expected named value "%s" but got "%s"' % (self._name, name)
             )
 
         value = self._template.instantiate()
@@ -697,10 +868,9 @@ class NamedValue(Value, typing.Generic[T]):
 
 class NameMap(Value):
     def __init__(self):
-        self._value: TemplatizedDict[str,
-                                     NamedValue] = TemplatizedDict(
-                                         self._make_value
-                                     )
+        self._value: TemplatizedDict[str, NamedValue] = TemplatizedDict(
+            self._make_value
+        )
 
     @property
     def value(self) -> TemplatizedDict[str, NamedValue]:
@@ -732,40 +902,46 @@ class NameMap(Value):
 
 
 # basics
-BYTE_TEMPLATE: Template[Byte] = Template(Byte)
-CHAR_TEMPLATE: Template[Char] = Template(Char)
-BOOL_TEMPLATE: Template[Bool] = Template(Bool)
-SHORT_TEMPLATE: Template[Short] = Template(Short)
-INT_TEMPLATE: Template[Int] = Template(Int)
-LONG_TEMPLATE: Template[Long] = Template(Long)
-FLOAT_TEMPLATE: Template[Float] = Template(Float)
-DOUBLE_TEMPLATE: Template[Double] = Template(Double)
-UTF8STR_TEMPLATE: Template[Utf8Str] = Template(Utf8Str)
+BYTE_TEMPLATE: ValueFactory[Byte] = ValueFactory(Byte)
+CHAR_TEMPLATE: ValueFactory[Char] = ValueFactory(Char)
+BOOL_TEMPLATE: ValueFactory[Bool] = ValueFactory(Bool)
+SHORT_TEMPLATE: ValueFactory[Short] = ValueFactory(Short)
+INT_TEMPLATE: ValueFactory[Int] = ValueFactory(Int)
+LONG_TEMPLATE: ValueFactory[Long] = ValueFactory(Long)
+FLOAT_TEMPLATE: ValueFactory[Float] = ValueFactory(Float)
+DOUBLE_TEMPLATE: ValueFactory[Double] = ValueFactory(Double)
+UTF8STR_TEMPLATE: ValueFactory[Utf8Str] = ValueFactory(Utf8Str)
 
 # composites
-JSON_TEMPLATE: Template[Json] = Template(Json)
-POSITION_TEMPLATE: Template[Position] = Template(Position)
-DATETIME_TEMPLATE: Template[DateTime] = Template(DateTime)
-LAST_PAGE_READ_TEMPLATE: Template[LastPageRead] = Template(LastPageRead)
-DYNAMIC_MAP_TEMPLATE: Template[DynamicMap] = Template(DynamicMap)
-TIMEZONE_OFFSET_TEMPLATE: Template[TimeZoneOffset] = Template(TimeZoneOffset)
+JSON_TEMPLATE: ValueFactory[Json] = ValueFactory(Json)
+POSITION_TEMPLATE: ValueFactory[Position] = ValueFactory(Position)
+DATETIME_TEMPLATE: ValueFactory[DateTime] = ValueFactory(DateTime)
+LAST_PAGE_READ_TEMPLATE: ValueFactory[LastPageRead] = ValueFactory(LastPageRead)
+DYNAMIC_MAP_TEMPLATE: ValueFactory[DynamicMap] = ValueFactory(DynamicMap)
+TIMEZONE_OFFSET_TEMPLATE: ValueFactory[TimeZoneOffset] = ValueFactory(
+    TimeZoneOffset
+)
 
-ARRAY_BYTE_TEMPLATE: Template[Array[Byte]] = Template(Array, BYTE_TEMPLATE)
-ARRAY_CHAR_TEMPLATE: Template[Array[Char]] = Template(Array, CHAR_TEMPLATE)
-ARRAY_BOOL_TEMPLATE: Template[Array[Bool]] = Template(Array, BOOL_TEMPLATE)
-ARRAY_SHORT_TEMPLATE: Template[Array[Short]] = Template(Array, SHORT_TEMPLATE)
-ARRAY_INT_TEMPLATE: Template[Array[Int]] = Template(Array, INT_TEMPLATE)
-ARRAY_LONG_TEMPLATE: Template[Array[Long]] = Template(Array, LONG_TEMPLATE)
-ARRAY_FLOAT_TEMPLATE: Template[Array[Float]] = Template(Array, FLOAT_TEMPLATE)
-ARRAY_DOUBLE_TEMPLATE: Template[Array[Double]
-                                ] = Template(Array,
-                                             DOUBLE_TEMPLATE)
-ARRAY_UTF8STR_TEMPLATE: Template[Array[Utf8Str]
-                                 ] = Template(Array,
-                                              UTF8STR_TEMPLATE)
+ARRAY_BYTE_TEMPLATE: ValueFactory[Array[Byte]
+                                  ] = ValueFactory(Array, BYTE_TEMPLATE)
+ARRAY_CHAR_TEMPLATE: ValueFactory[Array[Char]
+                                  ] = ValueFactory(Array, CHAR_TEMPLATE)
+ARRAY_BOOL_TEMPLATE: ValueFactory[Array[Bool]
+                                  ] = ValueFactory(Array, BOOL_TEMPLATE)
+ARRAY_SHORT_TEMPLATE: ValueFactory[Array[Short]
+                                   ] = ValueFactory(Array, SHORT_TEMPLATE)
+ARRAY_INT_TEMPLATE: ValueFactory[Array[Int]] = ValueFactory(Array, INT_TEMPLATE)
+ARRAY_LONG_TEMPLATE: ValueFactory[Array[Long]
+                                  ] = ValueFactory(Array, LONG_TEMPLATE)
+ARRAY_FLOAT_TEMPLATE: ValueFactory[Array[Float]
+                                   ] = ValueFactory(Array, FLOAT_TEMPLATE)
+ARRAY_DOUBLE_TEMPLATE: ValueFactory[Array[Double]
+                                    ] = ValueFactory(Array, DOUBLE_TEMPLATE)
+ARRAY_UTF8STR_TEMPLATE: ValueFactory[Array[Utf8Str]
+                                     ] = ValueFactory(Array, UTF8STR_TEMPLATE)
 
 # timer.average.calculator.distribution.normal
-TIMER_AVERAGE_CALCULATOR_DISTRIBUTION_NORMAL_TEMPLATE = Template(
+TIMER_AVERAGE_CALCULATOR_DISTRIBUTION_NORMAL_TEMPLATE = ValueFactory(
     FixedMap,
     {
         keys.TIMER_AVG_DISTRIBUTION_COUNT: LONG_TEMPLATE,
@@ -775,29 +951,29 @@ TIMER_AVERAGE_CALCULATOR_DISTRIBUTION_NORMAL_TEMPLATE = Template(
 )
 
 # timer.average.calculator.outliers
-TIMER_AVERAGE_CALCULATOR_OUTLIERS_TEMPLATE = Template(Array, DOUBLE_TEMPLATE)
+TIMER_AVERAGE_CALCULATOR_OUTLIERS_TEMPLATE = ValueFactory(
+    Array, DOUBLE_TEMPLATE
+)
 
 # timer.average.calculator
-TIMER_AVERAGE_CALCULATOR_TEMPLATE = Template(
+TIMER_AVERAGE_CALCULATOR_TEMPLATE = ValueFactory(
     FixedMap,
     {
         keys.TIMER_AVG_SAMPLES_1:
-            ARRAY_DOUBLE_TEMPLATE,
+        ARRAY_DOUBLE_TEMPLATE,
         keys.TIMER_AVG_SAMPLES_2:
-            ARRAY_DOUBLE_TEMPLATE,
+        ARRAY_DOUBLE_TEMPLATE,
         keys.TIMER_AVG_NORMAL_DISTRIBUTIONS:
-            Template(
-                Array,
-                TIMER_AVERAGE_CALCULATOR_DISTRIBUTION_NORMAL_TEMPLATE
-            ),
+        ValueFactory(
+            Array, TIMER_AVERAGE_CALCULATOR_DISTRIBUTION_NORMAL_TEMPLATE
+        ),
         keys.TIMER_AVG_OUTLIERS:
-            Template(Array,
-                     TIMER_AVERAGE_CALCULATOR_OUTLIERS_TEMPLATE),
+        ValueFactory(Array, TIMER_AVERAGE_CALCULATOR_OUTLIERS_TEMPLATE),
     },
 )
 
 # timer.model
-TIMER_MODEL_TEMPLATE = Template(
+TIMER_MODEL_TEMPLATE = ValueFactory(
     FixedMap,
     {
         keys.TIMER_VERSION: LONG_TEMPLATE,
@@ -809,7 +985,7 @@ TIMER_MODEL_TEMPLATE = Template(
 )
 
 # timer.data.store
-TIMER_DATA_STORE_TEMPLATE = Template(
+TIMER_DATA_STORE_TEMPLATE = ValueFactory(
     FixedMap,
     {
         keys.TIMERV1_STORE_ON: BOOL_TEMPLATE,
@@ -819,7 +995,7 @@ TIMER_DATA_STORE_TEMPLATE = Template(
 )
 
 # page.history.record
-PAGE_HISTORY_RECORD_TEMPLATE = Template(
+PAGE_HISTORY_RECORD_TEMPLATE = ValueFactory(
     FixedMap,
     {
         keys.PAGE_HISTORY_POS: POSITION_TEMPLATE,
@@ -828,7 +1004,7 @@ PAGE_HISTORY_RECORD_TEMPLATE = Template(
 )
 
 # font.prefs
-FONT_PREFS_TEMPLATE = Template(
+FONT_PREFS_TEMPLATE = ValueFactory(
     FixedMap,
     {
         keys.FONT_PREFS_TYPEFACE: UTF8STR_TEMPLATE,
@@ -852,7 +1028,7 @@ FONT_PREFS_TEMPLATE = Template(
 )
 
 # fpr
-FPR_TEMPLATE = Template(
+FPR_TEMPLATE = ValueFactory(
     FixedMap,
     {
         keys.FPR_POS: POSITION_TEMPLATE,
@@ -866,7 +1042,7 @@ FPR_TEMPLATE = Template(
 )
 
 # updated_lpr
-UPDATED_LPR_TEMPLATE = Template(
+UPDATED_LPR_TEMPLATE = ValueFactory(
     FixedMap,
     {
         keys.UPDATED_LPR_POS: POSITION_TEMPLATE,
@@ -880,7 +1056,7 @@ UPDATED_LPR_TEMPLATE = Template(
 )
 
 # apnx.key
-APNX_KEY_TEMPLATE = Template(
+APNX_KEY_TEMPLATE = ValueFactory(
     FixedMap,
     {
         keys.APNX_ASIN: UTF8STR_TEMPLATE,
@@ -895,7 +1071,7 @@ APNX_KEY_TEMPLATE = Template(
 )
 
 # fixed.layout.data
-FIXED_LAYOUT_DATA_TEMPLATE = Template(
+FIXED_LAYOUT_DATA_TEMPLATE = ValueFactory(
     FixedMap,
     {
         keys.FIXED_LAYOUT_DATA_UNKNOWN_1: BOOL_TEMPLATE,
@@ -905,17 +1081,17 @@ FIXED_LAYOUT_DATA_TEMPLATE = Template(
 )
 
 # sharing.limits
-SHARING_LIMITS_TEMPLATE = Template(
+SHARING_LIMITS_TEMPLATE = ValueFactory(
     FixedMap,
     {
         # TODO discover structure for sharing.limits
         keys.SHARING_LIMITS_ACCUMULATED:
-            None
+        None
     },
 )
 
 # language.store
-LANGUAGE_STORE_TEMPLATE = Template(
+LANGUAGE_STORE_TEMPLATE = ValueFactory(
     FixedMap,
     {
         keys.LANGUAGE_STORE_LANGUAGE: UTF8STR_TEMPLATE,
@@ -924,7 +1100,7 @@ LANGUAGE_STORE_TEMPLATE = Template(
 )
 
 # periodicals.view.state
-PERIODICALS_VIEW_STATE_TEMPLATE = Template(
+PERIODICALS_VIEW_STATE_TEMPLATE = ValueFactory(
     FixedMap,
     {
         keys.PERIODICALS_UNKNOWN_1: UTF8STR_TEMPLATE,
@@ -933,7 +1109,7 @@ PERIODICALS_VIEW_STATE_TEMPLATE = Template(
 )
 
 # purchase.state.data
-PURCHASE_STATE_DATA_TEMPLATE = Template(
+PURCHASE_STATE_DATA_TEMPLATE = ValueFactory(
     FixedMap,
     {
         keys.PURCHASE_STATE: INT_TEMPLATE,
@@ -942,7 +1118,7 @@ PURCHASE_STATE_DATA_TEMPLATE = Template(
 )
 
 # timer.data.store.v2
-TIMER_DATA_STOREV2_TEMPLATE = Template(
+TIMER_DATA_STOREV2_TEMPLATE = ValueFactory(
     FixedMap,
     {
         keys.TIMERV2_ON: BOOL_TEMPLATE,
@@ -953,7 +1129,7 @@ TIMER_DATA_STOREV2_TEMPLATE = Template(
 )
 
 # book.info.store
-BOOK_INFO_STORE_TEMPLATE = Template(
+BOOK_INFO_STORE_TEMPLATE = ValueFactory(
     FixedMap,
     {
         keys.BOOK_INFO_NUM_WORDS: LONG_TEMPLATE,
@@ -962,10 +1138,10 @@ BOOK_INFO_STORE_TEMPLATE = Template(
 )
 
 # page.history.store
-PAGE_HISTORY_STORE_TEMPLATE = Template(Array, PAGE_HISTORY_RECORD_TEMPLATE)
+PAGE_HISTORY_STORE_TEMPLATE = ValueFactory(Array, PAGE_HISTORY_RECORD_TEMPLATE)
 
 # reader.state.preferences
-READER_STATE_PREFERENCES_TEMPLATE = Template(
+READER_STATE_PREFERENCES_TEMPLATE = ValueFactory(
     FixedMap,
     {
         keys.READER_PREFS_FONT_PREFERENCES: FONT_PREFS_TEMPLATE,
@@ -981,7 +1157,7 @@ READER_STATE_PREFERENCES_TEMPLATE = Template(
 # annotation.personal.clip_article
 # annotation.personal.highlight
 # annotation.personal.note
-ANNOTATION_PERSONAL_ELEMENT_TEMPLATE = Template(
+ANNOTATION_PERSONAL_ELEMENT_TEMPLATE = ValueFactory(
     FixedMap,
     {
         keys.ANNOTATION_START_POS: POSITION_TEMPLATE,
@@ -996,43 +1172,35 @@ ANNOTATION_PERSONAL_ELEMENT_TEMPLATE = Template(
 )
 
 # saved.avl.interval.tree (child)
-SAVED_AVL_INTERVAL_TREE_BOOKMARK_TEMPLATE = Template(
-    NamedValue,
-    names.ANNOTATION_PERSONAL_BOOKMARK
+SAVED_AVL_INTERVAL_TREE_BOOKMARK_TEMPLATE = ValueFactory(
+    NamedValue, names.ANNOTATION_PERSONAL_BOOKMARK
 )
-SAVED_AVL_INTERVAL_TREE_HIGHLIGHT_TEMPLATE = Template(
-    NamedValue,
-    names.ANNOTATION_PERSONAL_HIGHLIGHT
+SAVED_AVL_INTERVAL_TREE_HIGHLIGHT_TEMPLATE = ValueFactory(
+    NamedValue, names.ANNOTATION_PERSONAL_HIGHLIGHT
 )
-SAVED_AVL_INTERVAL_TREE_NOTE_TEMPLATE = Template(
-    NamedValue,
-    names.ANNOTATION_PERSONAL_NOTE
+SAVED_AVL_INTERVAL_TREE_NOTE_TEMPLATE = ValueFactory(
+    NamedValue, names.ANNOTATION_PERSONAL_NOTE
 )
-SAVED_AVL_INTERVAL_TREE_CLIP_ARTICLE_TEMPLATE = Template(
-    NamedValue,
-    names.ANNOTATION_PERSONAL_CLIP_ARTICLE
+SAVED_AVL_INTERVAL_TREE_CLIP_ARTICLE_TEMPLATE = ValueFactory(
+    NamedValue, names.ANNOTATION_PERSONAL_CLIP_ARTICLE
 )
 
 # saved.avl.interval.tree
-SAVED_AVL_INTERVAL_TREE_BOOKMARKS_TEMPLATE = Template(
-    Array,
-    SAVED_AVL_INTERVAL_TREE_BOOKMARK_TEMPLATE
+SAVED_AVL_INTERVAL_TREE_BOOKMARKS_TEMPLATE = ValueFactory(
+    Array, SAVED_AVL_INTERVAL_TREE_BOOKMARK_TEMPLATE
 )
-SAVED_AVL_INTERVAL_TREE_HIGHLIGHTS_TEMPLATE = Template(
-    Array,
-    SAVED_AVL_INTERVAL_TREE_HIGHLIGHT_TEMPLATE
+SAVED_AVL_INTERVAL_TREE_HIGHLIGHTS_TEMPLATE = ValueFactory(
+    Array, SAVED_AVL_INTERVAL_TREE_HIGHLIGHT_TEMPLATE
 )
-SAVED_AVL_INTERVAL_TREE_NOTES_TEMPLATE = Template(
-    Array,
-    SAVED_AVL_INTERVAL_TREE_NOTE_TEMPLATE
+SAVED_AVL_INTERVAL_TREE_NOTES_TEMPLATE = ValueFactory(
+    Array, SAVED_AVL_INTERVAL_TREE_NOTE_TEMPLATE
 )
-SAVED_AVL_INTERVAL_TREE_CLIP_ARTICLES_TEMPLATE = Template(
-    Array,
-    SAVED_AVL_INTERVAL_TREE_CLIP_ARTICLE_TEMPLATE
+SAVED_AVL_INTERVAL_TREE_CLIP_ARTICLES_TEMPLATE = ValueFactory(
+    Array, SAVED_AVL_INTERVAL_TREE_CLIP_ARTICLE_TEMPLATE
 )
 
 # annotation.cache.object
-ANNOTATION_CACHE_OBJECT_TEMPLATE = Template(
+ANNOTATION_CACHE_OBJECT_TEMPLATE = ValueFactory(
     SwitchMap,
     {
         keys.ANNOTATION_BOOKMARKS: names.SAVED_AVL_INTERVAL_TREE,
@@ -1042,13 +1210,13 @@ ANNOTATION_CACHE_OBJECT_TEMPLATE = Template(
     },
     {
         keys.ANNOTATION_BOOKMARKS:
-            SAVED_AVL_INTERVAL_TREE_BOOKMARKS_TEMPLATE,
+        SAVED_AVL_INTERVAL_TREE_BOOKMARKS_TEMPLATE,
         keys.ANNOTATION_HIGHLIGHTS:
-            SAVED_AVL_INTERVAL_TREE_HIGHLIGHTS_TEMPLATE,
+        SAVED_AVL_INTERVAL_TREE_HIGHLIGHTS_TEMPLATE,
         keys.ANNOTATION_NOTES:
-            SAVED_AVL_INTERVAL_TREE_NOTES_TEMPLATE,
+        SAVED_AVL_INTERVAL_TREE_NOTES_TEMPLATE,
         keys.ANNOTATION_CLIP_ARTICLES:
-            SAVED_AVL_INTERVAL_TREE_CLIP_ARTICLES_TEMPLATE,
+        SAVED_AVL_INTERVAL_TREE_CLIP_ARTICLES_TEMPLATE,
         # keys.ANNOTATION_BOOKMARKS: Template(
         #     NamedValue, names.SAVED_AVL_INTERVAL_TREE, SAVED_AVL_INTERVAL_TREE_BOOKMARKS_TEMPLATE),
         # keys.ANNOTATION_HIGHLIGHTS: Template(
@@ -1084,7 +1252,8 @@ NAME_TO_TEMPLATE = {
     names.LPR: LAST_PAGE_READ_TEMPLATE,
     names.FPR: FPR_TEMPLATE,
     names.UPDATED_LPR: UPDATED_LPR_TEMPLATE,
-    names.APNX_KEY: APNX_KEY_TEMPLATE,  # APNX is "Amazon page num xref" (i.e. page num map)
+    names.APNX_KEY:
+    APNX_KEY_TEMPLATE,  # APNX is "Amazon page num xref" (i.e. page num map)
     names.FIXED_LAYOUT_DATA: FIXED_LAYOUT_DATA_TEMPLATE,
     names.SHARING_LIMITS: SHARING_LIMITS_TEMPLATE,
     names.LANGUAGE_STORE: LANGUAGE_STORE_TEMPLATE,
@@ -1100,5 +1269,6 @@ NAME_TO_TEMPLATE = {
     names.ANNOTATION_PERSONAL_BOOKMARK: ANNOTATION_PERSONAL_ELEMENT_TEMPLATE,
     names.ANNOTATION_PERSONAL_HIGHLIGHT: ANNOTATION_PERSONAL_ELEMENT_TEMPLATE,
     names.ANNOTATION_PERSONAL_NOTE: ANNOTATION_PERSONAL_ELEMENT_TEMPLATE,
-    names.ANNOTATION_PERSONAL_CLIP_ARTICLE: ANNOTATION_PERSONAL_ELEMENT_TEMPLATE,
+    names.ANNOTATION_PERSONAL_CLIP_ARTICLE:
+    ANNOTATION_PERSONAL_ELEMENT_TEMPLATE,
 }

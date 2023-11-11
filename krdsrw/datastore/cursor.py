@@ -52,8 +52,9 @@ class Cursor:
             b = bytearray()
             step = item.step if item.step is not None else 1
             self.seek((item.start if item.start is not None else 0) + step)
-            while (item.stop is None or self._data.tell() < item.stop
-                   ) and self._data.tell() < len(self._data.getbuffer()):
+            while (item.stop is None or self._data.tell()
+                   < item.stop) and self._data.tell() < len(
+                       self._data.getbuffer()):
                 b.extend(self._data.read(1))
                 self._data.seek(step, io.SEEK_CUR)
             self._data.seek(old_pos, io.SEEK_SET)
@@ -180,9 +181,7 @@ class Cursor:
     def read_byte(self, type_byte: bool = True) -> int:
         if type_byte and not self._eat_raw_byte(BYTE_TYPE_INDICATOR):
             raise UnexpectedDataTypeError(
-                self._data.tell(),
-                BYTE_TYPE_INDICATOR,
-                self._peek_raw_byte()
+                self._data.tell(), BYTE_TYPE_INDICATOR, self._peek_raw_byte()
             )
 
         return self._read_raw_byte()
@@ -196,9 +195,7 @@ class Cursor:
     def read_char(self, type_byte: bool = True) -> int:
         if type_byte and not self._eat_raw_byte(CHAR_TYPE_INDICATOR):
             raise UnexpectedDataTypeError(
-                self._data.tell(),
-                CHAR_TYPE_INDICATOR,
-                self._peek_raw_byte()
+                self._data.tell(), CHAR_TYPE_INDICATOR, self._peek_raw_byte()
             )
 
         return self._read_raw_byte()
@@ -212,9 +209,7 @@ class Cursor:
     def read_bool(self, type_byte: bool = True) -> bool:
         if type_byte and not self._eat_raw_byte(BOOL_TYPE_INDICATOR):
             raise UnexpectedDataTypeError(
-                self._data.tell(),
-                BOOL_TYPE_INDICATOR,
-                self._peek_raw_byte()
+                self._data.tell(), BOOL_TYPE_INDICATOR, self._peek_raw_byte()
             )
 
         return bool(self._read_raw_byte())
@@ -228,14 +223,11 @@ class Cursor:
     def read_int(self, type_byte: bool = True) -> int:
         if type_byte and not self._eat_raw_byte(INT_TYPE_INDICATOR):
             raise UnexpectedDataTypeError(
-                self._data.tell(),
-                INT_TYPE_INDICATOR,
-                self._peek_raw_byte()
+                self._data.tell(), INT_TYPE_INDICATOR, self._peek_raw_byte()
             )
 
         return struct.unpack_from(
-            ">l",
-            self._read_raw_bytes(struct.calcsize(">l"))
+            ">l", self._read_raw_bytes(struct.calcsize(">l"))
         )[0]
 
     def write_int(self, value: int, type_byte: bool = True):
@@ -247,14 +239,11 @@ class Cursor:
     def read_long(self, type_byte: bool = True) -> int:
         if type_byte and not self._eat_raw_byte(LONG_TYPE_INDICATOR):
             raise UnexpectedDataTypeError(
-                self._data.tell(),
-                LONG_TYPE_INDICATOR,
-                self._peek_raw_byte()
+                self._data.tell(), LONG_TYPE_INDICATOR, self._peek_raw_byte()
             )
 
         return struct.unpack_from(
-            ">q",
-            self._read_raw_bytes(struct.calcsize(">q"))
+            ">q", self._read_raw_bytes(struct.calcsize(">q"))
         )[0]
 
     def write_long(self, value: int, type_byte: bool = True):
@@ -266,14 +255,11 @@ class Cursor:
     def read_short(self, type_byte: bool = True) -> int:
         if type_byte and not self._eat_raw_byte(SHORT_TYPE_INDICATOR):
             raise UnexpectedDataTypeError(
-                self._data.tell(),
-                SHORT_TYPE_INDICATOR,
-                self._peek_raw_byte()
+                self._data.tell(), SHORT_TYPE_INDICATOR, self._peek_raw_byte()
             )
 
         return struct.unpack_from(
-            ">h",
-            self._read_raw_bytes(struct.calcsize(">h"))
+            ">h", self._read_raw_bytes(struct.calcsize(">h"))
         )[0]
 
     def write_short(self, value: int, type_byte: bool = True):
@@ -285,14 +271,11 @@ class Cursor:
     def read_float(self, type_byte: bool = True) -> float:
         if type_byte and not self._eat_raw_byte(FLOAT_TYPE_INDICATOR):
             raise UnexpectedDataTypeError(
-                self._data.tell(),
-                FLOAT_TYPE_INDICATOR,
-                self._peek_raw_byte()
+                self._data.tell(), FLOAT_TYPE_INDICATOR, self._peek_raw_byte()
             )
 
         return struct.unpack_from(
-            ">f",
-            self._read_raw_bytes(struct.calcsize(">f"))
+            ">f", self._read_raw_bytes(struct.calcsize(">f"))
         )[0]
 
     def write_float(self, value: float, type_byte: bool = True):
@@ -304,14 +287,11 @@ class Cursor:
     def read_double(self, type_byte: bool = True) -> int:
         if type_byte and not self._eat_raw_byte(DOUBLE_TYPE_INDICATOR):
             raise UnexpectedDataTypeError(
-                self._data.tell(),
-                DOUBLE_TYPE_INDICATOR,
-                self._peek_raw_byte()
+                self._data.tell(), DOUBLE_TYPE_INDICATOR, self._peek_raw_byte()
             )
 
         return struct.unpack_from(
-            ">d",
-            self._read_raw_bytes(struct.calcsize(">d"))
+            ">d", self._read_raw_bytes(struct.calcsize(">d"))
         )[0]
 
     def write_double(self, value: float, type_byte: bool = True):
@@ -323,16 +303,13 @@ class Cursor:
     def read_utf8str(self, type_byte: bool = True) -> None | str:
         if type_byte and not self._eat_raw_byte(UTF8STR_TYPE_INDICATOR):
             raise UnexpectedDataTypeError(
-                self._data.tell(),
-                UTF8STR_TYPE_INDICATOR,
-                self._peek_raw_byte()
+                self._data.tell(), UTF8STR_TYPE_INDICATOR, self._peek_raw_byte()
             )
         is_empty = bool(self._read_raw_byte())
         if not is_empty:
             # note: even if the is_empty byte is false, the actual str length can still be 0
             string_len = struct.unpack_from(
-                ">H",
-                self._read_raw_bytes(struct.calcsize(">H"))
+                ">H", self._read_raw_bytes(struct.calcsize(">H"))
             )[0]
             return self._read_raw_bytes(string_len).decode("utf-8")
         return None
