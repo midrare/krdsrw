@@ -21,7 +21,7 @@ class KindleAnnotation:
         return (
             f"{self.__class__.__name__}{{@{self.start_offset}:{self.end_offset}%s}}"
             % (
-                ' "' + self.note +
-                '"' if self.note and not self.note.isspace() else ""
+            ' "' + self.note
+            + '"' if self.note and not self.note.isspace() else ""
             )
         )

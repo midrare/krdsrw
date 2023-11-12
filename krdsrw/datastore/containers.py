@@ -236,21 +236,21 @@ class _CheckedDict(dict[K, V]):
             return self._val_maker[key].cls_
         return self._val_maker.cls_
 
-    def __contains__(self, key: K) -> bool:
+    def __contains__(self, key: int | float | str | K) -> bool:
         if not isinstance(key, self._key_cls):
             raise KeyError(
                 f'Key "{key}" is not of class {self._key_cls.__name__}'
             )
         return super().__contains__(key)
 
-    def __getitem__(self, key: K) -> V:
+    def __getitem__(self, key: int | float | str | K) -> V:
         if not isinstance(key, self._key_cls):
             raise KeyError(
                 f'Key "{key}" is not of class {self._key_cls.__name__}'
             )
         return super().__getitem__(key)
 
-    def __setitem__(self, key: K, item: V):
+    def __setitem__(self, key: int | float | str | K, item: V):
         if not isinstance(key, self._key_cls):
             raise KeyError(
                 f'Key "{key}" is not of class {self._key_cls.__name__}'
@@ -262,14 +262,14 @@ class _CheckedDict(dict[K, V]):
             )
         super().__setitem__(key, item)
 
-    def __delitem__(self, key: K) -> None:
+    def __delitem__(self, key: int | float | str | K) -> None:
         if not isinstance(key, self._key_cls):
             raise KeyError(
                 f'Key "{key}" is not of class {self._key_cls.__name__}'
             )
         super().__delitem__(key)
 
-    def _is_key_valid(self, key: K) -> bool:
+    def _is_key_valid(self, key: int | float | str | K) -> bool:
         if isinstance(self._val_maker, dict):
             return key in self._val_maker
         return True
@@ -293,7 +293,7 @@ class _CheckedDict(dict[K, V]):
         value: None | V = None) -> _CheckedDict[K, V]:
         raise NotImplementedError("Unsupported for this container")
 
-    def pop(self, key: K) -> V:
+    def pop(self, key: int | float | str | K) -> V:
         if not isinstance(key, self._key_cls):
             raise KeyError(
                 f'Key "{key}" is not of class {self._key_cls.__name__}'
@@ -303,7 +303,7 @@ class _CheckedDict(dict[K, V]):
     def popitem(self) -> typing.Tuple[K, V]:
         return super().popitem()
 
-    def setdefault(self, key: K, default: None | V) -> V:
+    def setdefault(self, key: int | float | str | K, default: None | V) -> V:
         if not isinstance(key, self._key_cls):
             raise KeyError(
                 f'Key "{key}" is not of class {self._key_cls.__name__}'
@@ -313,7 +313,7 @@ class _CheckedDict(dict[K, V]):
 
         return super().setdefault(key, default)
 
-    def update(self, m: typing.Mapping[K, V], **kwargs: V):
+    def update(self, m: typing.Mapping[int | float | str | K, V], **kwargs: V):
         d = dict(m) | kwargs
         for k, v in d.items():
             if not isinstance(k, self._key_cls):
@@ -325,7 +325,7 @@ class _CheckedDict(dict[K, V]):
 
         super().update(m, **kwargs)
 
-    def get(self, key: K) -> None | V:
+    def get(self, key: int | float | str | K) -> None | V:
         if not isinstance(key, self._key_cls):
             raise KeyError(
                 f'Key "{key}" is not of class {self._key_cls.__name__}'
@@ -340,7 +340,7 @@ class _CheckedDict(dict[K, V]):
             )
         return super().__eq__(o)
 
-    def compute_if_absent(self, key: K) -> V:
+    def compute_if_absent(self, key: int | float | str | K) -> V:
         if self._is_key_valid(key):
             raise KeyError(f'Key "{key}" is invalid for this container')
         if key not in self:

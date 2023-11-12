@@ -29,8 +29,6 @@ from .types import Long
 from .types import Float
 from .types import Double
 from .types import Utf8Str
-from .templatized import TemplatizedDict
-from .templatized import TemplatizedList
 from .value import Value
 
 __all__ = [
