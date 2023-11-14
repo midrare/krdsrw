@@ -79,10 +79,6 @@ def _is_type_compatible(t: type, cls_: type) -> bool:
     return issubclass(t, cls_)
 
 
-# WIP
-LastPageRead = dict
-
-
 class _TypeCheckedList(list[T]):
     def __init__(self, cls_: type[T]):
         super().__init__()
@@ -515,87 +511,89 @@ class Json(Value):
         return super().__eq__(other)
 
 
-# class LastPageRead(Value):  # aka LPR. this is kindle reading pos info
-#     EXTENDED_LPR_VERSION: typing.Final[int] = 2
+class LastPageRead(Value):  # aka LPR. this is kindle reading pos info
+    EXTENDED_LPR_VERSION: typing.Final[int] = 2
 
-#     def __init__(self):
-#         super().__init__()
-#         self._pos: Position = Position()
-#         self._timestamp: int = -1
-#         self._lpr_version: int = -1
+    def __init__(self):
+        super().__init__()
+        self._pos: Position = Position()
+        self._timestamp: int = -1
+        self._lpr_version: int = -1
 
-#     @property
-#     def pos(self) -> Position:
-#         return self._pos
+    @property
+    def pos(self) -> Position:
+        return self._pos
 
-#     @property
-#     def lpr_version(self) -> int:
-#         return self._lpr_version
+    @property
+    def lpr_version(self) -> int:
+        return self._lpr_version
 
-#     @lpr_version.setter
-#     def lpr_version(self, value: int):
-#         if not isinstance(value, int):
-#             raise TypeError(f"value is not of type {int.__name__}")
-#         self._lpr_version = value
+    @lpr_version.setter
+    def lpr_version(self, value: int):
+        if not isinstance(value, int):
+            raise TypeError(f"value is not of type {int.__name__}")
+        self._lpr_version = value
 
-#     @property
-#     def timestamp(self) -> int:
-#         return self._timestamp
+    @property
+    def timestamp(self) -> int:
+        return self._timestamp
 
-#     @timestamp.setter
-#     def timestamp(self, value: int):
-#         if not isinstance(value, int):
-#             raise TypeError(f"value is not of type {int.__name__}")
-#         self._timestamp = value
+    @timestamp.setter
+    def timestamp(self, value: int):
+        if not isinstance(value, int):
+            raise TypeError(f"value is not of type {int.__name__}")
+        self._timestamp = value
 
-#     def read(self, cursor: Cursor):
-#         self._pos.value = None
-#         self._pos.prefix = None
-#         self._timestamp = -1
-#         self._lpr_version = -1
+    def read(self, cursor: Cursor):
+        self._pos.value = -1
+        self._pos.chunk_eid = -1
+        self._pos.chunk_pos = -1
+        self._timestamp = -1
+        self._lpr_version = -1
 
-#         type_byte = cursor.peek()
-#         if type_byte == UTF8STR_TYPE_INDICATOR:
-#             # old LPR version'
-#             self._pos.read(cursor)
-#         elif type_byte == BYTE_TYPE_INDICATOR:
-#             # new LPR version
-#             self._lpr_version = cursor.read_byte()
-#             self._pos.read(cursor)
-#             self._timestamp = int(cursor.read_long())
-#         else:
-#             raise UnexpectedFieldError(
-#                 f"Expected Utf8Str or byte but got {type_byte}")
+        type_byte = cursor.peek()
+        if type_byte == UTF8STR_TYPE_INDICATOR:
+            # old LPR version'
+            self._pos.read(cursor)
+        elif type_byte == BYTE_TYPE_INDICATOR:
+            # new LPR version
+            self._lpr_version = cursor.read_byte()
+            self._pos.read(cursor)
+            self._timestamp = int(cursor.read_long())
+        else:
+            raise UnexpectedFieldError(
+                f"Expected Utf8Str or byte but got {type_byte}"
+            )
 
-#     def write(self, cursor: Cursor):
-#         # XXX may cause problems if kindle expects the original LPR format
-#         #   version when datastore file is re-written
-#         if self._timestamp is None or self._timestamp < 0:
-#             # old LPR version
-#             self._pos.write(cursor)
-#         else:
-#             # new LPR version
-#             lpr_version = max(self.EXTENDED_LPR_VERSION, self._lpr_version)
-#             cursor.write_byte(lpr_version)
-#             self._pos.write(cursor)
-#             cursor.write_long(self._timestamp)
+    def write(self, cursor: Cursor):
+        # XXX may cause problems if kindle expects the original LPR format
+        #   version when datastore file is re-written
+        if self._timestamp is None or self._timestamp < 0:
+            # old LPR version
+            self._pos.write(cursor)
+        else:
+            # new LPR version
+            lpr_version = max(self.EXTENDED_LPR_VERSION, self._lpr_version)
+            cursor.write_byte(lpr_version)
+            self._pos.write(cursor)
+            cursor.write_long(self._timestamp)
 
-#     def __eq__(self, other: Value) -> bool:
-#         if isinstance(other, self.__class__):
-#             return (
-#                 self._pos == other._pos and self._timestamp == other.timestamp
-#                 and self._lpr_version == other._lpr_version
-#             )
-#         return super().__eq__(other)
+    def __eq__(self, other: Value) -> bool:
+        if isinstance(other, self.__class__):
+            return (
+                self._pos == other._pos and self._timestamp == other.timestamp
+                and self._lpr_version == other._lpr_version
+            )
+        return super().__eq__(other)
 
-#     def __str__(self) -> str:
-#         return (
-#             self.__class__.__name__ + ":" + str({
-#             "lpr_version": self._lpr_version,
-#             "timestamp": self._timestamp,
-#             "pos": self._pos,
-#             })
-#         )
+    def __str__(self) -> str:
+        return (
+            self.__class__.__name__ + ":" + str({
+            "lpr_version": self._lpr_version,
+            "timestamp": self._timestamp,
+            "pos": self._pos,
+            })
+        )
 
 
 class Position(Value):
@@ -656,8 +654,7 @@ class Position(Value):
 
     def write(self, cursor: Cursor):
         s = ""
-        if (self._chunk_eid is not None and self._chunk_eid >= 0
-                and self._chunk_pos is not None and self._chunk_pos >= 0):
+        if self._chunk_eid >= 0 and self._chunk_pos >= 0:
             b_version = self.PREFIX_VERSION1.to_bytes(1, "little", signed=False)
             b_eid = self._chunk_eid.to_bytes(4, "little", signed=False)
             b_pos = self._chunk_pos.to_bytes(4, "little", signed=False)
