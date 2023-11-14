@@ -138,6 +138,9 @@ class _TypeCheckedList(list[T]):
     def extend(self, other: typing.Iterable[int | float | str | T]):
         super().extend(_convert_value(other, self._cls))
 
+    def count(self, o: typing.Any) -> int:
+        return super().count(o)
+
 
 class Array(_TypeCheckedList[T], Value):
     def __init__(self, maker: ValFactory[T]):
