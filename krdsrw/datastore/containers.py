@@ -78,7 +78,6 @@ def _is_type_compatible(t: type, cls_: type) -> bool:
 
 
 # WIP
-Json = object
 LastPageRead = int
 Position = int
 TimeZoneOffset = int
@@ -486,38 +485,35 @@ class DateTime(Value):
         return super().__eq__(other)
 
 
-# class Json(Value):
-#     def __init__(self):
-#         self._value: None | bool | int | float | str | list | dict = None
+class Json(Value):
+    def __init__(self):
+        self._value: None | bool | int | float | str | list | dict = None
 
-#     @property
-#     def value(self) -> None | bool | int | float | str | list | dict:
-#         return self._value
+    @property
+    def value(self) -> None | bool | int | float | str | list | dict:
+        return self._value
 
-#     @value.setter
-#     def value(self, value: None | bool | int | float | str | list | dict):
-#         if value is not None and not isinstance(value,
-#             (bool | int | float | str | list | dict)):
-#             class_names = [
-#                 c.__name__ for c in [bool | int | float | str | list | dict]
-#             ]
-#             raise TypeError(
-#                 f"value is not any of types {', '.join(class_names)}"
-#             )
-#         self._value = value
+    @value.setter
+    def value(self, value: None | bool | int | float | str | list | dict):
+        allowed = (bool, int, float, str, list, dict)
+        if value is not None and not isinstance(value, allowed):
+            class_names = ', '.join([c.__name__ for c in allowed])
+            raise TypeError(f"value is must be one of {class_names}")
+        self._value = value
 
-#     def read(self, cursor: Cursor):
-#         s = cursor.read_utf8str()
-#         self._value = json.loads(s) if s is not None and s else None
+    def read(self, cursor: Cursor):
+        s = cursor.read_utf8str()
+        self._value = json.loads(s) if s is not None and s else None
 
-#     def write(self, cursor: Cursor):
-#         s = json.dumps(self._value) if self._value is not None else ""
-#         cursor.write_utf8str(s)
+    def write(self, cursor: Cursor):
+        s = json.dumps(self._value) if self._value is not None else ""
+        cursor.write_utf8str(s)
 
-#     def __eq__(self, other: Value) -> bool:
-#         if isinstance(other, self.__class__):
-#             return self._value == other._value
-#         return super().__eq__(other)
+    def __eq__(self, other: Value) -> bool:
+        if isinstance(other, self.__class__):
+            return self._value == other._value
+        return super().__eq__(other)
+
 
 # class LastPageRead(Value):  # also known as LPR. LPR is kindle position info
 #     EXTENDED_LPR_VERSION: int = 2
