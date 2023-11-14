@@ -40,43 +40,43 @@ def _timer_model() -> ValFactory:
         _timer_model_factory = ValFactory(
             FixedMap,
             {
-            "version":
-            _long,
-            "total_time":
-            _long,
-            "total_words":
-            _long,
-            "total_percent":
-            _double,
+                "version":
+                _long,
+                "total_time":
+                _long,
+                "total_words":
+                _long,
+                "total_percent":
+                _double,
 
-  # timer.average.calculator
-            "average_calculator":
-            ValFactory(
-            FixedMap,
-            {
-            "samples1":
-            ValFactory(Array, _double),
-            "samples2":
-            ValFactory(Array, _double),
+                # timer.average.calculator
+                "average_calculator":
+                ValFactory(
+                    FixedMap,
+                    {
+                        "samples1":
+                        ValFactory(Array, _double),
+                        "samples2":
+                        ValFactory(Array, _double),
 
-            # timer.average.calculator.distribution.normal
-            "normal_distributions":
-            ValFactory(
-            Array,
-            ValFactory(
-            FixedMap, {
-            "count": _long,
-            "sum": _double,
-            "sum_of_squares": _double,
-            }
-            )
-            ),
+                        # timer.average.calculator.distribution.normal
+                        "normal_distributions":
+                        ValFactory(
+                            Array,
+                            ValFactory(
+                                FixedMap, {
+                                    "count": _long,
+                                    "sum": _double,
+                                    "sum_of_squares": _double,
+                                }
+                            )
+                        ),
 
-  # timer.average.calculator.outliers
-            "outliers":
-            ValFactory(Array, ValFactory(Array, _double)),
-            }
-            ),
+                        # timer.average.calculator.outliers
+                        "outliers":
+                        ValFactory(Array, ValFactory(Array, _double)),
+                    }
+                ),
             }
         )
 
@@ -89,25 +89,23 @@ def _font_prefs() -> ValFactory:
         from .containers import FixedMap
 
         _font_prefs_factory = ValFactory(
-            FixedMap,
-            {
-            "typeface": _utf8str,
-            "line_sp": _int,
-            "size": _int,
-            "align": _int,
-            "inset_top": _int,
-            "inset_left": _int,
-            "inset_bottom": _int,
-            "inset_right": _int,
-            "unknown1": _int,
-            },
-            {
-            "bold": _int,
-            "user_sideloadable_font": _utf8str,
-            "custom_font_index": _int,
-            "mobi7_system_font": _utf8str,
-            "mobi7_restore_font": _bool,
-            "reading_preset_selected": _utf8str,
+            FixedMap, {
+                "typeface": _utf8str,
+                "line_sp": _int,
+                "size": _int,
+                "align": _int,
+                "inset_top": _int,
+                "inset_left": _int,
+                "inset_bottom": _int,
+                "inset_right": _int,
+                "unknown1": _int,
+            }, {
+                "bold": _int,
+                "user_sideloadable_font": _utf8str,
+                "custom_font_index": _int,
+                "mobi7_system_font": _utf8str,
+                "mobi7_restore_font": _bool,
+                "reading_preset_selected": _utf8str,
             }
         )
 
@@ -121,14 +119,13 @@ def _reader_state_preferences() -> ValFactory:
 
         # reader.state.preferences
         _reader_state_preferences_factory = ValFactory(
-            FixedMap,
-            {
-            "font_preferences": _font_prefs(),
-            "left_margin": _int,
-            "right_margin": _int,
-            "top_margin": _int,
-            "bottom_margin": _int,
-            "unknown1": _bool,
+            FixedMap, {
+                "font_preferences": _font_prefs(),
+                "left_margin": _int,
+                "right_margin": _int,
+                "top_margin": _int,
+                "bottom_margin": _int,
+                "unknown1": _bool,
             }
         )
 
@@ -146,33 +143,33 @@ def _annotation_object_cache() -> ValFactory:
         _annotation_object_cache_factory = ValFactory(
             SwitchMap,
             {
-            0: "saved.avl.interval.tree",  # bookmarks
-            1: "saved.avl.interval.tree",  # highlights
-            2: "saved.avl.interval.tree",  # notes
-            3: "saved.avl.interval.tree",  # clip articles
+                0: "saved.avl.interval.tree",  # bookmarks
+                1: "saved.avl.interval.tree",  # highlights
+                2: "saved.avl.interval.tree",  # notes
+                3: "saved.avl.interval.tree",  # clip articles
             },
             {
-            # annotation.personal.bookmark
-            0:
-            ValFactory(
-            Array,
-            ValFactory(Value, _name="annotation.personal.bookmark"),
-            ),  # annotation.personal.highlight
-            1:
-            ValFactory(
-            Array,
-            ValFactory(Value, _name="annotation.personal.highlight"),
-            ),  # annotation.personal.note
-            2:
-            ValFactory(
-            Array,
-            ValFactory(Value, _name="annotation.personal.note"),
-            ),  # annotation.personal.clip_article
-            3:
-            ValFactory(
-            Array,
-            ValFactory(Value, _name="annotation.personal.clip_article"),
-            ),
+                # annotation.personal.bookmark
+                0:
+                ValFactory(
+                    Array,
+                    ValFactory(Value, _name="annotation.personal.bookmark"),
+                ),  # annotation.personal.highlight
+                1:
+                ValFactory(
+                    Array,
+                    ValFactory(Value, _name="annotation.personal.highlight"),
+                ),  # annotation.personal.note
+                2:
+                ValFactory(
+                    Array,
+                    ValFactory(Value, _name="annotation.personal.note"),
+                ),  # annotation.personal.clip_article
+                3:
+                ValFactory(
+                    Array,
+                    ValFactory(Value, _name="annotation.personal.clip_article"),
+                ),
             }
         )
 
@@ -191,15 +188,14 @@ def _annotation_personal() -> ValFactory:
         # annotation.personal.highlight
         # annotation.personal.note
         _annotation_personal_factory = ValFactory(
-            FixedMap,
-            {
-            "start_pos": Position,
-            "end_pos": Position,
-            "creation_time": DateTime,
-            "last_modification_time": DateTime,
-            "template": _utf8str,
+            FixedMap, {
+                "start_pos": Position,
+                "end_pos": Position,
+                "creation_time": DateTime,
+                "last_modification_time": DateTime,
+                "template": _utf8str,
             }, {
-            "note": _utf8str,
+                "note": _utf8str,
             }
         )
     return _annotation_personal_factory
@@ -262,112 +258,107 @@ def _name_to_factory() -> dict[str, None | ValFactory]:
             ValFactory(LastPageRead),
             "fpr":
             ValFactory(
-            FixedMap, {
-            "pos": ValFactory(Position),
-            },
-            {
-            "timestamp": ValFactory(DateTime),
-            "timezone_offset": TimeZoneOffset,
-            "country": _utf8str,
-            "device": _utf8str,
-            }
+                FixedMap, {
+                    "pos": ValFactory(Position),
+                }, {
+                    "timestamp": ValFactory(DateTime),
+                    "timezone_offset": TimeZoneOffset,
+                    "country": _utf8str,
+                    "device": _utf8str,
+                }
             ),
             "updated_lpr":
             ValFactory(
-            FixedMap, {
-            "pos": ValFactory(Position),
-            },
-            {
-            "timestamp": ValFactory(DateTime),
-            "timezone_offset": TimeZoneOffset,
-            "country": _utf8str,
-            "device": _utf8str,
-            }
+                FixedMap, {
+                    "pos": ValFactory(Position),
+                }, {
+                    "timestamp": ValFactory(DateTime),
+                    "timezone_offset": TimeZoneOffset,
+                    "country": _utf8str,
+                    "device": _utf8str,
+                }
             ),
 
-  # amzn page num xref (i.e. page num map)
+            # amzn page num xref (i.e. page num map)
             "apnx.key":
             ValFactory(
-            FixedMap,
-            {
-            "asin": _utf8str,
-            "cde_type": _utf8str,
-            "sidecar_available": _bool,
-            "opn_to_pos": ValFactory(Array, _int),
-            "first": _int,
-            "unknown1": _int,
-            "unknown2": _int,
-            "page_map": _utf8str,
-            }
+                FixedMap, {
+                    "asin": _utf8str,
+                    "cde_type": _utf8str,
+                    "sidecar_available": _bool,
+                    "opn_to_pos": ValFactory(Array, _int),
+                    "first": _int,
+                    "unknown1": _int,
+                    "unknown2": _int,
+                    "page_map": _utf8str,
+                }
             ),
             "fixed.layout.data":
             ValFactory(
-            FixedMap, {
-            "unknown1": _bool,
-            "unknown2": _bool,
-            "unknown3": _bool,
-            }
+                FixedMap, {
+                    "unknown1": _bool,
+                    "unknown2": _bool,
+                    "unknown3": _bool,
+                }
             ),
             "sharing.limits":
             ValFactory(
-            FixedMap,
-            {
-            # TODO discover structure for sharing.limits
-            "accumulated": None
-            }
+                FixedMap,
+                {
+                    # TODO discover structure for sharing.limits
+                    "accumulated": None
+                }
             ),
             "language.store":
             ValFactory(FixedMap, {
-            "language": _utf8str,
-            "unknown1": _int,
+                "language": _utf8str,
+                "unknown1": _int,
             }),
             "periodicals.view.state":
             ValFactory(FixedMap, {
-            "unknown1": _utf8str,
-            "unknown2": _int,
+                "unknown1": _utf8str,
+                "unknown2": _int,
             }),
             "purchase.state.data":
             ValFactory(
-            FixedMap, {
-            "state": _int,
-            "time": ValFactory(DateTime),
-            }
+                FixedMap, {
+                    "state": _int,
+                    "time": ValFactory(DateTime),
+                }
             ),
             "timer.data.store":
             ValFactory(
-            FixedMap,
-            {
-            "on": _bool,
-            "reading_timer_model": _timer_model(),
-            "version": _int,
-            }
+                FixedMap, {
+                    "on": _bool,
+                    "reading_timer_model": _timer_model(),
+                    "version": _int,
+                }
             ),
             "timer.data.store.v2":
             ValFactory(
-            FixedMap,
-            {
-            "on": _bool,
-            "reading_timer_model": _timer_model(),
-            "version": _int,
-            "last_option": _int,
-            }
+                FixedMap, {
+                    "on": _bool,
+                    "reading_timer_model": _timer_model(),
+                    "version": _int,
+                    "last_option": _int,
+                }
             ),
             "book.info.store":
             ValFactory(
-            FixedMap, {
-            "num_words": _long,
-            "percent_of_book": _double,
-            }
+                FixedMap, {
+                    "num_words": _long,
+                    "percent_of_book": _double,
+                }
             ),
             "page.history.store":
             ValFactory(
-            Array,
-            ValFactory(
-            FixedMap, {
-            "pos": ValFactory(Position),
-            "time": ValFactory(DateTime),
-            }
-            )
+                Array,
+                ValFactory(
+                    FixedMap, {
+                        "pos": ValFactory(Position),
+                        "time": ValFactory(DateTime),
+                    }
+                )
             ),
             "reader.state.preferences":
             _reader_state_preferences(),

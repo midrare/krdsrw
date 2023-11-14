@@ -70,9 +70,9 @@ class Cursor:
             b = bytearray()
             step = item.step if item.step is not None else 1
             self.seek((item.start if item.start is not None else 0) + step)
-            while (item.stop is None
-                or self._data.tell() < item.stop) and self._data.tell() < len(
-                self._data.getbuffer()):
+            while (item.stop is None or self._data.tell()
+                   < item.stop) and self._data.tell() < len(
+                       self._data.getbuffer()):
                 b.extend(self._data.read(1))
                 self._data.seek(step, io.SEEK_CUR)
             self._data.seek(old_pos, io.SEEK_SET)
@@ -246,7 +246,7 @@ class Cursor:
 
         return Int(
             struct.unpack_from(
-            ">l", self._read_raw_bytes(struct.calcsize(">l"))
+                ">l", self._read_raw_bytes(struct.calcsize(">l"))
             )[0]
         )
 
@@ -264,7 +264,7 @@ class Cursor:
 
         return Long(
             struct.unpack_from(
-            ">q", self._read_raw_bytes(struct.calcsize(">q"))
+                ">q", self._read_raw_bytes(struct.calcsize(">q"))
             )[0]
         )
 
@@ -282,7 +282,7 @@ class Cursor:
 
         return Short(
             struct.unpack_from(
-            ">h", self._read_raw_bytes(struct.calcsize(">h"))
+                ">h", self._read_raw_bytes(struct.calcsize(">h"))
             )[0]
         )
 
@@ -300,7 +300,7 @@ class Cursor:
 
         return Float(
             struct.unpack_from(
-            ">f", self._read_raw_bytes(struct.calcsize(">f"))
+                ">f", self._read_raw_bytes(struct.calcsize(">f"))
             )[0]
         )
 
@@ -318,7 +318,7 @@ class Cursor:
 
         return Double(
             struct.unpack_from(
-            ">d", self._read_raw_bytes(struct.calcsize(">d"))
+                ">d", self._read_raw_bytes(struct.calcsize(">d"))
             )[0]
         )
 
@@ -331,9 +331,7 @@ class Cursor:
     def read_utf8str(self, type_byte: bool = True) -> Utf8Str:
         if type_byte and not self._eat_raw_byte(UTF8STR_TYPE_INDICATOR):
             raise UnexpectedDataTypeError(
-                self._data.tell(),
-                UTF8STR_TYPE_INDICATOR,
-                self._peek_raw_byte()
+                self._data.tell(), UTF8STR_TYPE_INDICATOR, self._peek_raw_byte()
             )
         is_empty = bool(self._read_raw_byte())
         if is_empty:
@@ -408,8 +406,7 @@ class Cursor:
         )
 
     def write_auto(
-        self,
-        value: Byte | Char | Bool | Short
+        self, value: Byte | Char | Bool | Short
         | Int | Long | Float | Double | Utf8Str
     ):
         if isinstance(value, Byte):

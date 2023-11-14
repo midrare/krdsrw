@@ -102,9 +102,8 @@ class _TypeCheckedList(list[T]):
         ...
 
     def __setitem__(
-        self,
-        i: typing.SupportsIndex | slice,
-        o: int | float | str | T | typing.Iterable[int | float | str | T]
+        self, i: typing.SupportsIndex | slice, o: int | float | str
+        | T | typing.Iterable[int | float | str | T]
     ):
         if not isinstance(i, slice):
             o = _convert_value(o, self._cls)
@@ -164,8 +163,7 @@ class Array(_TypeCheckedList[T], Value):
 
 class _TypeCheckedDict(collections.OrderedDict[K, T]):
     def __init__(
-        self,
-        key_cls: type[K],
+        self, key_cls: type[K],
         val_maker: ValFactory[T] | dict[K, ValFactory[T]]
     ):
         super().__init__()
@@ -233,7 +231,7 @@ class _TypeCheckedDict(collections.OrderedDict[K, T]):
             raise TypeError(f'Key(s) is of wrong type for this container')
 
         if not all(_is_val_compatible(e, self._key_to_val_cls(e))
-            for e in d.values()):
+                   for e in d.values()):
             raise TypeError(f"Value(s) is of wrong class for this container")
 
         for key in list(d.keys()):
@@ -589,9 +587,9 @@ class LastPageRead(Value):  # aka LPR. this is kindle reading pos info
     def __str__(self) -> str:
         return (
             self.__class__.__name__ + ":" + str({
-            "lpr_version": self._lpr_version,
-            "timestamp": self._timestamp,
-            "pos": self._pos,
+                "lpr_version": self._lpr_version,
+                "timestamp": self._timestamp,
+                "pos": self._pos,
             })
         )
 
