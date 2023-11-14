@@ -3,6 +3,7 @@ import base64
 import collections
 import collections.abc
 import copy
+import inspect
 import json
 import typing
 import warnings
@@ -77,8 +78,6 @@ def _is_type_compatible(t: type, cls_: type) -> bool:
 
 
 # WIP
-NameMap = dict
-NamedValue = dict
 DateTime = int
 Json = object
 LastPageRead = int
@@ -177,8 +176,10 @@ class _TypeCheckedDict(collections.OrderedDict[K, T]):
     ):
         super().__init__()
         self._key_cls: type[K] = key_cls
-        self._val_maker: ValFactory[T] | dict[K, ValFactory[T]] \
-        = copy.deepcopy(val_maker)
+        self._val_maker: ValFactory[T] \
+        | dict[K, ValFactory[T]] \
+        | typing.Callable[[K], None|ValFactory[T]] \
+        = copy.copy(val_maker)
 
     @property
     def key_cls(self) -> type[K]:
@@ -193,6 +194,11 @@ class _TypeCheckedDict(collections.OrderedDict[K, T]):
     def _key_to_val_cls(self, key: K) -> type[T]:
         if isinstance(self._val_maker, dict):
             return self._val_maker[key].cls_
+        if callable(self._val_maker):
+            maker = self._val_maker(key)
+            assert maker, f'no factory for \"{key}\".'
+            return maker.cls_
+
         return self._val_maker.cls_
 
     def __setitem__(self, key: K, item: int | float | str | T):
@@ -203,11 +209,17 @@ class _TypeCheckedDict(collections.OrderedDict[K, T]):
     def _is_key_allowed(self, key: K) -> bool:
         if isinstance(self._val_maker, dict):
             return key in self._val_maker
+        if callable(self._val_maker):
+            return bool(self._val_maker(key))
         return True
 
     def _make_val(self, key: K) -> T:
         if isinstance(self._val_maker, dict):
             return self._val_maker[key].create()
+        if callable(self._val_maker):
+            maker = self._val_maker(key)
+            assert maker, f'no factory for \"{key}\".'
+            return maker.create()
         return self._val_maker.create()
 
     @classmethod
@@ -424,42 +436,30 @@ class SwitchMap(_TypeCheckedDict[int, Value], Value):
         return super().__eq__(other)
 
 
-# class NameMap(_CheckedDict[str, NamedValue], Value):
-#     def __init__(self):
-#         _CheckedDict.__init__(
-#             self,
-#             str,
-#             {
-#             name: ValFactory(NamedValue, name)
-#             for name in NAME_TO_FACTORY.keys()
-#             }
-#         )
-#         Value.__init__(self)
+class NameMap(_TypeCheckedDict[str, Value], Value):
+    def __init__(self):
+        _TypeCheckedDict.__init__(self, str, names.get_maker_by_name)
+        Value.__init__(self)
 
-#     def read(self, cursor: Cursor):
-#         self.clear()
-#         size = cursor.read_int()
-#         for _ in range(size):
-#             name = NamedValue.peek_name(cursor)
-#             assert name
-#             value = NamedValue(name)
-#             value.read(cursor)
-#             self[name] = value
+    def read(self, cursor: Cursor):
+        self.clear()
+        size = cursor.read_int()
+        for _ in range(size):
+            name = cursor.peek_demarcated_name()
+            assert name, 'object must have non-blank name'
+            self[name] = cursor.read_demarcated_value()
 
-#     def write(self, cursor: Cursor):
-#         cursor.write_int(len(self))
-#         for name, value in self.items():
-#             assert name == value.name, "name mismatch"
-#             value.write(cursor)
+    def write(self, cursor: Cursor):
+        cursor.write_int(len(self))
+        for name, value in self.items():
+            assert name == value.name, "object name mismatch"
+            value.write(cursor)
 
-#     def __eq__(self, other: Value) -> bool:
-#         if isinstance(other, self.__class__):
-#             return dict(self) == dict(other)
-#         return super().__eq__(other)
+    def __eq__(self, other: Value) -> bool:
+        if isinstance(other, self.__class__):
+            return dict(self) == dict(other)
+        return super().__eq__(other)
 
-#     @staticmethod
-#     def _make_value(name: str) -> NamedValue:
-#         return NamedValue(name)
 
 # class DateTime(Value):
 #     def __init__(self):
