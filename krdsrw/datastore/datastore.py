@@ -4,8 +4,8 @@ import typing
 from .types import *
 from .containers import *
 from .cursor import Cursor
+from .cursor import Value
 from .error import *
-from .value import Value
 
 
 class DataStore(Value):
@@ -51,7 +51,7 @@ class DataStore(Value):
         cursor.write_long(DataStore.FIXED_MYSTERY_NUM)
         self.value.write(cursor)
 
-    def __eq__(self, other: Value) -> bool:
+    def __eq__(self, other: typing.Any) -> bool:
         if isinstance(other, self.__class__):
             return self.value == other.value
         return super().__eq__(other)

@@ -12,6 +12,8 @@ from . import names
 from .constants import BYTE_TYPE_INDICATOR
 from .constants import UTF8STR_TYPE_INDICATOR
 from .cursor import Cursor
+from .cursor import Value
+from .cursor import ValFactory
 from .error import *
 from .types import ALL_BASIC_TYPES
 from .types import Basic
@@ -24,8 +26,6 @@ from .types import Long
 from .types import Float
 from .types import Double
 from .types import Utf8Str
-from .value import Value
-from .value import ValFactory
 
 K = typing.TypeVar("K", bound=int | float | str)
 T = typing.TypeVar("T", bound=Byte | Char | Bool | Short | Int | Long \
@@ -84,7 +84,7 @@ class _TypeCheckedList(list[T]):
         super().__init__()
         self._cls: typing.Final[type[T]] = cls_
 
-    def __eq__(self, o: object) -> bool:
+    def __eq__(self, o: typing.Any) -> bool:
         if isinstance(o, self.__class__):
             return self._cls == o._cls and list(self) == list(o)
         return super().__eq__(o)
@@ -241,7 +241,7 @@ class _TypeCheckedDict(collections.OrderedDict[K, T]):
 
         super().update(d)
 
-    def __eq__(self, o: object) -> bool:
+    def __eq__(self, o: typing.Any) -> bool:
         if isinstance(o, self.__class__):
             return (
                 o._key_cls == self._key_cls \
@@ -281,7 +281,7 @@ class DynamicMap(_TypeCheckedDict[str, T], Value):
             cursor.write_utf8str(key)
             _write_value(cursor, value)
 
-    def __eq__(self, other: Value) -> bool:
+    def __eq__(self, other: typing.Any) -> bool:
         if isinstance(other, self.__class__):
             return dict(self) == dict(other)
         return super().__eq__(other)
@@ -349,7 +349,7 @@ class FixedMap(_TypeCheckedDict[str, T], Value):
             assert isinstance(value, val_maker.cls_)
             _write_value(cursor, value)
 
-    def __eq__(self, other: Value) -> bool:
+    def __eq__(self, other: typing.Any) -> bool:
         if isinstance(other, self.__class__):
             return (
                 self._required == other._required
@@ -449,7 +449,7 @@ class NameMap(_TypeCheckedDict[str, Value], Value):
             assert name == value.name, "object name mismatch"
             value.write(cursor)
 
-    def __eq__(self, other: Value) -> bool:
+    def __eq__(self, other: typing.Any) -> bool:
         if isinstance(other, self.__class__):
             return dict(self) == dict(other)
         return super().__eq__(other)
@@ -475,7 +475,7 @@ class DateTime(Value):
     def write(self, cursor: Cursor):
         cursor.write_long(max(-1, self._value))
 
-    def __eq__(self, other: Value) -> bool:
+    def __eq__(self, other: typing.Any) -> bool:
         if isinstance(other, self.__class__):
             return self._value == other._value
         return super().__eq__(other)
@@ -505,7 +505,7 @@ class Json(Value):
         s = json.dumps(self._value) if self._value is not None else ""
         cursor.write_utf8str(s)
 
-    def __eq__(self, other: Value) -> bool:
+    def __eq__(self, other: typing.Any) -> bool:
         if isinstance(other, self.__class__):
             return self._value == other._value
         return super().__eq__(other)
@@ -578,7 +578,7 @@ class LastPageRead(Value):  # aka LPR. this is kindle reading pos info
             self._pos.write(cursor)
             cursor.write_long(self._timestamp)
 
-    def __eq__(self, other: Value) -> bool:
+    def __eq__(self, other: typing.Any) -> bool:
         if isinstance(other, self.__class__):
             return (
                 self._pos == other._pos and self._timestamp == other.timestamp
@@ -665,7 +665,7 @@ class Position(Value):
         )
         cursor.write_utf8str(s)
 
-    def __eq__(self, other: Value) -> bool:
+    def __eq__(self, other: typing.Any) -> bool:
         if isinstance(other, self.__class__):
             return self._value == other._value \
             and self._chunk_eid == other._chunk_eid \
@@ -702,7 +702,7 @@ class TimeZoneOffset(Value):
     def write(self, cursor: Cursor):
         cursor.write_long(max(-1, self._value))
 
-    def __eq__(self, other: Value) -> bool:
+    def __eq__(self, other: typing.Any) -> bool:
         if isinstance(other, self.__class__):
             return self._value == other._value
 

@@ -10,6 +10,7 @@ from .containers import Position
 from .containers import SwitchMap
 from .containers import TimeZoneOffset
 from .cursor import Cursor
+from .cursor import Value
 from .datastore import DataStore
 from .error import DemarcationError
 from .error import UnexpectedFieldError
@@ -27,7 +28,6 @@ from .types import Long
 from .types import Float
 from .types import Double
 from .types import Utf8Str
-from .value import Value
 
 __all__ = [
     "Cursor",

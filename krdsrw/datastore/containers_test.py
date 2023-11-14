@@ -1,9 +1,9 @@
 import pytest
 
 from .cursor import Cursor
+from .cursor import ValFactory
 from .containers import Array
 from .containers import DynamicMap
-from .containers import ValFactory
 from .types import Int
 
 

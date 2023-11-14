@@ -9,7 +9,7 @@ from .types import Long
 from .types import Float
 from .types import Double
 from .types import Utf8Str
-from .value import ValFactory
+from .cursor import ValFactory
 
 _bool: typing.Final[ValFactory[Bool]] = ValFactory(Bool)
 _byte: typing.Final[ValFactory[Byte]] = ValFactory(Byte)

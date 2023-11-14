@@ -1,9 +1,10 @@
 from __future__ import annotations
+import abc
+import collections
 import io
 import struct
 import typing
 
-from . import keys
 from . import names
 from .constants import BOOL_TYPE_INDICATOR
 from .constants import INT_TYPE_INDICATOR
@@ -19,7 +20,8 @@ from .constants import OBJECT_END_INDICATOR
 from .error import MagicStrNotFoundError
 from .error import UnexpectedDataTypeError
 from .error import DemarcationError
-from .error import UnexpectedNameError
+from .types import ALL_BASIC_TYPES
+from .types import Basic
 from .types import Byte
 from .types import Char
 from .types import Bool
@@ -29,8 +31,6 @@ from .types import Long
 from .types import Float
 from .types import Double
 from .types import Utf8Str
-from .value import Value
-from .value import ValFactory
 
 
 class Cursor:
@@ -358,8 +358,10 @@ class Cursor:
             self._write_raw_bytes(encoded)
 
 
-    def read_auto(self, cls_: None|typing.Type[Byte]| typing.Type[Char] | typing.Type[Bool] | typing.Type[Short] | typing.Type[Int] \
-        | typing.Type[Long] | typing.Type[Float] | typing.Type[Double] | typing.Type[Utf8Str] = None) -> Byte | Char | Bool | Short | Int \
+    def read_auto(self, cls_: None|typing.Type[Byte]| typing.Type[Char] \
+        | typing.Type[Bool] | typing.Type[Short] | typing.Type[Int] \
+        | typing.Type[Long] | typing.Type[Float] | typing.Type[Double] \
+        | typing.Type[Utf8Str] = None) -> Byte | Char | Bool | Short | Int \
         | Long | Float | Double | Utf8Str:
 
         if isinstance(cls_, Byte):
@@ -449,7 +451,7 @@ class Cursor:
         ch = self.read()
         if ch == OBJECT_BEGIN_INDICATOR:
             name = self.read_utf8str(False)
-            fct = NAME_TO_FACTORY[name]
+            fct = names.get_maker_by_name(name)
             assert fct, f'Unsupported name \"{name}\".'
             cls_ = fct.cls_
         self.restore()
@@ -460,7 +462,7 @@ class Cursor:
             raise DemarcationError(f"Object start not found @{self.tell()}")
 
         name = self.read_utf8str(False)
-        fct = NAME_TO_FACTORY[name]
+        fct = names.get_maker_by_name(name)
         assert fct, f'Unsupported name \"{name}\".'
         value = fct.read_from(self)
         value._name = name  # TODO do not access private members
@@ -476,3 +478,76 @@ class Cursor:
         self.write_utf8str(o.name, False)
         o.write(self)
         self.write(OBJECT_END_INDICATOR)
+
+
+class Value(metaclass=abc.ABCMeta):
+    def __init__(self, _name: None | str = None):
+        super().__init__()
+        self._name: str = _name or ''
+
+    @abc.abstractmethod
+    def read(self, cursor: Cursor):
+        raise NotImplementedError(
+            "This method must be implemented by the subclass."
+        )
+
+    @abc.abstractmethod
+    def write(self, cursor: Cursor):
+        raise NotImplementedError(
+            "This method must be implemented by the subclass."
+        )
+
+    @abc.abstractmethod
+    def __eq__(self, other: typing.Self) -> bool:
+        raise NotImplementedError(
+            "This method must be implemented by the subclass."
+        )
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+    def __str__(self) -> str:
+        return f"{self.__class__.__name__}{{{self._name}}}"
+
+
+T = typing.TypeVar("T", bound=Byte | Char | Bool | Short | Int | Long \
+    | Float | Double | Utf8Str | Value)
+
+
+class ValFactory(typing.Generic[T]):
+    def __init__(self, cls_: type[T], *args, **kwargs):
+        super().__init__()
+
+        if not any(issubclass(cls_, c) for c in ALL_BASIC_TYPES) \
+        and issubclass(cls_, Value):
+            raise TypeError(f"Unsupported type \"{type(cls_).__name__}\".")
+
+        self._cls: typing.Final[type[T]] = cls_
+        self._args: typing.Final[list] = list(args)
+        self._kwargs: typing.Final[dict] = collections.OrderedDict(kwargs)
+
+    @property
+    def cls_(self) -> type[T]:
+        return self._cls
+
+    def create(self) -> T:
+        return self._cls(*self._args, **self._kwargs)
+
+    def read_from(self, cursor: Cursor) -> T:
+        if issubclass(self._cls, Basic):
+            return cursor.read_auto(self._cls)  # type: ignore
+        assert issubclass(self._cls, Value), 'class is not subclass of Value'
+        val = self._cls(*self._args, **self._kwargs)
+        val.read(cursor)
+        return val
+
+    def is_basic(self) -> bool:
+        return issubclass(self._cls, Basic)
+
+    def __eq__(self, o: typing.Any) -> bool:
+        if isinstance(o, self.__class__):
+            return self._cls == o._cls \
+            and self._args == o._args \
+            and self._kwargs == o._kwargs
+        return super().__eq__(o)

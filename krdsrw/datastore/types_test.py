@@ -1,5 +1,4 @@
 from . import cursor
-from . import factory
 from . import types
 
 
