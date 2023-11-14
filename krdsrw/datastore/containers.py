@@ -545,7 +545,7 @@ class LastPageRead(Value):  # aka LPR. this is kindle reading pos info
         self._timestamp = value
 
     def read(self, cursor: Cursor):
-        self._pos.value = -1
+        self._pos.char_pos = -1
         self._pos.chunk_eid = -1
         self._pos.chunk_pos = -1
         self._timestamp = -1
@@ -625,11 +625,11 @@ class Position(Value):
         self._chunk_pos = value
 
     @property
-    def value(self) -> int:
+    def char_pos(self) -> int:
         return self._value
 
-    @value.setter
-    def value(self, value: int):
+    @char_pos.setter
+    def char_pos(self, value: int):
         if not isinstance(value, int):
             raise TypeError(f"value is not of type {int.__name__}")
         self._value = value
