@@ -9,6 +9,8 @@ import typing
 import warnings
 
 from . import names
+from .constants import BYTE_TYPE_INDICATOR
+from .constants import UTF8STR_TYPE_INDICATOR
 from .cursor import Cursor
 from .error import *
 from .types import ALL_BASIC_TYPES
@@ -78,8 +80,7 @@ def _is_type_compatible(t: type, cls_: type) -> bool:
 
 
 # WIP
-LastPageRead = int
-Position = int
+LastPageRead = dict
 TimeZoneOffset = int
 
 
@@ -515,8 +516,8 @@ class Json(Value):
         return super().__eq__(other)
 
 
-# class LastPageRead(Value):  # also known as LPR. LPR is kindle position info
-#     EXTENDED_LPR_VERSION: int = 2
+# class LastPageRead(Value):  # aka LPR. this is kindle reading pos info
+#     EXTENDED_LPR_VERSION: typing.Final[int] = 2
 
 #     def __init__(self):
 #         super().__init__()
@@ -529,12 +530,12 @@ class Json(Value):
 #         return self._pos
 
 #     @property
-#     def lpr_version(self) -> None | int:
+#     def lpr_version(self) -> int:
 #         return self._lpr_version
 
 #     @lpr_version.setter
-#     def lpr_version(self, value: None | int):
-#         if value is not None and not isinstance(value, int):
+#     def lpr_version(self, value: int):
+#         if not isinstance(value, int):
 #             raise TypeError(f"value is not of type {int.__name__}")
 #         self._lpr_version = value
 
@@ -544,7 +545,7 @@ class Json(Value):
 
 #     @timestamp.setter
 #     def timestamp(self, value: int):
-#         if value is not None and not isinstance(value, int):
+#         if not isinstance(value, int):
 #             raise TypeError(f"value is not of type {int.__name__}")
 #         self._timestamp = value
 
@@ -565,8 +566,7 @@ class Json(Value):
 #             self._timestamp = int(cursor.read_long())
 #         else:
 #             raise UnexpectedFieldError(
-#                 "Expected Utf8Str or byte but got %d" % type_byte
-#             )
+#                 f"Expected Utf8Str or byte but got {type_byte}")
 
 #     def write(self, cursor: Cursor):
 #         # XXX may cause problems if kindle expects the original LPR format
@@ -598,118 +598,93 @@ class Json(Value):
 #             })
 #         )
 
-# class Position(Value):
-#     PREFIX_VERSION1: int = 0x01
 
-#     def __init__(self):
-#         self._chunk_eid: None | int = -1
-#         self._chunk_pos: None | int = -1
-#         self._value: None | int = -1
+class Position(Value):
+    PREFIX_VERSION1: typing.Final[int] = 0x01
 
-#     @property
-#     def chunk_eid(self) -> None | int:
-#         return self._chunk_eid
+    def __init__(self):
+        self._chunk_eid: int = -1
+        self._chunk_pos: int = -1
+        self._value: int = -1
 
-#     @chunk_eid.setter
-#     def chunk_eid(self, value: None | int):
-#         if value is not None and not isinstance(value, int):
-#             raise TypeError(f"value is not of type {int.__name__}")
-#         self._chunk_eid = value
+    @property
+    def chunk_eid(self) -> int:
+        return self._chunk_eid
 
-#     @property
-#     def chunk_pos(self) -> None | int:
-#         return self._chunk_pos
+    @chunk_eid.setter
+    def chunk_eid(self, value: int):
+        if not isinstance(value, int):
+            raise TypeError(f"value is not of type {int.__name__}")
+        self._chunk_eid = value
 
-#     @chunk_pos.setter
-#     def chunk_pos(self, value: None | int):
-#         if value is not None and not isinstance(value, int):
-#             raise TypeError(f"value is not of type {int.__name__}")
-#         self._chunk_pos = value
+    @property
+    def chunk_pos(self) -> int:
+        return self._chunk_pos
 
-#     @property
-#     def value(self) -> None | int:
-#         return self._value
+    @chunk_pos.setter
+    def chunk_pos(self, value: int):
+        if not isinstance(value, int):
+            raise TypeError(f"value is not of type {int.__name__}")
+        self._chunk_pos = value
 
-#     @value.setter
-#     def value(self, value: None | int):
-#         if value is not None and not isinstance(value, int):
-#             raise TypeError(f"value is not of type {int.__name__}")
-#         self._value = value
+    @property
+    def value(self) -> int:
+        return self._value
 
-#     def read(self, cursor: Cursor):
-#         s = cursor.read_utf8str()
-#         split = s.split(":", 2)
-#         if len(split) > 1:
-#             b = base64.b64decode(split[0])
-#             version = b[0]
-#             if version == self.PREFIX_VERSION1:
-#                 self._chunk_eid = int.from_bytes(b[1:5], "little")
-#                 self._chunk_pos = int.from_bytes(b[5:9], "little")
-#             else:
-#                 # TODO throw a proper exception
-#                 raise Exception(
-#                     "Unrecognized position version 0x%02x" % version
-#                 )
-#             self._value = int(split[1])
-#         else:
-#             self._value = int(s)
+    @value.setter
+    def value(self, value: int):
+        if not isinstance(value, int):
+            raise TypeError(f"value is not of type {int.__name__}")
+        self._value = value
 
-#     def write(self, cursor: Cursor):
-#         s = ""
-#         if (self._chunk_eid is not None and self._chunk_eid >= 0
-#                 and self._chunk_pos is not None and self._chunk_pos >= 0):
-#             b_version = self.PREFIX_VERSION1.to_bytes(1, "little", signed=False)
-#             b_eid = self._chunk_eid.to_bytes(4, "little", signed=False)
-#             b_pos = self._chunk_pos.to_bytes(4, "little", signed=False)
-#             s += base64.b64encode(b_version + b_eid + b_pos).decode("ascii")
-#             s += ":"
-#         s += str(
-#             self._value if self._value is not None and self._value >= 0 else -1
-#         )
-#         cursor.write_utf8str(s)
+    def read(self, cursor: Cursor):
+        s = cursor.read_utf8str()
+        split = s.split(":", 2)
+        if len(split) > 1:
+            b = base64.b64decode(split[0])
+            version = b[0]
+            if version == self.PREFIX_VERSION1:
+                self._chunk_eid = int.from_bytes(b[1:5], "little")
+                self._chunk_pos = int.from_bytes(b[5:9], "little")
+            else:
+                # TODO throw a proper exception
+                raise Exception(
+                    "Unrecognized position version 0x%02x" % version
+                )
+            self._value = int(split[1])
+        else:
+            self._value = int(s)
 
-#     def __eq__(self, other: Value) -> bool:
-#         if isinstance(other, self.__class__):
-#             val1 = (
-#                 self._value
-#                 if self._value is not None and self._value >= 0 else -1
-#             )
-#             val2 = (
-#                 other._value
-#                 if other._value is not None and other._value >= 0 else -1
-#             )
-#             eid1 = (
-#                 self._chunk_eid if self._chunk_eid is not None
-#                 and self._chunk_eid >= 0 else None
-#             )
-#             eid2 = (
-#                 other._chunk_eid if other._chunk_eid is not None
-#                 and other._chunk_eid >= 0 else None
-#             )
-#             pos1 = (
-#                 self._chunk_pos if self._chunk_pos is not None
-#                 and self._chunk_pos >= 0 else None
-#             )
-#             pos2 = (
-#                 other._chunk_pos if other._chunk_pos is not None
-#                 and other._chunk_pos >= 0 else None
-#             )
-#             return val1 == val2 and eid1 == eid2 and pos1 == pos2
-#         return super().__eq__(other)
+    def write(self, cursor: Cursor):
+        s = ""
+        if (self._chunk_eid is not None and self._chunk_eid >= 0
+                and self._chunk_pos is not None and self._chunk_pos >= 0):
+            b_version = self.PREFIX_VERSION1.to_bytes(1, "little", signed=False)
+            b_eid = self._chunk_eid.to_bytes(4, "little", signed=False)
+            b_pos = self._chunk_pos.to_bytes(4, "little", signed=False)
+            s += base64.b64encode(b_version + b_eid + b_pos).decode("ascii")
+            s += ":"
+        s += str(
+            self._value if self._value is not None and self._value >= 0 else -1
+        )
+        cursor.write_utf8str(s)
 
-#     def __str__(self) -> str:
-#         d = {
-#             "chunk_eid": self._chunk_eid,
-#             "chunk_pos": self._chunk_pos,
-#             "char_pos": self._value,
-#         }
-#         d = {
-#             k: v
-#             for k,
-#             v in d.items()
-#             if v is not None and not (isinstance(v, int) or v >= 0)
-#         }
-#         return f"{self.__class__.__name__}{str(d)}"
+    def __eq__(self, other: Value) -> bool:
+        if isinstance(other, self.__class__):
+            return self._value == other._value \
+            and self._chunk_eid == other._chunk_eid \
+            and self._chunk_pos == other._chunk_pos
+        return super().__eq__(other)
+
+    def __str__(self) -> str:
+        d = {
+            "chunk_eid": self._chunk_eid,
+            "chunk_pos": self._chunk_pos,
+            "char_pos": self._value,
+        }
+        d = { k: v for k, v in d.items() if v >= 0 }
+        return f"{self.__class__.__name__}{str(d)}"
+
 
 # class TimeZoneOffset(Value):
 #     def __init__(self):
