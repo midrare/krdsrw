@@ -78,7 +78,6 @@ def _is_type_compatible(t: type, cls_: type) -> bool:
 
 
 # WIP
-DateTime = int
 Json = object
 LastPageRead = int
 Position = int
@@ -461,40 +460,31 @@ class NameMap(_TypeCheckedDict[str, Value], Value):
         return super().__eq__(other)
 
 
-# class DateTime(Value):
-#     def __init__(self):
-#         self._value: None | int = -1  # -1 is null
+class DateTime(Value):
+    def __init__(self):
+        self._value: int = -1  # -1 is null
 
-#     @property
-#     def value(self) -> None | int:
-#         return self._value
+    @property
+    def value(self) -> int:
+        return self._value
 
-#     @value.setter
-#     def value(self, value: None | int):
-#         if value is not None and not isinstance(value, int):
-#             raise TypeError(f"Value is not of class {int.__name__}")
-#         self._value = value
+    @value.setter
+    def value(self, value: int):
+        if not isinstance(value, int):
+            raise TypeError(f"Value must be an {int.__name__}")
+        self._value = max(-1, value)
 
-#     def read(self, cursor: Cursor):
-#         self._value = cursor.read_long()
+    def read(self, cursor: Cursor):
+        self._value = cursor.read_long()
 
-#     def write(self, cursor: Cursor):
-#         cursor.write_long(
-#             self._value if self._value is not None and self._value >= 0 else -1
-#         )
+    def write(self, cursor: Cursor):
+        cursor.write_long(max(-1, self._value))
 
-#     def __eq__(self, other: Value) -> bool:
-#         if isinstance(other, self.__class__):
-#             o1 = (
-#                 self._value
-#                 if self._value is not None and self._value >= 0 else -1
-#             )
-#             o2 = (
-#                 other._value
-#                 if other._value is not None and other._value >= 0 else -1
-#             )
-#             return o1 == o2
-#         return super().__eq__(other)
+    def __eq__(self, other: Value) -> bool:
+        if isinstance(other, self.__class__):
+            return self._value == other._value
+        return super().__eq__(other)
+
 
 # class Json(Value):
 #     def __init__(self):
