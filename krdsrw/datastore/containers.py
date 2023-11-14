@@ -143,7 +143,9 @@ class _TypeCheckedList(list[T]):
 
 
 class Array(_TypeCheckedList[T], Value):
-    def __init__(self, maker: ValFactory[T]):
+    def __init__(self, maker: type[T] | ValFactory[T]):
+        if not isinstance(maker, ValFactory):
+            maker = ValFactory(maker)
         _TypeCheckedList.__init__(self, maker.cls_)
         Value.__init__(self)
         self._maker: typing.Final[ValFactory[T]] = maker
@@ -167,8 +169,10 @@ class Array(_TypeCheckedList[T], Value):
 class _TypeCheckedDict(collections.OrderedDict[K, T]):
     def __init__(
         self, key_cls: type[K],
-        val_maker: ValFactory[T] | dict[K, ValFactory[T]]
+        val_maker: type[T] | ValFactory[T] | dict[K, ValFactory[T]]
     ):
+        if not isinstance(val_maker, (ValFactory, dict)):
+            val_maker = ValFactory(val_maker)
         super().__init__()
         self._key_cls: type[K] = key_cls
         self._val_maker: ValFactory[T] \
