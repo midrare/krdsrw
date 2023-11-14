@@ -1,7 +1,5 @@
 from . import names
-from . import keys
 from .containers import NameMap
-from .containers import NamedValue
 from .containers import Array
 from .containers import DateTime
 from .containers import DynamicMap
@@ -41,7 +39,6 @@ __all__ = [
     "LastPageRead",
     "Position",
     "SwitchMap",
-    "NamedValue",
     "NameMap",
     "TimeZoneOffset",
     "DataStore",
@@ -62,8 +59,5 @@ __all__ = [
     "Double",
     "Utf8Str",
     "Value",
-    "TemplatizedDict",
-    "TemplatizedList",
     "names",
-    "keys",
 ]
