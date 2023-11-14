@@ -373,28 +373,25 @@ class SwitchMap(_TypeCheckedDict[int, Value], Value):
         = id_to_maker  # type: ignore
         self._id_to_name: typing.Final[typing.Dict[int, str]] \
             = dict(id_to_name)
-        self._name_to_id: typing.Final[typing.Dict[str, int]] \
-            = { v: k for k, v in id_to_name.items() }
 
     def read(self, cursor: Cursor):
         self.clear()
 
         size = cursor.read_int()
         for _ in range(size):
-            field_id = cursor.read_int()
-            if field_id not in self._id_to_name:
+            id_ = cursor.read_int()
+            if id_ not in self._id_to_name:
+                raise UnexpectedFieldError('Unrecognized field ID "%d"' % id_)
+
+            if not (name := cursor.peek_demarcated_name()) \
+            or self._id_to_name[id_] != name:
                 raise UnexpectedFieldError(
-                    'Unrecognized field ID "%d"' % field_id
+                    f'Expected name "{self._id_to_name[id_]}" '
+                    + f'but got "{name}"'
                 )
 
-            name = NamedValue.peek_name(cursor)
-            if self._id_to_name[field_id] != name:
-                raise UnexpectedFieldError(
-                    'Expected name "%s" but got "%s"' %
-                    (name, self._id_to_name[field_id])
-                )
-
-            self[field_id] = self._id_to_maker[field_id].create_from(cursor)
+            assert id_ in self._id_to_maker, f'no factory for id "{id_}"'
+            self[id_] = self._id_to_maker[id_].read_from(cursor)
 
     def write(self, cursor: Cursor):
         id_to_non_null_value = {
@@ -403,9 +400,9 @@ class SwitchMap(_TypeCheckedDict[int, Value], Value):
             if v is not None
         }
         cursor.write_int(len(id_to_non_null_value))
-        for field_id, field_value in id_to_non_null_value.items():
-            cursor.write_int(field_id)
-            _write_value(cursor, field_value)
+        for id_, val in id_to_non_null_value.items():
+            cursor.write_int(id_)
+            _write_value(cursor, val)
 
     def __eq__(self, other: typing.Any) -> bool:
         if isinstance(other, self.__class__):
@@ -425,18 +422,6 @@ class SwitchMap(_TypeCheckedDict[int, Value], Value):
                 and self._id_to_maker == other._id_to_maker
             )
         return super().__eq__(other)
-
-    def names(self) -> typing.List[str]:
-        return list(self._name_to_id.keys())
-
-    def ids(self) -> typing.List[int]:
-        return list(self._id_to_name.keys())
-
-    def name_to_id(self, name: str) -> None | int:
-        return self._name_to_id.get(name)
-
-    def id_to_name(self, id: int) -> None | str:
-        return self._id_to_name.get(id)
 
 
 # class NameMap(_CheckedDict[str, NamedValue], Value):
