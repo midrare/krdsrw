@@ -20,7 +20,7 @@ split_arguments_when_comma_terminated = true
 split_before_arithmetic_operator = true
 split_before_bitwise_operator = true
 split_before_closing_bracket = true
-split_before_dict_set_generator
+split_before_dict_set_generator = true
 split_before_dot = true
 split_before_first_argument = true
 split_before_logical_operator = true
