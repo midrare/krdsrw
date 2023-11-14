@@ -1,4 +1,3 @@
-import re
 import typing
 
 
@@ -39,18 +38,12 @@ class Bool(int, Basic):
 class Short(int, Basic):
     builtin: typing.Final[type[int | float | str]] = int
 
-    def __str__(self) -> str:
-        return str(self)
-
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}{{{int(self)}}}"
 
 
 class Int(int, Basic):
     builtin: typing.Final[type[int | float | str]] = int
-
-    def __str__(self) -> str:
-        return str(self)
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}{{{int(self)}}}"
@@ -59,9 +52,6 @@ class Int(int, Basic):
 class Long(int, Basic):
     builtin: typing.Final[type[int | float | str]] = int
 
-    def __str__(self) -> str:
-        return str(self)
-
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}{{{int(self)}}}"
 
@@ -69,18 +59,12 @@ class Long(int, Basic):
 class Float(float, Basic):
     builtin: typing.Final[type[int | float | str]] = float
 
-    def __str__(self) -> str:
-        return str(self)
-
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}{{{float(self)}}}"
 
 
 class Double(float, Basic):
     builtin: typing.Final[type[int | float | str]] = float
-
-    def __str__(self) -> str:
-        return str(self)
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}{{{float(self)}}}"

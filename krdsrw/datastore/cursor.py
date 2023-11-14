@@ -3,6 +3,8 @@ import io
 import struct
 import typing
 
+from . import keys
+from . import names
 from .constants import BOOL_TYPE_INDICATOR
 from .constants import INT_TYPE_INDICATOR
 from .constants import LONG_TYPE_INDICATOR
@@ -12,8 +14,12 @@ from .constants import SHORT_TYPE_INDICATOR
 from .constants import FLOAT_TYPE_INDICATOR
 from .constants import BYTE_TYPE_INDICATOR
 from .constants import CHAR_TYPE_INDICATOR
+from .constants import OBJECT_BEGIN_INDICATOR
+from .constants import OBJECT_END_INDICATOR
 from .error import MagicStrNotFoundError
 from .error import UnexpectedDataTypeError
+from .error import DemarcationError
+from .error import UnexpectedNameError
 from .types import Byte
 from .types import Char
 from .types import Bool
@@ -23,6 +29,8 @@ from .types import Long
 from .types import Float
 from .types import Double
 from .types import Utf8Str
+from .value import Value
+from .value import ValFactory
 
 
 class Cursor:
@@ -425,3 +433,46 @@ class Cursor:
                 f"Value of type \"{type(value).__name__}\" "
                 + " is not supported."
             )
+
+    def peek_demarcated_name(self) -> None | str:
+        name = None
+        self.save()
+        ch = self.read()
+        if ch == OBJECT_BEGIN_INDICATOR:
+            name = self.read_utf8str(False)
+        self.restore()
+        return name
+
+    def peek_demarcated_type(self) -> None | type[Value]:
+        cls_ = None
+        self.save()
+        ch = self.read()
+        if ch == OBJECT_BEGIN_INDICATOR:
+            name = self.read_utf8str(False)
+            fct = NAME_TO_FACTORY[name]
+            assert fct, f'Unsupported name \"{name}\".'
+            cls_ = fct.cls_
+        self.restore()
+        return cls_
+
+    def read_demarcated_value(self) -> Value:
+        if not self.eat(OBJECT_BEGIN_INDICATOR):
+            raise DemarcationError(f"Object start not found @{self.tell()}")
+
+        name = self.read_utf8str(False)
+        fct = NAME_TO_FACTORY[name]
+        assert fct, f'Unsupported name \"{name}\".'
+        value = fct.read_from(self)
+        value._name = name  # TODO do not access private members
+
+        if not self.eat(OBJECT_END_INDICATOR):
+            raise DemarcationError(f"Object end not found @{self.tell()}")
+
+        return value
+
+    def write_demarcated_value(self, o: Value):
+        assert o.name, 'Value must be named'
+        self.write(OBJECT_BEGIN_INDICATOR)
+        self.write_utf8str(o.name, False)
+        o.write(self)
+        self.write(OBJECT_END_INDICATOR)

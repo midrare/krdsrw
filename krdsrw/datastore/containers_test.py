@@ -2,6 +2,7 @@ import pytest
 
 from .cursor import Cursor
 from .containers import Array
+from .containers import DynamicMap
 from .containers import ValFactory
 from .types import Int
 
@@ -14,12 +15,12 @@ def test_val_factory_create():
 def test_val_factory_read():
     o = ValFactory(Int)
     csr = Cursor(b'\x01\x00\xcc\x07\xc9')
-    assert o.create_from(csr) == 13371337
+    assert o.read_from(csr) == 13371337
 
 
-def test_val_factory_is_primitive():
+def test_val_factory_is_basic():
     o = ValFactory(Int)
-    assert o.is_cls_primitive()
+    assert o.is_basic()
 
 
 def test_array_init():
@@ -64,20 +65,6 @@ def test_array_extend_type_check_disallow():
         o.extend([ "a", "b", "c", "d", "e"])
 
 
-def test_array_remove_type_check_allow():
-    o = Array(ValFactory(Int))
-    o.extend([ 0, 1, 2, 3, 4 ])
-    o.remove(2)
-    assert o == [ 0, 1, 3, 4 ]
-
-
-def test_array_remove_type_check_disallow():
-    o = Array(ValFactory(Int))
-    o.extend([ 0, 1, 2, 3, 4 ])
-    with pytest.raises(TypeError):
-        o.remove("foo")
-
-
 def test_array_copy_contents():
     o = Array(ValFactory(Int))
     o.extend([ 0, 1, 2, 3, 4 ])
@@ -110,3 +97,15 @@ def test_array_write():
         + b'\x01\x00\x00\x00\x0a' \
         + b'\x01\x00\x00\x00\x0b' \
         + b'\x01\x00\x00\x00\x0c'
+
+
+def test_dynamic_map_put_key_allow():
+    o = DynamicMap(str, ValFactory(Int))
+    o['a'] = 0x0a
+    assert o == { 'a': 0x0a }
+
+
+def test_dynamic_map_put_key_disallow():
+    o = DynamicMap(str, ValFactory(Int))
+    with pytest.raises(TypeError):
+        o[777] = 0x0a  # type: ignore

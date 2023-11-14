@@ -217,7 +217,7 @@ class AnnotationCache:
             backing = self._get_or_compute(keys.ANNOTATION_BOOKMARKS, True)
             # asserts to placate IntelliJ intellisense
             assert isinstance(backing, NamedValue)
-            assert backing.name == names.SAVED_AVL_INTERVAL_TREE
+            assert backing.name == "saved.avl.interval.tree"
             self._bookmarks = WrappedList(
                 Bookmark, backing.value, self._from_obj, self._to_obj
             )
@@ -229,7 +229,7 @@ class AnnotationCache:
             backing = self._get_or_compute(keys.ANNOTATION_NOTES, True)
             # asserts to placate IntelliJ intellisense
             assert isinstance(backing, NamedValue)
-            assert backing.name == names.SAVED_AVL_INTERVAL_TREE
+            assert backing.name == "saved.avl.interval.tree"
             self._notes = WrappedList(
                 Note, backing.value, self._from_obj, self._to_obj
             )
@@ -241,7 +241,7 @@ class AnnotationCache:
             backing = self._get_or_compute(keys.ANNOTATION_HIGHLIGHTS, True)
             # asserts to placate IntelliJ intellisense
             assert isinstance(backing, NamedValue)
-            assert backing.name == names.SAVED_AVL_INTERVAL_TREE
+            assert backing.name == "saved.avl.interval.tree"
             self._highlights = WrappedList(
                 Highlight, backing.value, self._from_obj, self._to_obj
             )
@@ -253,7 +253,7 @@ class AnnotationCache:
             backing = self._get_or_compute(keys.ANNOTATION_CLIP_ARTICLES, True)
             # asserts to placate IntelliJ intellisense
             assert isinstance(backing, NamedValue)
-            assert backing.name == names.SAVED_AVL_INTERVAL_TREE
+            assert backing.name == "saved.avl.interval.tree"
             self._clip_articles = WrappedList(
                 ClipArticle, backing.value, self._from_obj, self._to_obj
             )
