@@ -140,7 +140,7 @@ def _annotation_object_cache() -> ValFactory:
     if not _annotation_object_cache_factory:
         from .containers import Array
         from .containers import SwitchMap
-        from .value import Value
+        from .cursor import Value
 
         # annotation.cache.object
         _annotation_object_cache_factory = ValFactory(
