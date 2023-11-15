@@ -379,7 +379,7 @@ class Cursor:
 
 class Value:
     @staticmethod
-    def read(cursor: Cursor, *args, **kwargs) -> Value:
+    def read(cursor: Cursor) -> Value:
         raise NotImplementedError("Must be implemented by the subclass.")
 
     @staticmethod
