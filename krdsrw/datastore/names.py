@@ -68,17 +68,13 @@ def _timer_model() -> ValueFactory:
                                     "count": _long,
                                     "sum": _double,
                                     "sum_of_squares": _double,
-                                }
-                            )
-                        ),
+                                })),
 
                         # timer.average.calculator.outliers
                         "outliers":
                         ValueFactory(Array, ValueFactory(Array, _double)),
-                    }
-                ),
-            }
-        )
+                    }),
+            })
 
     return _timer_model_factory
 
@@ -106,8 +102,7 @@ def _font_prefs() -> ValueFactory:
                 "mobi7_system_font": _utf8str,
                 "mobi7_restore_font": _bool,
                 "reading_preset_selected": _utf8str,
-            }
-        )
+            })
 
     return _font_prefs_factory
 
@@ -126,8 +121,7 @@ def _reader_state_preferences() -> ValueFactory:
                 "top_margin": _int,
                 "bottom_margin": _int,
                 "unknown1": _bool,
-            }
-        )
+            })
 
     return _reader_state_preferences_factory
 
@@ -169,11 +163,9 @@ def _annotation_object_cache() -> ValueFactory:
                 ValueFactory(
                     Array,
                     ValueFactory(
-                        Object, _name="annotation.personal.clip_article"
-                    ),
+                        Object, _name="annotation.personal.clip_article"),
                 ),
-            }
-        )
+            })
 
     return _annotation_object_cache_factory
 
@@ -198,8 +190,7 @@ def _annotation_personal() -> ValueFactory:
                 "template": _utf8str,
             }, {
                 "note": _utf8str,
-            }
-        )
+            })
     return _annotation_personal_factory
 
 
@@ -267,8 +258,7 @@ def _name_to_factory() -> dict[str, None | ValueFactory]:
                     "timezone_offset": TimeZoneOffset,
                     "country": _utf8str,
                     "device": _utf8str,
-                }
-            ),
+                }),
             "updated_lpr":
             ValueFactory(
                 FixedMap, {
@@ -278,8 +268,7 @@ def _name_to_factory() -> dict[str, None | ValueFactory]:
                     "timezone_offset": TimeZoneOffset,
                     "country": _utf8str,
                     "device": _utf8str,
-                }
-            ),
+                }),
 
             # amzn page num xref (i.e. page num map)
             "apnx.key":
@@ -293,24 +282,21 @@ def _name_to_factory() -> dict[str, None | ValueFactory]:
                     "unknown1": _int,
                     "unknown2": _int,
                     "page_map": _utf8str,
-                }
-            ),
+                }),
             "fixed.layout.data":
             ValueFactory(
                 FixedMap, {
                     "unknown1": _bool,
                     "unknown2": _bool,
                     "unknown3": _bool,
-                }
-            ),
+                }),
             "sharing.limits":
             ValueFactory(
                 FixedMap,
                 {
                     # TODO discover structure for sharing.limits
                     "accumulated": None
-                }
-            ),
+                }),
             "language.store":
             ValueFactory(FixedMap, {
                 "language": _utf8str,
@@ -326,16 +312,14 @@ def _name_to_factory() -> dict[str, None | ValueFactory]:
                 FixedMap, {
                     "state": _int,
                     "time": ValueFactory(DateTime),
-                }
-            ),
+                }),
             "timer.data.store":
             ValueFactory(
                 FixedMap, {
                     "on": _bool,
                     "reading_timer_model": _timer_model(),
                     "version": _int,
-                }
-            ),
+                }),
             "timer.data.store.v2":
             ValueFactory(
                 FixedMap, {
@@ -343,15 +327,13 @@ def _name_to_factory() -> dict[str, None | ValueFactory]:
                     "reading_timer_model": _timer_model(),
                     "version": _int,
                     "last_option": _int,
-                }
-            ),
+                }),
             "book.info.store":
             ValueFactory(
                 FixedMap, {
                     "num_words": _long,
                     "percent_of_book": _double,
-                }
-            ),
+                }),
             "page.history.store":
             ValueFactory(
                 Array,
@@ -359,9 +341,7 @@ def _name_to_factory() -> dict[str, None | ValueFactory]:
                     FixedMap, {
                         "pos": ValueFactory(Position),
                         "time": ValueFactory(DateTime),
-                    }
-                )
-            ),
+                    })),
             "reader.state.preferences":
             _reader_state_preferences(),
             "font.prefs":

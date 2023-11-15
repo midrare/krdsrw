@@ -99,9 +99,8 @@ class _TypeCheckedList(list[T]):
         ...
 
     def __setitem__(
-        self, i: typing.SupportsIndex | slice, o: int | float | str
-        | T | typing.Iterable[int | float | str | T]
-    ):
+            self, i: typing.SupportsIndex | slice, o: int | float | str
+        | T | typing.Iterable[int | float | str | T]):
         if not isinstance(i, slice):
             o = _convert_value(o, self._cls)
             super().__setitem__(i, o)  # type: ignore
@@ -111,15 +110,13 @@ class _TypeCheckedList(list[T]):
             super().__setitem__(i, o)  # type: ignore
 
     def __add__(
-        self, other: typing.Iterable[int | float | str | T]
-    ) -> typing.Self:
+            self, other: typing.Iterable[int | float | str | T]) -> typing.Self:
         o = self.copy()
         o.extend(_convert_value(other, self._cls))
         return o
 
     def __iadd__(
-        self, other: typing.Iterable[int | float | str | T]
-    ) -> typing.Self:
+            self, other: typing.Iterable[int | float | str | T]) -> typing.Self:
         self.extend(_convert_value(other, self._cls))
         return self
 
@@ -165,9 +162,8 @@ class Array(_TypeCheckedList[T], Object):
 
 class _TypeCheckedDict(collections.OrderedDict[K, T]):
     def __init__(
-        self, key_cls: type[K],
-        val_maker: type[T] | ValueFactory[T] | dict[K, ValueFactory[T]]
-    ):
+            self, key_cls: type[K],
+            val_maker: type[T] | ValueFactory[T] | dict[K, ValueFactory[T]]):
         if not isinstance(val_maker, (ValueFactory, dict)):
             val_maker = ValueFactory(val_maker)
         super().__init__()
@@ -320,16 +316,15 @@ class FixedMap(_TypeCheckedDict[str, T], Object):
         for name, val_maker in self._required.items():
             if not self._read_next(cursor, name, val_maker):
                 raise FieldNotFoundError(
-                    'Expected field with name "%s" but was not found' % name
-                )
+                    'Expected field with name "%s" but was not found' % name)
 
         for name, val_maker in self._optional.items():
             if not self._read_next(cursor, name, val_maker):
                 break
 
     def _read_next(
-        self, cursor: Cursor, name: str, val_maker: ValueFactory[T]
-    ) -> bool:
+            self, cursor: Cursor, name: str,
+            val_maker: ValueFactory[T]) -> bool:
         cursor.save()
         try:
             self[name] = val_maker.create(cursor)
@@ -395,8 +390,7 @@ class SwitchMap(_TypeCheckedDict[int, Object], Object):
             or self._id_to_name[id_] != name:
                 raise UnexpectedFieldError(
                     f'Expected name "{self._id_to_name[id_]}" '
-                    + f'but got "{name}"'
-                )
+                    + f'but got "{name}"')
 
             assert id_ in self._id_to_maker, f'no factory for id "{id_}"'
             self[id_] = self._id_to_maker[id_].create(cursor)
@@ -427,8 +421,7 @@ class SwitchMap(_TypeCheckedDict[int, Object], Object):
             return (
                 self._id_to_name == other._id_to_name
                 and id_to_non_null_value1 == id_to_non_null_value2
-                and self._id_to_maker == other._id_to_maker
-            )
+                and self._id_to_maker == other._id_to_maker)
         return super().__eq__(other)
 
 
@@ -564,8 +557,7 @@ class LastPageRead(Object):  # aka LPR. this is kindle reading pos info
             self._timestamp = int(cursor.read_long())
         else:
             raise UnexpectedFieldError(
-                f"Expected Utf8Str or byte but got {type_byte}"
-            )
+                f"Expected Utf8Str or byte but got {type_byte}")
 
     def write(self, cursor: Cursor):
         # XXX may cause problems if kindle expects the original LPR format
@@ -584,8 +576,7 @@ class LastPageRead(Object):  # aka LPR. this is kindle reading pos info
         if isinstance(other, self.__class__):
             return (
                 self._pos == other._pos and self._timestamp == other.timestamp
-                and self._lpr_version == other._lpr_version
-            )
+                and self._lpr_version == other._lpr_version)
         return super().__eq__(other)
 
     def __str__(self) -> str:
@@ -594,8 +585,7 @@ class LastPageRead(Object):  # aka LPR. this is kindle reading pos info
                 "lpr_version": self._lpr_version,
                 "timestamp": self._timestamp,
                 "pos": self._pos,
-            })
-        )
+            }))
 
 
 class Position(Object):
@@ -648,8 +638,7 @@ class Position(Object):
             else:
                 # TODO throw a proper exception
                 raise Exception(
-                    "Unrecognized position version 0x%02x" % version
-                )
+                    "Unrecognized position version 0x%02x" % version)
             self._value = int(split[1])
         else:
             self._value = int(s)
@@ -663,8 +652,7 @@ class Position(Object):
             s += base64.b64encode(b_version + b_eid + b_pos).decode("ascii")
             s += ":"
         s += str(
-            self._value if self._value is not None and self._value >= 0 else -1
-        )
+            self._value if self._value is not None and self._value >= 0 else -1)
         cursor.write_utf8str(s)
 
     def __eq__(self, other: typing.Any) -> bool:

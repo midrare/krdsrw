@@ -36,8 +36,7 @@ class UnexpectedDataTypeError(Exception):
                 pos,
                 expected,
                 hex(actual) if isinstance(actual, int) else str(actual),
-            )
-        )
+            ))
         self.pos: int = pos
         self.expected: int = expected
         self.actual: None | int = actual

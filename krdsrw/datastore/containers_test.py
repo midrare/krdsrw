@@ -82,8 +82,7 @@ def test_array_read():
     o = Array(ValueFactory(Int))
     csr = Cursor(
         b'\x01\x00\x00\x00\x03' + b'\x01\x00\x00\x00\x0a'
-        + b'\x01\x00\x00\x00\x0b' + b'\x01\x00\x00\x00\x0c'
-    )
+        + b'\x01\x00\x00\x00\x0b' + b'\x01\x00\x00\x00\x0c')
     o.read(csr)
     assert o == [ 0x0a, 0x0b, 0x0c ]
 

@@ -30,8 +30,7 @@ class DataStore(Object):
                     DataStore.SIGNATURE.hex(),
                     cursor.tell(),
                     cursor.peek(len(DataStore.SIGNATURE)),
-                )
-            )
+                ))
 
     @staticmethod
     def _eat_fixed_mystery_num_or_error(cursor):
@@ -41,8 +40,7 @@ class DataStore(Object):
             cursor.restore()
             raise MagicStrNotFoundError(
                 "Expected fixed num 0x%08x at pos %d but got 0x%08x" %
-                (DataStore.FIXED_MYSTERY_NUM, cursor.tell(), value)
-            )
+                (DataStore.FIXED_MYSTERY_NUM, cursor.tell(), value))
         cursor.unsave()
 
     def write(self, cursor: Cursor):

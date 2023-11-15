@@ -1,5 +1,4 @@
 from __future__ import annotations
-import abc
 import collections
 import io
 import struct
@@ -26,8 +25,7 @@ class Cursor:
     def __init__(self, data: None | typing.ByteString = None):
         self._saved_positions: typing.List[int] = []
         self._data: io.BytesIO = (
-            io.BytesIO(bytes(data)) if data else io.BytesIO()
-        )
+            io.BytesIO(bytes(data)) if data else io.BytesIO())
 
     def load(self, data: typing.ByteString):
         self._data = io.BytesIO(bytes(data))
@@ -68,8 +66,7 @@ class Cursor:
             return b
 
         raise IndexError(
-            'index of class "' + str(type(item)) + '" not supported'
-        )
+            'index of class "' + str(type(item)) + '" not supported')
 
     def __str__(self) -> str:
         return "%s{@%d of %db}" % (
@@ -91,8 +88,7 @@ class Cursor:
         if b is None or len(b) <= 0:
             raise IndexError(
                 "Cannot read next byte; buffer of length %d has reached its end"
-                % len(self._data.getbuffer())
-            )
+                % len(self._data.getbuffer()))
         return b[0]
 
     def _read_raw_bytes(self, length: int) -> bytes:
@@ -141,8 +137,7 @@ class Cursor:
         if len(b) <= 0:
             raise IndexError(
                 "Cannot peek next byte; buffer of length %d has reached its end"
-                % len(self._data.getbuffer())
-            )
+                % len(self._data.getbuffer()))
         return b[0]
 
     def _peek_raw_bytes(self, length: int) -> bytes:
@@ -302,13 +297,11 @@ class Cursor:
             return self.read_utf8str()
 
         raise MagicStrNotFoundError(
-            f"Unrecognized type indicator byte \"{magic_byte}\"."
-        )
+            f"Unrecognized type indicator byte \"{magic_byte}\".")
 
     def write_auto(
         self, value: Byte | Char | Bool | Short
-        | Int | Long | Float | Double | Utf8Str
-    ):
+        | Int | Long | Float | Double | Utf8Str):
         if isinstance(value, Byte):
             self.write_byte(value)
         elif isinstance(value, Char):
@@ -330,8 +323,7 @@ class Cursor:
         else:
             raise TypeError(
                 f"Value of type \"{type(value).__name__}\" "
-                + " is not supported."
-            )
+                + " is not supported.")
 
     def peek_demarcated_name(self) -> None | str:
         name = None
@@ -442,8 +434,7 @@ class Byte(int, Basic):  # signed byte
     def read(cursor: Cursor, magic_byte: bool = True) -> Byte:
         if magic_byte and not cursor.eat(Byte.magic_byte):
             raise UnexpectedDataTypeError(
-                cursor.tell(), Byte.magic_byte, cursor.peek()
-            )
+                cursor.tell(), Byte.magic_byte, cursor.peek())
         return Byte(cursor.read())
 
     @staticmethod
@@ -455,7 +446,7 @@ class Byte(int, Basic):  # signed byte
 
 class Char(int, Basic):
     builtin: typing.Final[type[int | float | str]] = int
-    size: int = 2  # TODO check if char really is 2 bytes
+    size: int = 1
     magic_byte: int = 0x09
 
     def __str__(self) -> str:
@@ -468,8 +459,7 @@ class Char(int, Basic):
     def read(cursor: Cursor, magic_byte: bool = True) -> Char:
         if magic_byte and not cursor.eat(Char.magic_byte):
             raise UnexpectedDataTypeError(
-                cursor.tell(), Char.magic_byte, cursor.peek()
-            )
+                cursor.tell(), Char.magic_byte, cursor.peek())
         return Char(cursor.read())
 
     @staticmethod
@@ -494,8 +484,7 @@ class Bool(int, Basic):
     def read(cursor: Cursor, magic_byte: bool = True) -> Bool:
         if magic_byte and not cursor.eat(Bool.magic_byte):
             raise UnexpectedDataTypeError(
-                cursor.tell(), Bool.magic_byte, cursor.peek()
-            )
+                cursor.tell(), Bool.magic_byte, cursor.peek())
         return Bool(bool(cursor.read()))
 
     @staticmethod
@@ -517,11 +506,9 @@ class Short(int, Basic):
     def read(cursor: Cursor, magic_byte: bool = True) -> Short:
         if magic_byte and not cursor.eat(Short.magic_byte):
             raise UnexpectedDataTypeError(
-                cursor.tell(), Short.magic_byte, cursor.peek()
-            )
+                cursor.tell(), Short.magic_byte, cursor.peek())
         return Short(
-            struct.unpack_from(">h", cursor.read(struct.calcsize(">h")))[0]
-        )
+            struct.unpack_from(">h", cursor.read(struct.calcsize(">h")))[0])
 
     @staticmethod
     def write(cursor: Cursor, o: int | Short, magic_byte: bool = True):
@@ -542,11 +529,9 @@ class Int(int, Basic):
     def read(cursor: Cursor, magic_byte: bool = True) -> Int:
         if magic_byte and not cursor.eat(Int.magic_byte):
             raise UnexpectedDataTypeError(
-                cursor.tell(), Int.magic_byte, cursor.peek()
-            )
+                cursor.tell(), Int.magic_byte, cursor.peek())
         return Int(
-            struct.unpack_from(">l", cursor.read(struct.calcsize(">l")))[0]
-        )
+            struct.unpack_from(">l", cursor.read(struct.calcsize(">l")))[0])
 
     @staticmethod
     def write(cursor: Cursor, o: int | Int, magic_byte: bool = True):
@@ -567,11 +552,9 @@ class Long(int, Basic):
     def read(cursor: Cursor, magic_byte: bool = True) -> Long:
         if magic_byte and not cursor.eat(Long.magic_byte):
             raise UnexpectedDataTypeError(
-                cursor.tell(), Long.magic_byte, cursor.peek()
-            )
+                cursor.tell(), Long.magic_byte, cursor.peek())
         return Long(
-            struct.unpack_from(">q", cursor.read(struct.calcsize(">q")))[0]
-        )
+            struct.unpack_from(">q", cursor.read(struct.calcsize(">q")))[0])
 
     @staticmethod
     def write(cursor: Cursor, o: int | Long, magic_byte: bool = True):
@@ -592,11 +575,9 @@ class Float(float, Basic):
     def read(cursor: Cursor, magic_byte: bool = True) -> Float:
         if magic_byte and not cursor.eat(Float.magic_byte):
             raise UnexpectedDataTypeError(
-                cursor.tell(), Float.magic_byte, cursor.peek()
-            )
+                cursor.tell(), Float.magic_byte, cursor.peek())
         return Float(
-            struct.unpack_from(">f", cursor.read(struct.calcsize(">f")))[0]
-        )
+            struct.unpack_from(">f", cursor.read(struct.calcsize(">f")))[0])
 
     @staticmethod
     def write(cursor: Cursor, o: float | Float, magic_byte: bool = True):
@@ -617,11 +598,9 @@ class Double(float, Basic):
     def read(cursor: Cursor, magic_byte: bool = True) -> Double:
         if magic_byte and not cursor.eat(Double.magic_byte):
             raise UnexpectedDataTypeError(
-                cursor.tell(), Double.magic_byte, cursor.peek()
-            )
+                cursor.tell(), Double.magic_byte, cursor.peek())
         return Double(
-            struct.unpack_from(">d", cursor.read(struct.calcsize(">d")))[0]
-        )
+            struct.unpack_from(">d", cursor.read(struct.calcsize(">d")))[0])
 
     @staticmethod
     def write(cursor: Cursor, o: float | Double, magic_byte: bool = True):
@@ -641,8 +620,7 @@ class Utf8Str(str, Basic):
     def read(cursor: Cursor, magic_byte: bool = True) -> Utf8Str:
         if magic_byte and not cursor.eat(Utf8Str.magic_byte):
             raise UnexpectedDataTypeError(
-                cursor.tell(), Utf8Str.magic_byte, cursor.peek()
-            )
+                cursor.tell(), Utf8Str.magic_byte, cursor.peek())
 
         is_empty = bool(cursor.read())
         if is_empty:
@@ -651,8 +629,7 @@ class Utf8Str(str, Basic):
         # NOTE even if the is_empty byte is false, the actual str
         #   length can still be 0
         string_len = struct.unpack_from(
-            ">H", cursor.read(struct.calcsize(">H"))
-        )[0]
+            ">H", cursor.read(struct.calcsize(">H")))[0]
         return Utf8Str(cursor.read(string_len).decode("utf-8"))
 
     @staticmethod
