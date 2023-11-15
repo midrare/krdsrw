@@ -1,43 +1,43 @@
 import typing
 
-from .types import Bool
-from .types import Byte
-from .types import Char
-from .types import Short
-from .types import Int
-from .types import Long
-from .types import Float
-from .types import Double
-from .types import Utf8Str
-from .cursor import ValFactory
+from .cursor import Bool
+from .cursor import Byte
+from .cursor import Char
+from .cursor import Short
+from .cursor import Int
+from .cursor import Long
+from .cursor import Float
+from .cursor import Double
+from .cursor import Utf8Str
+from .cursor import ValueFactory
 
-_bool: typing.Final[ValFactory[Bool]] = ValFactory(Bool)
-_byte: typing.Final[ValFactory[Byte]] = ValFactory(Byte)
-_char: typing.Final[ValFactory[Char]] = ValFactory(Char)
-_short: typing.Final[ValFactory[Short]] = ValFactory(Short)
-_int: typing.Final[ValFactory[Int]] = ValFactory(Int)
-_long: typing.Final[ValFactory[Long]] = ValFactory(Long)
-_float: typing.Final[ValFactory[Float]] = ValFactory(Float)
-_double: typing.Final[ValFactory[Double]] = ValFactory(Double)
-_utf8str: typing.Final[ValFactory[Utf8Str]] = ValFactory(Utf8Str)
+_bool: typing.Final[ValueFactory[Bool]] = ValueFactory(Bool)
+_byte: typing.Final[ValueFactory[Byte]] = ValueFactory(Byte)
+_char: typing.Final[ValueFactory[Char]] = ValueFactory(Char)
+_short: typing.Final[ValueFactory[Short]] = ValueFactory(Short)
+_int: typing.Final[ValueFactory[Int]] = ValueFactory(Int)
+_long: typing.Final[ValueFactory[Long]] = ValueFactory(Long)
+_float: typing.Final[ValueFactory[Float]] = ValueFactory(Float)
+_double: typing.Final[ValueFactory[Double]] = ValueFactory(Double)
+_utf8str: typing.Final[ValueFactory[Utf8Str]] = ValueFactory(Utf8Str)
 
-_timer_model_factory: None | ValFactory = None
-_font_prefs_factory: None | ValFactory = None
-_reader_state_preferences_factory: None | ValFactory = None
-_annotation_object_cache_factory: None | ValFactory = None
-_annotation_personal_factory: None | ValFactory = None
-_name_to_factory_map: dict[str, None | ValFactory] = {}
+_timer_model_factory: None | ValueFactory = None
+_font_prefs_factory: None | ValueFactory = None
+_reader_state_preferences_factory: None | ValueFactory = None
+_annotation_object_cache_factory: None | ValueFactory = None
+_annotation_personal_factory: None | ValueFactory = None
+_name_to_factory_map: dict[str, None | ValueFactory] = {}
 
 
-def _timer_model() -> ValFactory:
+def _timer_model() -> ValueFactory:
     global _timer_model_factory
     if not _timer_model_factory:
         from .containers import Array
         from .containers import FixedMap
-        from .containers import ValFactory
+        from .containers import ValueFactory
 
         # timer.model
-        _timer_model_factory = ValFactory(
+        _timer_model_factory = ValueFactory(
             FixedMap,
             {
                 "version":
@@ -51,19 +51,19 @@ def _timer_model() -> ValFactory:
 
                 # timer.average.calculator
                 "average_calculator":
-                ValFactory(
+                ValueFactory(
                     FixedMap,
                     {
                         "samples1":
-                        ValFactory(Array, _double),
+                        ValueFactory(Array, _double),
                         "samples2":
-                        ValFactory(Array, _double),
+                        ValueFactory(Array, _double),
 
                         # timer.average.calculator.distribution.normal
                         "normal_distributions":
-                        ValFactory(
+                        ValueFactory(
                             Array,
-                            ValFactory(
+                            ValueFactory(
                                 FixedMap, {
                                     "count": _long,
                                     "sum": _double,
@@ -74,7 +74,7 @@ def _timer_model() -> ValFactory:
 
                         # timer.average.calculator.outliers
                         "outliers":
-                        ValFactory(Array, ValFactory(Array, _double)),
+                        ValueFactory(Array, ValueFactory(Array, _double)),
                     }
                 ),
             }
@@ -83,12 +83,12 @@ def _timer_model() -> ValFactory:
     return _timer_model_factory
 
 
-def _font_prefs() -> ValFactory:
+def _font_prefs() -> ValueFactory:
     global _font_prefs_factory
     if not _font_prefs_factory:
         from .containers import FixedMap
 
-        _font_prefs_factory = ValFactory(
+        _font_prefs_factory = ValueFactory(
             FixedMap, {
                 "typeface": _utf8str,
                 "line_sp": _int,
@@ -112,13 +112,13 @@ def _font_prefs() -> ValFactory:
     return _font_prefs_factory
 
 
-def _reader_state_preferences() -> ValFactory:
+def _reader_state_preferences() -> ValueFactory:
     global _reader_state_preferences_factory
     if not _reader_state_preferences_factory:
         from .containers import FixedMap
 
         # reader.state.preferences
-        _reader_state_preferences_factory = ValFactory(
+        _reader_state_preferences_factory = ValueFactory(
             FixedMap, {
                 "font_preferences": _font_prefs(),
                 "left_margin": _int,
@@ -132,15 +132,15 @@ def _reader_state_preferences() -> ValFactory:
     return _reader_state_preferences_factory
 
 
-def _annotation_object_cache() -> ValFactory:
+def _annotation_object_cache() -> ValueFactory:
     global _annotation_object_cache_factory
     if not _annotation_object_cache_factory:
         from .containers import Array
         from .containers import SwitchMap
-        from .cursor import Value
+        from .cursor import Object
 
         # annotation.cache.object
-        _annotation_object_cache_factory = ValFactory(
+        _annotation_object_cache_factory = ValueFactory(
             SwitchMap,
             {
                 0: "saved.avl.interval.tree",  # bookmarks
@@ -151,24 +151,26 @@ def _annotation_object_cache() -> ValFactory:
             {
                 # annotation.personal.bookmark
                 0:
-                ValFactory(
+                ValueFactory(
                     Array,
-                    ValFactory(Value, _name="annotation.personal.bookmark"),
+                    ValueFactory(Object, _name="annotation.personal.bookmark"),
                 ),  # annotation.personal.highlight
                 1:
-                ValFactory(
+                ValueFactory(
                     Array,
-                    ValFactory(Value, _name="annotation.personal.highlight"),
+                    ValueFactory(Object, _name="annotation.personal.highlight"),
                 ),  # annotation.personal.note
                 2:
-                ValFactory(
+                ValueFactory(
                     Array,
-                    ValFactory(Value, _name="annotation.personal.note"),
+                    ValueFactory(Object, _name="annotation.personal.note"),
                 ),  # annotation.personal.clip_article
                 3:
-                ValFactory(
+                ValueFactory(
                     Array,
-                    ValFactory(Value, _name="annotation.personal.clip_article"),
+                    ValueFactory(
+                        Object, _name="annotation.personal.clip_article"
+                    ),
                 ),
             }
         )
@@ -176,7 +178,7 @@ def _annotation_object_cache() -> ValFactory:
     return _annotation_object_cache_factory
 
 
-def _annotation_personal() -> ValFactory:
+def _annotation_personal() -> ValueFactory:
     global _annotation_personal_factory
     if not _annotation_personal_factory:
         from .containers import DateTime
@@ -187,7 +189,7 @@ def _annotation_personal() -> ValFactory:
         # annotation.personal.clip_article
         # annotation.personal.highlight
         # annotation.personal.note
-        _annotation_personal_factory = ValFactory(
+        _annotation_personal_factory = ValueFactory(
             FixedMap, {
                 "start_pos": Position,
                 "end_pos": Position,
@@ -201,7 +203,7 @@ def _annotation_personal() -> ValFactory:
     return _annotation_personal_factory
 
 
-def _name_to_factory() -> dict[str, None | ValFactory]:
+def _name_to_factory() -> dict[str, None | ValueFactory]:
     global _name_to_factory_map
     if not _name_to_factory_map:
         from .containers import Array
@@ -235,44 +237,44 @@ def _name_to_factory() -> dict[str, None | ValFactory]:
             "XRAY_TAB_STATE":
             None,
             "dict.prefs.v2":
-            ValFactory(DynamicMap),
+            ValueFactory(DynamicMap),
             "EndActions":
-            ValFactory(DynamicMap),
+            ValueFactory(DynamicMap),
             "ReaderMetrics":
-            ValFactory(DynamicMap),
+            ValueFactory(DynamicMap),
             "StartActions":
-            ValFactory(DynamicMap),
+            ValueFactory(DynamicMap),
             "Translator":
-            ValFactory(DynamicMap),
+            ValueFactory(DynamicMap),
             "Wikipedia":
-            ValFactory(DynamicMap),
+            ValueFactory(DynamicMap),
             "buy.asin.response.data":
-            ValFactory(Json),
+            ValueFactory(Json),
             "next.in.series.info.data":
-            ValFactory(Json),
+            ValueFactory(Json),
             "price.info.data":
-            ValFactory(Json),
+            ValueFactory(Json),
             "erl":
-            ValFactory(Position),
+            ValueFactory(Position),
             "lpr":
-            ValFactory(LastPageRead),
+            ValueFactory(LastPageRead),
             "fpr":
-            ValFactory(
+            ValueFactory(
                 FixedMap, {
-                    "pos": ValFactory(Position),
+                    "pos": ValueFactory(Position),
                 }, {
-                    "timestamp": ValFactory(DateTime),
+                    "timestamp": ValueFactory(DateTime),
                     "timezone_offset": TimeZoneOffset,
                     "country": _utf8str,
                     "device": _utf8str,
                 }
             ),
             "updated_lpr":
-            ValFactory(
+            ValueFactory(
                 FixedMap, {
-                    "pos": ValFactory(Position),
+                    "pos": ValueFactory(Position),
                 }, {
-                    "timestamp": ValFactory(DateTime),
+                    "timestamp": ValueFactory(DateTime),
                     "timezone_offset": TimeZoneOffset,
                     "country": _utf8str,
                     "device": _utf8str,
@@ -281,12 +283,12 @@ def _name_to_factory() -> dict[str, None | ValFactory]:
 
             # amzn page num xref (i.e. page num map)
             "apnx.key":
-            ValFactory(
+            ValueFactory(
                 FixedMap, {
                     "asin": _utf8str,
                     "cde_type": _utf8str,
                     "sidecar_available": _bool,
-                    "opn_to_pos": ValFactory(Array, _int),
+                    "opn_to_pos": ValueFactory(Array, _int),
                     "first": _int,
                     "unknown1": _int,
                     "unknown2": _int,
@@ -294,7 +296,7 @@ def _name_to_factory() -> dict[str, None | ValFactory]:
                 }
             ),
             "fixed.layout.data":
-            ValFactory(
+            ValueFactory(
                 FixedMap, {
                     "unknown1": _bool,
                     "unknown2": _bool,
@@ -302,7 +304,7 @@ def _name_to_factory() -> dict[str, None | ValFactory]:
                 }
             ),
             "sharing.limits":
-            ValFactory(
+            ValueFactory(
                 FixedMap,
                 {
                     # TODO discover structure for sharing.limits
@@ -310,24 +312,24 @@ def _name_to_factory() -> dict[str, None | ValFactory]:
                 }
             ),
             "language.store":
-            ValFactory(FixedMap, {
+            ValueFactory(FixedMap, {
                 "language": _utf8str,
                 "unknown1": _int,
             }),
             "periodicals.view.state":
-            ValFactory(FixedMap, {
+            ValueFactory(FixedMap, {
                 "unknown1": _utf8str,
                 "unknown2": _int,
             }),
             "purchase.state.data":
-            ValFactory(
+            ValueFactory(
                 FixedMap, {
                     "state": _int,
-                    "time": ValFactory(DateTime),
+                    "time": ValueFactory(DateTime),
                 }
             ),
             "timer.data.store":
-            ValFactory(
+            ValueFactory(
                 FixedMap, {
                     "on": _bool,
                     "reading_timer_model": _timer_model(),
@@ -335,7 +337,7 @@ def _name_to_factory() -> dict[str, None | ValFactory]:
                 }
             ),
             "timer.data.store.v2":
-            ValFactory(
+            ValueFactory(
                 FixedMap, {
                     "on": _bool,
                     "reading_timer_model": _timer_model(),
@@ -344,19 +346,19 @@ def _name_to_factory() -> dict[str, None | ValFactory]:
                 }
             ),
             "book.info.store":
-            ValFactory(
+            ValueFactory(
                 FixedMap, {
                     "num_words": _long,
                     "percent_of_book": _double,
                 }
             ),
             "page.history.store":
-            ValFactory(
+            ValueFactory(
                 Array,
-                ValFactory(
+                ValueFactory(
                     FixedMap, {
-                        "pos": ValFactory(Position),
-                        "time": ValFactory(DateTime),
+                        "pos": ValueFactory(Position),
+                        "time": ValueFactory(DateTime),
                     }
                 )
             ),
@@ -378,5 +380,5 @@ def _name_to_factory() -> dict[str, None | ValFactory]:
     return _name_to_factory_map
 
 
-def get_maker_by_name(name: str) -> None | ValFactory:
+def get_maker_by_name(name: str) -> None | ValueFactory:
     return _name_to_factory().get(name)

@@ -3,39 +3,36 @@ import base64
 import collections
 import collections.abc
 import copy
-import inspect
 import json
 import typing
-import warnings
 
 from . import names
 from .constants import BYTE_TYPE_INDICATOR
 from .constants import UTF8STR_TYPE_INDICATOR
 from .cursor import Cursor
-from .cursor import Value
-from .cursor import ValFactory
-from .error import *
-from .types import ALL_BASIC_TYPES
-from .types import Basic
-from .types import Byte
-from .types import Char
-from .types import Bool
-from .types import Short
-from .types import Int
-from .types import Long
-from .types import Float
-from .types import Double
-from .types import Utf8Str
+from .cursor import Object
+from .cursor import ValueFactory
+from .cursor import ALL_BASIC_TYPES
+from .cursor import Basic
+from .cursor import Byte
+from .cursor import Char
+from .cursor import Bool
+from .cursor import Short
+from .cursor import Int
+from .cursor import Long
+from .cursor import Float
+from .cursor import Double
+from .cursor import Utf8Str
 
 K = typing.TypeVar("K", bound=int | float | str)
 T = typing.TypeVar("T", bound=Byte | Char | Bool | Short | Int | Long \
-    | Float | Double | Utf8Str | Value)
+    | Float | Double | Utf8Str | Object)
 
 
 def _write_value(
     cursor: Cursor,
     value: Byte | Char | Bool | Short | Int | Long | Float | Double | Utf8Str
-    | Value,
+    | Object,
 ):
     if any(isinstance(value, c) for c in ALL_BASIC_TYPES):
         cursor.write_auto(value)  # type: ignore
@@ -57,7 +54,7 @@ def _convert_value(o: typing.Any, cls_: type) -> typing.Any:
     if issubclass(cls_, Basic) and isinstance(o, cls_.builtin):
         return cls_(o)
 
-    if issubclass(cls_, Value) and isinstance(o, Value):
+    if issubclass(cls_, Object) and isinstance(o, Object):
         return o
 
     if issubclass(cls_, (bool, int, float, str)) \
@@ -142,19 +139,19 @@ class _TypeCheckedList(list[T]):
         return super().count(o)
 
 
-class Array(_TypeCheckedList[T], Value):
-    def __init__(self, maker: type[T] | ValFactory[T]):
-        if not isinstance(maker, ValFactory):
-            maker = ValFactory(maker)
+class Array(_TypeCheckedList[T], Object):
+    def __init__(self, maker: type[T] | ValueFactory[T]):
+        if not isinstance(maker, ValueFactory):
+            maker = ValueFactory(maker)
         _TypeCheckedList.__init__(self, maker.cls_)
-        Value.__init__(self)
-        self._maker: typing.Final[ValFactory[T]] = maker
+        Object.__init__(self)
+        self._maker: typing.Final[ValueFactory[T]] = maker
 
     def read(self, cursor: Cursor):
         self.clear()
         size = cursor.read_int()
         for _ in range(size):
-            self.append(self._maker.read_from(cursor))
+            self.append(self._maker.create(cursor))
 
     def write(self, cursor: Cursor):
         cursor.write_int(len(self))
@@ -169,15 +166,15 @@ class Array(_TypeCheckedList[T], Value):
 class _TypeCheckedDict(collections.OrderedDict[K, T]):
     def __init__(
         self, key_cls: type[K],
-        val_maker: type[T] | ValFactory[T] | dict[K, ValFactory[T]]
+        val_maker: type[T] | ValueFactory[T] | dict[K, ValueFactory[T]]
     ):
-        if not isinstance(val_maker, (ValFactory, dict)):
-            val_maker = ValFactory(val_maker)
+        if not isinstance(val_maker, (ValueFactory, dict)):
+            val_maker = ValueFactory(val_maker)
         super().__init__()
         self._key_cls: type[K] = key_cls
-        self._val_maker: ValFactory[T] \
-        | dict[K, ValFactory[T]] \
-        | typing.Callable[[K], None|ValFactory[T]] \
+        self._val_maker: ValueFactory[T] \
+        | dict[K, ValueFactory[T]] \
+        | typing.Callable[[K], None|ValueFactory[T]] \
         = copy.copy(val_maker)
 
     @property
@@ -263,14 +260,14 @@ class _TypeCheckedDict(collections.OrderedDict[K, T]):
         return self[key]
 
 
-class DynamicMap(_TypeCheckedDict[str, T], Value):
+class DynamicMap(_TypeCheckedDict[str, T], Object):
     def __init__(
         self,
         key_cls: type[str],
-        val_maker: ValFactory[T] | dict[K, ValFactory[T]],
+        val_maker: ValueFactory[T] | dict[K, ValueFactory[T]],
     ):
         _TypeCheckedDict.__init__(self, key_cls, val_maker)
-        Value.__init__(self)
+        Object.__init__(self)
 
     def read(self, cursor: Cursor):
         self.clear()
@@ -292,18 +289,18 @@ class DynamicMap(_TypeCheckedDict[str, T], Value):
         return super().__eq__(other)
 
 
-class FixedMap(_TypeCheckedDict[str, T], Value):
+class FixedMap(_TypeCheckedDict[str, T], Object):
     def __init__(
         self,
-        required: typing.Dict[str, ValFactory[T]],
-        optional: None | typing.Dict[str, ValFactory[T]] = None,
+        required: typing.Dict[str, ValueFactory[T]],
+        optional: None | typing.Dict[str, ValueFactory[T]] = None,
     ):
         _TypeCheckedDict.__init__(self, str, required | (optional or {}))
-        Value.__init__(self)
+        Object.__init__(self)
 
-        self._required: typing.Final[typing.Dict[str, ValFactory[T]]] \
+        self._required: typing.Final[typing.Dict[str, ValueFactory[T]]] \
             = collections.OrderedDict(required)
-        self._optional: typing.Final[typing.Dict[str, ValFactory[T]]] \
+        self._optional: typing.Final[typing.Dict[str, ValueFactory[T]]] \
             = collections.OrderedDict(optional or {})
 
         for k, v in self._required.items():
@@ -331,11 +328,11 @@ class FixedMap(_TypeCheckedDict[str, T], Value):
                 break
 
     def _read_next(
-        self, cursor: Cursor, name: str, val_maker: ValFactory[T]
+        self, cursor: Cursor, name: str, val_maker: ValueFactory[T]
     ) -> bool:
         cursor.save()
         try:
-            self[name] = val_maker.read_from(cursor)
+            self[name] = val_maker.create(cursor)
             cursor.unsave()
             return True
         except UnexpectedDataTypeError:
@@ -369,7 +366,7 @@ class FixedMap(_TypeCheckedDict[str, T], Value):
         return f"{self.__class__.__name__}{str(d)}"
 
 
-class SwitchMap(_TypeCheckedDict[int, Value], Value):
+class SwitchMap(_TypeCheckedDict[int, Object], Object):
     def __init__(self, id_to_name: typing.Dict[int, str]):
         id_to_maker = {
             k: names.get_maker_by_name(v)
@@ -377,10 +374,10 @@ class SwitchMap(_TypeCheckedDict[int, Value], Value):
         }
 
         _TypeCheckedDict.__init__(self, int, self._id_to_maker)
-        Value.__init__(self)
+        Object.__init__(self)
 
         assert all(v is not None for v in id_to_maker.values())
-        self._id_to_maker: typing.Final[dict[int, ValFactory[Value]]] \
+        self._id_to_maker: typing.Final[dict[int, ValueFactory[Object]]] \
         = id_to_maker  # type: ignore
         self._id_to_name: typing.Final[typing.Dict[int, str]] \
             = dict(id_to_name)
@@ -402,7 +399,7 @@ class SwitchMap(_TypeCheckedDict[int, Value], Value):
                 )
 
             assert id_ in self._id_to_maker, f'no factory for id "{id_}"'
-            self[id_] = self._id_to_maker[id_].read_from(cursor)
+            self[id_] = self._id_to_maker[id_].create(cursor)
 
     def write(self, cursor: Cursor):
         id_to_non_null_value = {
@@ -435,10 +432,10 @@ class SwitchMap(_TypeCheckedDict[int, Value], Value):
         return super().__eq__(other)
 
 
-class NameMap(_TypeCheckedDict[str, Value], Value):
+class NameMap(_TypeCheckedDict[str, Object], Object):
     def __init__(self):
         _TypeCheckedDict.__init__(self, str, names.get_maker_by_name)
-        Value.__init__(self)
+        Object.__init__(self)
 
     def read(self, cursor: Cursor):
         self.clear()
@@ -460,7 +457,7 @@ class NameMap(_TypeCheckedDict[str, Value], Value):
         return super().__eq__(other)
 
 
-class DateTime(Value):
+class DateTime(Object):
     def __init__(self):
         self._value: int = -1  # -1 is null
 
@@ -486,7 +483,7 @@ class DateTime(Value):
         return super().__eq__(other)
 
 
-class Json(Value):
+class Json(Object):
     def __init__(self):
         self._value: None | bool | int | float | str | list | dict = None
 
@@ -516,7 +513,7 @@ class Json(Value):
         return super().__eq__(other)
 
 
-class LastPageRead(Value):  # aka LPR. this is kindle reading pos info
+class LastPageRead(Object):  # aka LPR. this is kindle reading pos info
     EXTENDED_LPR_VERSION: typing.Final[int] = 2
 
     def __init__(self):
@@ -601,7 +598,7 @@ class LastPageRead(Value):  # aka LPR. this is kindle reading pos info
         )
 
 
-class Position(Value):
+class Position(Object):
     PREFIX_VERSION1: typing.Final[int] = 0x01
 
     def __init__(self):
@@ -687,7 +684,7 @@ class Position(Value):
         return f"{self.__class__.__name__}{str(d)}"
 
 
-class TimeZoneOffset(Value):
+class TimeZoneOffset(Object):
     def __init__(self):
         self._value: int = -1  # -1 is null
 

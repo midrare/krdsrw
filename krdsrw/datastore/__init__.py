@@ -10,7 +10,7 @@ from .containers import Position
 from .containers import SwitchMap
 from .containers import TimeZoneOffset
 from .cursor import Cursor
-from .cursor import Value
+from .cursor import Object
 from .datastore import DataStore
 from .error import DemarcationError
 from .error import UnexpectedFieldError
@@ -19,15 +19,15 @@ from .error import NameNotSupportedError
 from .error import UnexpectedNameError
 from .error import UnexpectedDataTypeError
 from .error import MagicStrNotFoundError
-from .types import Byte
-from .types import Bool
-from .types import Char
-from .types import Short
-from .types import Int
-from .types import Long
-from .types import Float
-from .types import Double
-from .types import Utf8Str
+from .cursor import Byte
+from .cursor import Bool
+from .cursor import Char
+from .cursor import Short
+from .cursor import Int
+from .cursor import Long
+from .cursor import Float
+from .cursor import Double
+from .cursor import Utf8Str
 
 __all__ = [
     "Cursor",
@@ -58,6 +58,6 @@ __all__ = [
     "Float",
     "Double",
     "Utf8Str",
-    "Value",
+    "Object",
     "names",
 ]

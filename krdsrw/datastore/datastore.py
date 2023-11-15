@@ -1,14 +1,13 @@
 from __future__ import annotations
 import typing
 
-from .types import *
-from .containers import *
+from .containers import NameMap
 from .cursor import Cursor
-from .cursor import Value
-from .error import *
+from .cursor import Object
+from .error import MagicStrNotFoundError
 
 
-class DataStore(Value):
+class DataStore(Object):
     SIGNATURE: typing.Final[bytes] = b"\x00\x00\x00\x00\x00\x1A\xB1\x26"
     FIXED_MYSTERY_NUM: typing.Final[int] = (
         1  # present after the signature; unknown what this number means
