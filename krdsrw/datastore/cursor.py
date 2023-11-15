@@ -202,163 +202,58 @@ class Cursor:
         self._data.seek(pos, io.SEEK_SET)
 
     def read_byte(self, magic_byte: bool = True) -> Byte:
-        if magic_byte and not self._eat_raw_byte(BYTE_TYPE_INDICATOR):
-            raise UnexpectedDataTypeError(
-                self._data.tell(), BYTE_TYPE_INDICATOR, self._peek_raw_byte()
-            )
-
-        return Byte(self._read_raw_byte())
+        return Byte.read(self, magic_byte)
 
     def write_byte(self, value: int, magic_byte: bool = True):
-        if magic_byte:
-            self._write_raw_byte(BYTE_TYPE_INDICATOR)
-
-        self._write_raw_byte(value)
+        Byte.write(self, value, magic_byte)
 
     def read_char(self, magic_byte: bool = True) -> Char:
-        if magic_byte and not self._eat_raw_byte(CHAR_TYPE_INDICATOR):
-            raise UnexpectedDataTypeError(
-                self._data.tell(), CHAR_TYPE_INDICATOR, self._peek_raw_byte()
-            )
-
-        return Char(self._read_raw_byte())
+        return Char.read(self, magic_byte)
 
     def write_char(self, value: int, magic_byte: bool = True):
-        if magic_byte:
-            self._write_raw_byte(CHAR_TYPE_INDICATOR)
-
-        self._write_raw_byte(value)
+        Char.write(self, value, magic_byte)
 
     def read_bool(self, magic_byte: bool = True) -> Bool:
-        if magic_byte and not self._eat_raw_byte(BOOL_TYPE_INDICATOR):
-            raise UnexpectedDataTypeError(
-                self._data.tell(), BOOL_TYPE_INDICATOR, self._peek_raw_byte()
-            )
-
-        return Bool(bool(self._read_raw_byte()))
+        return Bool.read(self, magic_byte)
 
     def write_bool(self, value: bool | int, magic_byte: bool = True):
-        if magic_byte:
-            self._write_raw_byte(BOOL_TYPE_INDICATOR)
-
-        self._write_raw_byte(int(bool(value)))
+        Bool.write(self, value, magic_byte)
 
     def read_int(self, magic_byte: bool = True) -> Int:
-        if magic_byte and not self._eat_raw_byte(INT_TYPE_INDICATOR):
-            raise UnexpectedDataTypeError(
-                self._data.tell(), INT_TYPE_INDICATOR, self._peek_raw_byte()
-            )
-
-        return Int(
-            struct.unpack_from(
-                ">l", self._read_raw_bytes(struct.calcsize(">l"))
-            )[0]
-        )
+        return Int.read(self, magic_byte)
 
     def write_int(self, value: int, magic_byte: bool = True):
-        if magic_byte:
-            self._write_raw_byte(INT_TYPE_INDICATOR)
-
-        self._write_raw_bytes(struct.pack(">l", value))
+        Int.write(self, value, magic_byte)
 
     def read_long(self, magic_byte: bool = True) -> Long:
-        if magic_byte and not self._eat_raw_byte(LONG_TYPE_INDICATOR):
-            raise UnexpectedDataTypeError(
-                self._data.tell(), LONG_TYPE_INDICATOR, self._peek_raw_byte()
-            )
-
-        return Long(
-            struct.unpack_from(
-                ">q", self._read_raw_bytes(struct.calcsize(">q"))
-            )[0]
-        )
+        return Long.read(self, magic_byte)
 
     def write_long(self, value: int, magic_byte: bool = True):
-        if magic_byte:
-            self._write_raw_byte(LONG_TYPE_INDICATOR)
-
-        self._write_raw_bytes(struct.pack(">q", value))
+        Long.write(self, value, magic_byte)
 
     def read_short(self, magic_byte: bool = True) -> Short:
-        if magic_byte and not self._eat_raw_byte(SHORT_TYPE_INDICATOR):
-            raise UnexpectedDataTypeError(
-                self._data.tell(), SHORT_TYPE_INDICATOR, self._peek_raw_byte()
-            )
-
-        return Short(
-            struct.unpack_from(
-                ">h", self._read_raw_bytes(struct.calcsize(">h"))
-            )[0]
-        )
+        return Short.read(self, magic_byte)
 
     def write_short(self, value: int, magic_byte: bool = True):
-        if magic_byte:
-            self._write_raw_byte(SHORT_TYPE_INDICATOR)
-
-        self._write_raw_bytes(struct.pack(">h", value))
+        Short.write(self, value, magic_byte)
 
     def read_float(self, magic_byte: bool = True) -> Float:
-        if magic_byte and not self._eat_raw_byte(FLOAT_TYPE_INDICATOR):
-            raise UnexpectedDataTypeError(
-                self._data.tell(), FLOAT_TYPE_INDICATOR, self._peek_raw_byte()
-            )
-
-        return Float(
-            struct.unpack_from(
-                ">f", self._read_raw_bytes(struct.calcsize(">f"))
-            )[0]
-        )
+        return Float.read(self, magic_byte)
 
     def write_float(self, value: float, magic_byte: bool = True):
-        if magic_byte:
-            self._write_raw_byte(FLOAT_TYPE_INDICATOR)
-
-        self._write_raw_bytes(struct.pack(">f", value))
+        Float.write(self, value, magic_byte)
 
     def read_double(self, magic_byte: bool = True) -> Double:
-        if magic_byte and not self._eat_raw_byte(DOUBLE_TYPE_INDICATOR):
-            raise UnexpectedDataTypeError(
-                self._data.tell(), DOUBLE_TYPE_INDICATOR, self._peek_raw_byte()
-            )
-
-        return Double(
-            struct.unpack_from(
-                ">d", self._read_raw_bytes(struct.calcsize(">d"))
-            )[0]
-        )
+        return Double.read(self, magic_byte)
 
     def write_double(self, value: float, magic_byte: bool = True):
-        if magic_byte:
-            self._write_raw_byte(DOUBLE_TYPE_INDICATOR)
-
-        self._write_raw_bytes(struct.pack(">d", value))
+        Double.write(self, value, magic_byte)
 
     def read_utf8str(self, magic_byte: bool = True) -> Utf8Str:
-        if magic_byte and not self._eat_raw_byte(UTF8STR_TYPE_INDICATOR):
-            raise UnexpectedDataTypeError(
-                self._data.tell(), UTF8STR_TYPE_INDICATOR, self._peek_raw_byte()
-            )
-        is_empty = bool(self._read_raw_byte())
-        if is_empty:
-            return Utf8Str()
+        return Utf8Str.read(self, magic_byte)
 
-        # NOTE even if the is_empty byte is false, the actual str
-        #   length can still be 0
-        string_len = struct.unpack_from(
-            ">H", self._read_raw_bytes(struct.calcsize(">H"))
-        )[0]
-        return Utf8Str(self._read_raw_bytes(string_len).decode("utf-8"))
-
-    def write_utf8str(self, value: None | str, magic_byte: bool = True):
-        if magic_byte:
-            self._write_raw_byte(UTF8STR_TYPE_INDICATOR)
-
-        is_str_null = value is None
-        self._write_raw_byte(int(is_str_null))
-        if not is_str_null:
-            encoded = value.encode("utf-8")
-            self._write_raw_bytes(struct.pack(">H", len(encoded)))
-            self._write_raw_bytes(encoded)
+    def write_utf8str(self, value: str, magic_byte: bool = True):
+        Utf8Str.write(self, value, magic_byte)
 
 
     def read_auto(self, cls_: None|typing.Type[Byte]| typing.Type[Char] \
@@ -552,7 +447,7 @@ class Byte(int, Basic):  # signed byte
         return Byte(cursor.read())
 
     @staticmethod
-    def write(cursor: Cursor, o: Byte, magic_byte: bool = True):
+    def write(cursor: Cursor, o: int | Byte, magic_byte: bool = True):
         if magic_byte:
             cursor.write(Byte.magic_byte)
         cursor.write(o)
@@ -578,7 +473,7 @@ class Char(int, Basic):
         return Char(cursor.read())
 
     @staticmethod
-    def write(cursor: Cursor, o: Char, magic_byte: bool = True):
+    def write(cursor: Cursor, o: int | Char, magic_byte: bool = True):
         if magic_byte:
             cursor.write(Char.magic_byte)
         cursor.write(o)
@@ -604,7 +499,7 @@ class Bool(int, Basic):
         return Bool(bool(cursor.read()))
 
     @staticmethod
-    def write(cursor: Cursor, o: Bool, magic_byte: bool = True):
+    def write(cursor: Cursor, o: bool | int | Bool, magic_byte: bool = True):
         if magic_byte:
             cursor.write(Bool.magic_byte)
         cursor.write(int(bool(o)))
@@ -629,7 +524,7 @@ class Short(int, Basic):
         )
 
     @staticmethod
-    def write(cursor: Cursor, o: Short, magic_byte: bool = True):
+    def write(cursor: Cursor, o: int | Short, magic_byte: bool = True):
         if magic_byte:
             cursor.write(Short.magic_byte)
         cursor.write(struct.pack(">h", o))
@@ -654,7 +549,7 @@ class Int(int, Basic):
         )
 
     @staticmethod
-    def write(cursor: Cursor, o: Int, magic_byte: bool = True):
+    def write(cursor: Cursor, o: int | Int, magic_byte: bool = True):
         if magic_byte:
             cursor.write(Int.magic_byte)
         cursor.write(struct.pack(">l", o))
@@ -679,7 +574,7 @@ class Long(int, Basic):
         )
 
     @staticmethod
-    def write(cursor: Cursor, o: Long, magic_byte: bool = True):
+    def write(cursor: Cursor, o: int | Long, magic_byte: bool = True):
         if magic_byte:
             cursor.write(Long.magic_byte)
         cursor.write(struct.pack(">q", o))
@@ -704,7 +599,7 @@ class Float(float, Basic):
         )
 
     @staticmethod
-    def write(cursor: Cursor, o: Float, magic_byte: bool = True):
+    def write(cursor: Cursor, o: float | Float, magic_byte: bool = True):
         if magic_byte:
             cursor.write(Float.magic_byte)
         cursor.write(struct.pack(">f", o))
@@ -729,7 +624,7 @@ class Double(float, Basic):
         )
 
     @staticmethod
-    def write(cursor: Cursor, o: Double, magic_byte: bool = True):
+    def write(cursor: Cursor, o: float | Double, magic_byte: bool = True):
         if magic_byte:
             cursor.write(Double.magic_byte)
         cursor.write(struct.pack(">d", o))
@@ -761,7 +656,7 @@ class Utf8Str(str, Basic):
         return Utf8Str(cursor.read(string_len).decode("utf-8"))
 
     @staticmethod
-    def write(cursor: Cursor, o: Utf8Str, magic_byte: bool = True):
+    def write(cursor: Cursor, o: str | Utf8Str, magic_byte: bool = True):
         if magic_byte:
             cursor.write(Utf8Str.magic_byte)
 
