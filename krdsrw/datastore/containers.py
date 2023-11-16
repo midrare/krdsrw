@@ -3,41 +3,28 @@ import base64
 import collections
 import collections.abc
 import copy
+import inspect
 import json
 import typing
 
 from . import names
-from .constants import BYTE_TYPE_INDICATOR
-from .constants import UTF8STR_TYPE_INDICATOR
 from .cursor import Cursor
-from .cursor import Object
-from .cursor import ValueFactory
-from .cursor import ALL_BASIC_TYPES
-from .cursor import Basic
-from .cursor import Byte
-from .cursor import Char
-from .cursor import Bool
-from .cursor import Short
-from .cursor import Int
-from .cursor import Long
-from .cursor import Float
-from .cursor import Double
-from .cursor import Utf8Str
+from .types import Object
+from .types import ValueFactory
+from .types import Basic
+from .types import Byte
+from .types import Char
+from .types import Bool
+from .types import Short
+from .types import Int
+from .types import Long
+from .types import Float
+from .types import Double
+from .types import Utf8Str
 
 K = typing.TypeVar("K", bound=int | float | str)
 T = typing.TypeVar("T", bound=Byte | Char | Bool | Short | Int | Long \
     | Float | Double | Utf8Str | Object)
-
-
-def _write_value(
-    cursor: Cursor,
-    value: Byte | Char | Bool | Short | Int | Long | Float | Double | Utf8Str
-    | Object,
-):
-    if any(isinstance(value, c) for c in ALL_BASIC_TYPES):
-        cursor.write_auto(value)  # type: ignore
-    else:
-        value.write(cursor)  # type: ignore
 
 
 def _convert_value(o: typing.Any, cls_: type) -> typing.Any:
@@ -153,7 +140,7 @@ class Array(_TypeCheckedList[T], Object):
     def write(self, cursor: Cursor):
         cursor.write_int(len(self))
         for e in self:
-            _write_value(cursor, e)
+            cursor.write_value(type(e), e)
 
     @property
     def cls_(self) -> type[T]:
@@ -270,14 +257,14 @@ class DynamicMap(_TypeCheckedDict[str, T], Object):
         size = cursor.read_int()
         for _ in range(size):
             name = cursor.read_utf8str()
-            value = cursor.read_auto()
+            value = cursor.read_value()
             self[name] = value
 
     def write(self, cursor: Cursor):
         cursor.write_int(len(self))
         for key, value in self.items():
             cursor.write_utf8str(key)
-            _write_value(cursor, value)
+            cursor.write_value(type(value), value)
 
     def __eq__(self, other: typing.Any) -> bool:
         if isinstance(other, self.__class__):
@@ -337,14 +324,14 @@ class FixedMap(_TypeCheckedDict[str, T], Object):
     def write(self, cursor: Cursor):
         for name, val_maker in self._required.items():
             assert isinstance(self[name], val_maker.cls_)
-            _write_value(cursor, self[name])
+            cursor.write_value(type(self[name]), self[name])
 
         for name, val_maker in self._optional.items():
             value = self.get(name)
             if value is None:
                 break
             assert isinstance(value, val_maker.cls_)
-            _write_value(cursor, value)
+            cursor.write_value(type(value), value)
 
     def __eq__(self, other: typing.Any) -> bool:
         if isinstance(other, self.__class__):
@@ -404,7 +391,7 @@ class SwitchMap(_TypeCheckedDict[int, Object], Object):
         cursor.write_int(len(id_to_non_null_value))
         for id_, val in id_to_non_null_value.items():
             cursor.write_int(id_)
-            _write_value(cursor, val)
+            cursor.write_value(type(val), val)
 
     def __eq__(self, other: typing.Any) -> bool:
         if isinstance(other, self.__class__):

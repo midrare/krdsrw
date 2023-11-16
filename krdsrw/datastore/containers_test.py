@@ -1,8 +1,8 @@
 import pytest
 
 from .cursor import Cursor
-from .cursor import Int
-from .cursor import ValueFactory
+from .types import Int
+from .types import ValueFactory
 from .containers import Array
 from .containers import DynamicMap
 

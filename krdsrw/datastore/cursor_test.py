@@ -55,7 +55,7 @@ def test_cursor_peek():
 def test_cursor_peek_matches():
     csr = cursor.Cursor(b'ABCDEFGHIJKLMNOPQRSTUVWXYZ')
     csr.seek(8)
-    assert csr.peek_matches(b'IJKL') is True
+    assert csr.startswith(b'IJKL') is True
 
 
 def test_cursor_write():
@@ -295,48 +295,3 @@ def test_char_write():
     csr = cursor.Cursor()
     csr.write_char(70)
     assert csr.dump() == b'\x09\x46'
-
-
-def test_bool_cmp():
-    o = cursor.Bool(True)
-    assert o == True
-
-
-def test_byte_cmp():
-    o = cursor.Byte(0xab)
-    assert o == 0xab
-
-
-def test_char_cmp():
-    o = cursor.Char(0xab)
-    assert o == 0xab
-
-
-def test_short_cmp():
-    o = cursor.Short(1337)
-    assert o == 1337
-
-
-def test_int_cmp():
-    o = cursor.Int(1337)
-    assert o == 1337
-
-
-def test_long_cmp():
-    o = cursor.Long(1337)
-    assert o == 1337
-
-
-def test_float_cmp():
-    o = cursor.Float(12.34)
-    assert o == 12.34
-
-
-def test_double_cmp():
-    o = cursor.Double(12.34)
-    assert o == 12.34
-
-
-def test_utf8str_cmp():
-    o = cursor.Utf8Str("foo")
-    assert o == "foo"

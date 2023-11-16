@@ -3,8 +3,8 @@ import typing
 
 from .containers import NameMap
 from .cursor import Cursor
-from .cursor import Object
 from .error import MagicStrNotFoundError
+from .types import Object
 
 
 class DataStore(Object):

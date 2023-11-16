@@ -1,15 +1,15 @@
 import typing
 
-from .cursor import Bool
-from .cursor import Byte
-from .cursor import Char
-from .cursor import Short
-from .cursor import Int
-from .cursor import Long
-from .cursor import Float
-from .cursor import Double
-from .cursor import Utf8Str
-from .cursor import ValueFactory
+from .types import Bool
+from .types import Byte
+from .types import Char
+from .types import Short
+from .types import Int
+from .types import Long
+from .types import Float
+from .types import Double
+from .types import Utf8Str
+from .types import ValueFactory
 
 _bool: typing.Final[ValueFactory[Bool]] = ValueFactory(Bool)
 _byte: typing.Final[ValueFactory[Byte]] = ValueFactory(Byte)
@@ -131,7 +131,7 @@ def _annotation_object_cache() -> ValueFactory:
     if not _annotation_object_cache_factory:
         from .containers import Array
         from .containers import SwitchMap
-        from .cursor import Object
+        from .types import Object
 
         # annotation.cache.object
         _annotation_object_cache_factory = ValueFactory(
