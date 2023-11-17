@@ -319,3 +319,25 @@ class Cursor:
             encoded = value.encode("utf-8")
             self._write_raw_bytes(struct.pack(">H", len(encoded)))
             self._write_raw_bytes(encoded)
+
+    def peek_object_name(self, magic_byte: bool = True) -> None | str:
+        name = None
+        self.save()
+        if not magic_byte or self.eat(_OBJECT_BEGIN_INDICATOR):
+            name = self.read_utf8str(False)
+        self.restore()
+        return name
+
+    def peek_object_type(self, magic_byte: bool = True) -> None | type:
+        from . import names
+        cls_ = None
+        self.save()
+
+        if not magic_byte or self.eat(_OBJECT_BEGIN_INDICATOR):
+            name = self.read_utf8str(False)
+            fct = names.get_maker_by_name(name)
+            assert fct, f'Unsupported name \"{name}\".'
+            cls_ = fct.cls_
+
+        self.restore()
+        return cls_
