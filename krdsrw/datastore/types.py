@@ -57,7 +57,7 @@ class Byte(int, Basic):
     magic_byte: int = 0x07
 
     def __new__(cls, *args, **kwargs) -> typing.Self:
-        return super().__new__(*args, **kwargs)
+        return super().__new__(cls, *args, **kwargs)
 
     def __str__(self) -> str:
         return f"0x{hex(self)}"
@@ -204,7 +204,7 @@ class Char(int, Basic):
     magic_byte: int = 0x09
 
     def __new__(cls, *args, **kwargs) -> typing.Self:
-        return super().__new__(*args, **kwargs)
+        return super().__new__(cls, *args, **kwargs)
 
     def __str__(self) -> str:
         return str(chr(self))
@@ -351,7 +351,7 @@ class Bool(int, Basic):
     magic_byte: int = 0x00
 
     def __new__(cls, *args, **kwargs) -> typing.Self:
-        return super().__new__(*args, **kwargs)
+        return super().__new__(cls, *args, **kwargs)
 
     def __str__(self) -> str:
         return str(bool(self))
@@ -501,7 +501,7 @@ class Short(int, Basic):
     magic_byte: int = 0x05
 
     def __new__(cls, *args, **kwargs) -> typing.Self:
-        return super().__new__(*args, **kwargs)
+        return super().__new__(cls, *args, **kwargs)
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}{{{int(self)}}}"
@@ -645,7 +645,7 @@ class Int(int, Basic):
     magic_byte: int = 0x01
 
     def __new__(cls, *args, **kwargs) -> typing.Self:
-        return super().__new__(*args, **kwargs)
+        return super().__new__(cls, *args, **kwargs)
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}{{{int(self)}}}"
@@ -789,7 +789,7 @@ class Long(int, Basic):
     magic_byte: int = 0x02
 
     def __new__(cls, *args, **kwargs) -> typing.Self:
-        return super().__new__(*args, **kwargs)
+        return super().__new__(cls, *args, **kwargs)
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}{{{int(self)}}}"
@@ -933,7 +933,7 @@ class Float(float, Basic):
     magic_byte: int = 0x06
 
     def __new__(cls, *args, **kwargs) -> typing.Self:
-        return super().__new__(*args, **kwargs)
+        return super().__new__(cls, *args, **kwargs)
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}{{{float(self)}}}"
@@ -1036,7 +1036,7 @@ class Double(float, Basic):
     magic_byte: int = 0x04
 
     def __new__(cls, *args, **kwargs) -> typing.Self:
-        return super().__new__(*args, **kwargs)
+        return super().__new__(cls, *args, **kwargs)
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}{{{float(self)}}}"
@@ -1140,7 +1140,7 @@ class Utf8Str(str, Basic):
     magic_byte: int = 0x03
 
     def __new__(cls, *args, **kwargs) -> typing.Self:
-        return super().__new__(*args, **kwargs)
+        return super().__new__(cls, *args, **kwargs)
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}{{\"{str(self)}\"}}"
@@ -1342,27 +1342,6 @@ class ValueFactory(typing.Generic[T]):
 #     else:
 #         raise TypeError(
 #             f"Value of type \"{type(o).__name__}\" " + " is not supported.")
-
-# def peek_object_name(self) -> None | str:
-#     name = None
-#     self.save()
-#     ch = self.read()
-#     if ch == Object.object_begin:
-#         name = Utf8Str.read(self, False)
-#     self.restore()
-#     return name
-
-# def peek_object_type(self) -> None | type[Object]:
-#     cls_ = None
-#     self.save()
-#     ch = self.read()
-#     if ch == Object.object_begin:
-#         name = Utf8Str.read(self, False)
-#         fct = names.get_maker_by_name(name)
-#         assert fct, f'Unsupported name \"{name}\".'
-#         cls_ = fct.cls_
-#     self.restore()
-#     return cls_
 
 # def read_auto(self) -> int|float|str:
 #     type_byte = self.peek()
