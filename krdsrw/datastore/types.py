@@ -8,12 +8,12 @@ from .error import UnexpectedDataTypeError
 
 
 class Value:
-    @staticmethod
-    def read(cursor: Cursor) -> Value:
+    @classmethod
+    def create(cls, cursor: Cursor) -> typing.Self:
         raise NotImplementedError("Must be implemented by the subclass.")
 
-    @staticmethod
-    def write(cursor: Cursor, o: Value):
+    @classmethod
+    def write(cls, cursor: Cursor, o: typing.Self):
         raise NotImplementedError("Must be implemented by the subclass.")
 
 
@@ -21,12 +21,12 @@ class Basic(Value):
     builtin: type[int | float | str] = NotImplemented  # type: ignore
     magic_byte: int = NotImplemented
 
-    @staticmethod
-    def read(cursor: Cursor, magic_byte: bool = True) -> Basic:
+    @classmethod
+    def create(cls, cursor: Cursor, magic_byte: bool = True) -> typing.Self:
         raise NotImplementedError("Must be implemented by the subclass.")
 
-    @staticmethod
-    def write(cursor: Cursor, o: Basic, magic_byte: bool = True):
+    @classmethod
+    def write(cls, cursor: Cursor, o: typing.Self, magic_byte: bool = True):
         raise NotImplementedError("Must be implemented by the subclass.")
 
     @staticmethod
@@ -50,40 +50,14 @@ class Basic(Value):
         cursor.write(struct.pack(fmt, o))
 
 
-class Object(Value):
-    # named object data structure (name utf8str + data)
-    object_begin: int = 0xfe
-    # end of data for object
-    object_end: int = 0xff
-
-    def __init__(self, *args, _name: None | str = None, **kwargs):
-        super().__init__()
-        self._name: str = _name or ''
-
-    @staticmethod
-    def read(cursor: Cursor, *args, **kwargs) -> Object:
-        raise NotImplementedError("Must be implemented by the subclass.")
-
-    @staticmethod
-    def write(cursor: Cursor, o: Object):
-        raise NotImplementedError("Must be implemented by the subclass.")
-
-    def __eq__(self, other: typing.Self) -> bool:
-        raise NotImplementedError("Must be implemented by the subclass.")
-
-    @property
-    def name(self) -> str:
-        return self._name
-
-    def __str__(self) -> str:
-        return f"{self.__class__.__name__}{{{self._name}}}"
-
-
 class Byte(int, Basic):
     # signed byte
     builtin: type[int | float | str] = int
     size: int = struct.calcsize('>b')
     magic_byte: int = 0x07
+
+    def __new__(cls, *args, **kwargs) -> typing.Self:
+        return super().__new__(*args, **kwargs)
 
     def __str__(self) -> str:
         return f"0x{hex(self)}"
@@ -91,13 +65,134 @@ class Byte(int, Basic):
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}{{0x{hex(self)}}}"
 
+    def __add__(self, other: int) -> typing.Self:
+        o = super().__add__(other)
+        return self.__class__(o)
+
+    def __sub__(self, other: int) -> typing.Self:
+        o = super().__sub__(other)
+        return self.__class__(o)
+
+    def __mul__(self, other: int) -> typing.Self:
+        o = super().__mul__(other)
+        return self.__class__(o)
+
+    def __truediv__(self, other: int) -> typing.Self:
+        o = super().__truediv__(other)
+        return self.__class__(o)
+
+    def __floordiv__(self, other: int) -> typing.Self:
+        o = super().__floordiv__(other)
+        return self.__class__(o)
+
+    def __mod__(self, other: int) -> typing.Self:
+        o = super().__mod__(other)
+        return self.__class__(o)
+
+    def __divmod__(self, other: int) -> typing.Self:
+        o = super().__divmod__(other)
+        return self.__class__(o)
+
+    def __pow__(self, other: int, modulo: None | int = None) -> typing.Self:
+        o = super().__pow__(other, modulo)
+        return self.__class__(o)
+
+    def __lshift__(self, other: int) -> typing.Self:
+        o = super().__lshift__(other)
+        return self.__class__(o)
+
+    def __rshift__(self, other: int) -> typing.Self:
+        o = super().__rshift__(other)
+        return self.__class__(o)
+
+    def __and__(self, other: int) -> typing.Self:
+        o = super().__and__(other)
+        return self.__class__(o)
+
+    def __xor__(self, other: int) -> typing.Self:
+        o = super().__xor__(other)
+        return self.__class__(o)
+
+    def __or__(self, other: int) -> typing.Self:
+        o = super().__or__(other)
+        return self.__class__(o)
+
+    def __radd__(self, other: int) -> typing.Self:
+        o = super().__radd__(other)
+        return self.__class__(o)
+
+    def __rsub__(self, other: int) -> typing.Self:
+        o = super().__rsub__(other)
+        return self.__class__(o)
+
+    def __rmul__(self, other: int) -> typing.Self:
+        o = super().__rmul__(other)
+        return self.__class__(o)
+
+    def __rtruediv__(self, other: int) -> typing.Self:
+        o = super().__rtruediv__(other)
+        return self.__class__(o)
+
+    def __rfloordiv__(self, other: int) -> typing.Self:
+        o = super().__rfloordiv__(other)
+        return self.__class__(o)
+
+    def __rmod__(self, other: int) -> typing.Self:
+        o = super().__rmod__(other)
+        return self.__class__(o)
+
+    def __rdivmod__(self, other: int) -> typing.Self:
+        o = super().__rdivmod__(other)
+        return self.__class__(o)
+
+    def __rpow__(self, other: int, modulo: None | int = None) -> typing.Self:
+        o = super().__rpow__(other, modulo)
+        return self.__class__(o)
+
+    def __rlshift__(self, other: int) -> typing.Self:
+        o = super().__rlshift__(other)
+        return self.__class__(o)
+
+    def __rrshift__(self, other: int) -> typing.Self:
+        o = super().__rrshift__(other)
+        return self.__class__(o)
+
+    def __rand__(self, other: int) -> typing.Self:
+        o = super().__rand__(other)
+        return self.__class__(o)
+
+    def __rxor__(self, other: int) -> typing.Self:
+        o = super().__rxor__(other)
+        return self.__class__(o)
+
+    def __ror__(self, other: int) -> typing.Self:
+        o = super().__ror__(other)
+        return self.__class__(o)
+
+    def __neg__(self) -> typing.Self:
+        o = super().__neg__()
+        return self.__class__(o)
+
+    def __pos__(self) -> typing.Self:
+        o = super().__pos__()
+        return self.__class__(o)
+
+    def __abs__(self) -> typing.Self:
+        o = super().__abs__()
+        return self.__class__(o)
+
+    def __invert__(self) -> typing.Self:
+        o = super().__invert__()
+        return self.__class__(o)
+
     @classmethod
-    def read(cls, cursor: Cursor, magic_byte: bool = True) -> Byte:
+    def create(cls, cursor: Cursor, magic_byte: bool = True) -> typing.Self:
         magic_byte_ = cls.magic_byte if magic_byte else None
         return cls(cls._read_unpack(cursor, '>b', magic_byte_))
 
     @classmethod
-    def write(cls, cursor: Cursor, o: int | Byte, magic_byte: bool = True):
+    def write(
+            cls, cursor: Cursor, o: int | typing.Self, magic_byte: bool = True):
         magic_byte_ = cls.magic_byte if magic_byte else None
         cls._write_pack(cursor, o, '>b', magic_byte_)
 
@@ -108,6 +203,9 @@ class Char(int, Basic):
     size: int = struct.calcsize('>B')
     magic_byte: int = 0x09
 
+    def __new__(cls, *args, **kwargs) -> typing.Self:
+        return super().__new__(*args, **kwargs)
+
     def __str__(self) -> str:
         return str(chr(self))
 
@@ -115,14 +213,135 @@ class Char(int, Basic):
         return f"{self.__class__.__name__}{{{chr(self)}}}"
 
     @classmethod
-    def read(cls, cursor: Cursor, magic_byte: bool = True) -> Char:
+    def create(cls, cursor: Cursor, magic_byte: bool = True) -> typing.Self:
         magic_byte_ = cls.magic_byte if magic_byte else None
         return cls(cls._read_unpack(cursor, '>B', magic_byte_))
 
     @classmethod
-    def write(cls, cursor: Cursor, o: int | Char, magic_byte: bool = True):
+    def write(
+            cls, cursor: Cursor, o: int | typing.Self, magic_byte: bool = True):
         magic_byte_ = cls.magic_byte if magic_byte else None
         cls._write_pack(cursor, o, '>B', magic_byte_)
+
+    def __add__(self, other: int) -> typing.Self:
+        o = super().__add__(other)
+        return self.__class__(o)
+
+    def __sub__(self, other: int) -> typing.Self:
+        o = super().__sub__(other)
+        return self.__class__(o)
+
+    def __mul__(self, other: int) -> typing.Self:
+        o = super().__mul__(other)
+        return self.__class__(o)
+
+    def __truediv__(self, other: int) -> typing.Self:
+        o = super().__truediv__(other)
+        return self.__class__(o)
+
+    def __floordiv__(self, other: int) -> typing.Self:
+        o = super().__floordiv__(other)
+        return self.__class__(o)
+
+    def __mod__(self, other: int) -> typing.Self:
+        o = super().__mod__(other)
+        return self.__class__(o)
+
+    def __divmod__(self, other: int) -> typing.Self:
+        o = super().__divmod__(other)
+        return self.__class__(o)
+
+    def __pow__(self, other: int, modulo: None | int = None) -> typing.Self:
+        o = super().__pow__(other, modulo)
+        return self.__class__(o)
+
+    def __lshift__(self, other: int) -> typing.Self:
+        o = super().__lshift__(other)
+        return self.__class__(o)
+
+    def __rshift__(self, other: int) -> typing.Self:
+        o = super().__rshift__(other)
+        return self.__class__(o)
+
+    def __and__(self, other: int) -> typing.Self:
+        o = super().__and__(other)
+        return self.__class__(o)
+
+    def __xor__(self, other: int) -> typing.Self:
+        o = super().__xor__(other)
+        return self.__class__(o)
+
+    def __or__(self, other: int) -> typing.Self:
+        o = super().__or__(other)
+        return self.__class__(o)
+
+    def __radd__(self, other: int) -> typing.Self:
+        o = super().__radd__(other)
+        return self.__class__(o)
+
+    def __rsub__(self, other: int) -> typing.Self:
+        o = super().__rsub__(other)
+        return self.__class__(o)
+
+    def __rmul__(self, other: int) -> typing.Self:
+        o = super().__rmul__(other)
+        return self.__class__(o)
+
+    def __rtruediv__(self, other: int) -> typing.Self:
+        o = super().__rtruediv__(other)
+        return self.__class__(o)
+
+    def __rfloordiv__(self, other: int) -> typing.Self:
+        o = super().__rfloordiv__(other)
+        return self.__class__(o)
+
+    def __rmod__(self, other: int) -> typing.Self:
+        o = super().__rmod__(other)
+        return self.__class__(o)
+
+    def __rdivmod__(self, other: int) -> typing.Self:
+        o = super().__rdivmod__(other)
+        return self.__class__(o)
+
+    def __rpow__(self, other: int, modulo: None | int = None) -> typing.Self:
+        o = super().__rpow__(other, modulo)
+        return self.__class__(o)
+
+    def __rlshift__(self, other: int) -> typing.Self:
+        o = super().__rlshift__(other)
+        return self.__class__(o)
+
+    def __rrshift__(self, other: int) -> typing.Self:
+        o = super().__rrshift__(other)
+        return self.__class__(o)
+
+    def __rand__(self, other: int) -> typing.Self:
+        o = super().__rand__(other)
+        return self.__class__(o)
+
+    def __rxor__(self, other: int) -> typing.Self:
+        o = super().__rxor__(other)
+        return self.__class__(o)
+
+    def __ror__(self, other: int) -> typing.Self:
+        o = super().__ror__(other)
+        return self.__class__(o)
+
+    def __neg__(self) -> typing.Self:
+        o = super().__neg__()
+        return self.__class__(o)
+
+    def __pos__(self) -> typing.Self:
+        o = super().__pos__()
+        return self.__class__(o)
+
+    def __abs__(self) -> typing.Self:
+        o = super().__abs__()
+        return self.__class__(o)
+
+    def __invert__(self) -> typing.Self:
+        o = super().__invert__()
+        return self.__class__(o)
 
 
 class Bool(int, Basic):
@@ -131,6 +350,9 @@ class Bool(int, Basic):
     size: int = struct.calcsize('>?')
     magic_byte: int = 0x00
 
+    def __new__(cls, *args, **kwargs) -> typing.Self:
+        return super().__new__(*args, **kwargs)
+
     def __str__(self) -> str:
         return str(bool(self))
 
@@ -138,15 +360,138 @@ class Bool(int, Basic):
         return f"{self.__class__.__name__}{{{bool(self)}}}"
 
     @classmethod
-    def read(cls, cursor: Cursor, magic_byte: bool = True) -> Bool:
+    def create(cls, cursor: Cursor, magic_byte: bool = True) -> typing.Self:
         magic_byte_ = cls.magic_byte if magic_byte else None
         return cls(cls._read_unpack(cursor, '>?', magic_byte_))
 
     @classmethod
     def write(
-            cls, cursor: Cursor, o: bool | int | Bool, magic_byte: bool = True):
+            cls,
+            cursor: Cursor,
+            o: bool | int | typing.Self,
+            magic_byte: bool = True):
         magic_byte_ = cls.magic_byte if magic_byte else None
-        cls._write_pack(cursor, o, '>?', magic_byte_)
+        cls._write_pack(cursor, int(o), '>?', magic_byte_)
+
+    def __add__(self, other: int) -> typing.Self:
+        o = super().__add__(other)
+        return self.__class__(o)
+
+    def __sub__(self, other: int) -> typing.Self:
+        o = super().__sub__(other)
+        return self.__class__(o)
+
+    def __mul__(self, other: int) -> typing.Self:
+        o = super().__mul__(other)
+        return self.__class__(o)
+
+    def __truediv__(self, other: int) -> typing.Self:
+        o = super().__truediv__(other)
+        return self.__class__(o)
+
+    def __floordiv__(self, other: int) -> typing.Self:
+        o = super().__floordiv__(other)
+        return self.__class__(o)
+
+    def __mod__(self, other: int) -> typing.Self:
+        o = super().__mod__(other)
+        return self.__class__(o)
+
+    def __divmod__(self, other: int) -> typing.Self:
+        o = super().__divmod__(other)
+        return self.__class__(o)
+
+    def __pow__(self, other: int, modulo: None | int = None) -> typing.Self:
+        o = super().__pow__(other, modulo)
+        return self.__class__(o)
+
+    def __lshift__(self, other: int) -> typing.Self:
+        o = super().__lshift__(other)
+        return self.__class__(o)
+
+    def __rshift__(self, other: int) -> typing.Self:
+        o = super().__rshift__(other)
+        return self.__class__(o)
+
+    def __and__(self, other: int) -> typing.Self:
+        o = super().__and__(other)
+        return self.__class__(o)
+
+    def __xor__(self, other: int) -> typing.Self:
+        o = super().__xor__(other)
+        return self.__class__(o)
+
+    def __or__(self, other: int) -> typing.Self:
+        o = super().__or__(other)
+        return self.__class__(o)
+
+    def __radd__(self, other: int) -> typing.Self:
+        o = super().__radd__(other)
+        return self.__class__(o)
+
+    def __rsub__(self, other: int) -> typing.Self:
+        o = super().__rsub__(other)
+        return self.__class__(o)
+
+    def __rmul__(self, other: int) -> typing.Self:
+        o = super().__rmul__(other)
+        return self.__class__(o)
+
+    def __rtruediv__(self, other: int) -> typing.Self:
+        o = super().__rtruediv__(other)
+        return self.__class__(o)
+
+    def __rfloordiv__(self, other: int) -> typing.Self:
+        o = super().__rfloordiv__(other)
+        return self.__class__(o)
+
+    def __rmod__(self, other: int) -> typing.Self:
+        o = super().__rmod__(other)
+        return self.__class__(o)
+
+    def __rdivmod__(self, other: int) -> typing.Self:
+        o = super().__rdivmod__(other)
+        return self.__class__(o)
+
+    def __rpow__(self, other: int, modulo: None | int = None) -> typing.Self:
+        o = super().__rpow__(other, modulo)
+        return self.__class__(o)
+
+    def __rlshift__(self, other: int) -> typing.Self:
+        o = super().__rlshift__(other)
+        return self.__class__(o)
+
+    def __rrshift__(self, other: int) -> typing.Self:
+        o = super().__rrshift__(other)
+        return self.__class__(o)
+
+    def __rand__(self, other: int) -> typing.Self:
+        o = super().__rand__(other)
+        return self.__class__(o)
+
+    def __rxor__(self, other: int) -> typing.Self:
+        o = super().__rxor__(other)
+        return self.__class__(o)
+
+    def __ror__(self, other: int) -> typing.Self:
+        o = super().__ror__(other)
+        return self.__class__(o)
+
+    def __neg__(self) -> typing.Self:
+        o = super().__neg__()
+        return self.__class__(o)
+
+    def __pos__(self) -> typing.Self:
+        o = super().__pos__()
+        return self.__class__(o)
+
+    def __abs__(self) -> typing.Self:
+        o = super().__abs__()
+        return self.__class__(o)
+
+    def __invert__(self) -> typing.Self:
+        o = super().__invert__()
+        return self.__class__(o)
 
 
 class Short(int, Basic):
@@ -155,18 +500,142 @@ class Short(int, Basic):
     size: int = struct.calcsize('>h')
     magic_byte: int = 0x05
 
+    def __new__(cls, *args, **kwargs) -> typing.Self:
+        return super().__new__(*args, **kwargs)
+
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}{{{int(self)}}}"
 
     @classmethod
-    def read(cls, cursor: Cursor, magic_byte: bool = True) -> Short:
+    def create(cls, cursor: Cursor, magic_byte: bool = True) -> typing.Self:
         magic_byte_ = cls.magic_byte if magic_byte else None
         return cls(cls._read_unpack(cursor, '>h', magic_byte_))
 
     @classmethod
-    def write(cls, cursor: Cursor, o: int | Short, magic_byte: bool = True):
+    def write(
+            cls, cursor: Cursor, o: int | typing.Self, magic_byte: bool = True):
         magic_byte_ = cls.magic_byte if magic_byte else None
         cls._write_pack(cursor, o, '>h', magic_byte_)
+
+    def __add__(self, other: int) -> typing.Self:
+        o = super().__add__(other)
+        return self.__class__(o)
+
+    def __sub__(self, other: int) -> typing.Self:
+        o = super().__sub__(other)
+        return self.__class__(o)
+
+    def __mul__(self, other: int) -> typing.Self:
+        o = super().__mul__(other)
+        return self.__class__(o)
+
+    def __truediv__(self, other: int) -> typing.Self:
+        o = super().__truediv__(other)
+        return self.__class__(o)
+
+    def __floordiv__(self, other: int) -> typing.Self:
+        o = super().__floordiv__(other)
+        return self.__class__(o)
+
+    def __mod__(self, other: int) -> typing.Self:
+        o = super().__mod__(other)
+        return self.__class__(o)
+
+    def __divmod__(self, other: int) -> typing.Self:
+        o = super().__divmod__(other)
+        return self.__class__(o)
+
+    def __pow__(self, other: int, modulo: None | int = None) -> typing.Self:
+        o = super().__pow__(other, modulo)
+        return self.__class__(o)
+
+    def __lshift__(self, other: int) -> typing.Self:
+        o = super().__lshift__(other)
+        return self.__class__(o)
+
+    def __rshift__(self, other: int) -> typing.Self:
+        o = super().__rshift__(other)
+        return self.__class__(o)
+
+    def __and__(self, other: int) -> typing.Self:
+        o = super().__and__(other)
+        return self.__class__(o)
+
+    def __xor__(self, other: int) -> typing.Self:
+        o = super().__xor__(other)
+        return self.__class__(o)
+
+    def __or__(self, other: int) -> typing.Self:
+        o = super().__or__(other)
+        return self.__class__(o)
+
+    def __radd__(self, other: int) -> typing.Self:
+        o = super().__radd__(other)
+        return self.__class__(o)
+
+    def __rsub__(self, other: int) -> typing.Self:
+        o = super().__rsub__(other)
+        return self.__class__(o)
+
+    def __rmul__(self, other: int) -> typing.Self:
+        o = super().__rmul__(other)
+        return self.__class__(o)
+
+    def __rtruediv__(self, other: int) -> typing.Self:
+        o = super().__rtruediv__(other)
+        return self.__class__(o)
+
+    def __rfloordiv__(self, other: int) -> typing.Self:
+        o = super().__rfloordiv__(other)
+        return self.__class__(o)
+
+    def __rmod__(self, other: int) -> typing.Self:
+        o = super().__rmod__(other)
+        return self.__class__(o)
+
+    def __rdivmod__(self, other: int) -> typing.Self:
+        o = super().__rdivmod__(other)
+        return self.__class__(o)
+
+    def __rpow__(self, other: int, modulo: None | int = None) -> typing.Self:
+        o = super().__rpow__(other, modulo)
+        return self.__class__(o)
+
+    def __rlshift__(self, other: int) -> typing.Self:
+        o = super().__rlshift__(other)
+        return self.__class__(o)
+
+    def __rrshift__(self, other: int) -> typing.Self:
+        o = super().__rrshift__(other)
+        return self.__class__(o)
+
+    def __rand__(self, other: int) -> typing.Self:
+        o = super().__rand__(other)
+        return self.__class__(o)
+
+    def __rxor__(self, other: int) -> typing.Self:
+        o = super().__rxor__(other)
+        return self.__class__(o)
+
+    def __ror__(self, other: int) -> typing.Self:
+        o = super().__ror__(other)
+        return self.__class__(o)
+
+    def __neg__(self) -> typing.Self:
+        o = super().__neg__()
+        return self.__class__(o)
+
+    def __pos__(self) -> typing.Self:
+        o = super().__pos__()
+        return self.__class__(o)
+
+    def __abs__(self) -> typing.Self:
+        o = super().__abs__()
+        return self.__class__(o)
+
+    def __invert__(self) -> typing.Self:
+        o = super().__invert__()
+        return self.__class__(o)
 
 
 class Int(int, Basic):
@@ -175,18 +644,142 @@ class Int(int, Basic):
     size: int = struct.calcsize('>l')
     magic_byte: int = 0x01
 
+    def __new__(cls, *args, **kwargs) -> typing.Self:
+        return super().__new__(*args, **kwargs)
+
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}{{{int(self)}}}"
 
     @classmethod
-    def read(cls, cursor: Cursor, magic_byte: bool = True) -> Int:
+    def create(cls, cursor: Cursor, magic_byte: bool = True) -> typing.Self:
         magic_byte_ = cls.magic_byte if magic_byte else None
         return cls(cls._read_unpack(cursor, '>l', magic_byte_))
 
     @classmethod
-    def write(cls, cursor: Cursor, o: int | Int, magic_byte: bool = True):
+    def write(
+            cls, cursor: Cursor, o: int | typing.Self, magic_byte: bool = True):
         magic_byte_ = cls.magic_byte if magic_byte else None
         cls._write_pack(cursor, o, '>l', magic_byte_)
+
+    def __add__(self, other: int) -> typing.Self:
+        o = super().__add__(other)
+        return self.__class__(o)
+
+    def __sub__(self, other: int) -> typing.Self:
+        o = super().__sub__(other)
+        return self.__class__(o)
+
+    def __mul__(self, other: int) -> typing.Self:
+        o = super().__mul__(other)
+        return self.__class__(o)
+
+    def __truediv__(self, other: int) -> typing.Self:
+        o = super().__truediv__(other)
+        return self.__class__(o)
+
+    def __floordiv__(self, other: int) -> typing.Self:
+        o = super().__floordiv__(other)
+        return self.__class__(o)
+
+    def __mod__(self, other: int) -> typing.Self:
+        o = super().__mod__(other)
+        return self.__class__(o)
+
+    def __divmod__(self, other: int) -> typing.Self:
+        o = super().__divmod__(other)
+        return self.__class__(o)
+
+    def __pow__(self, other: int, modulo: None | int = None) -> typing.Self:
+        o = super().__pow__(other, modulo)
+        return self.__class__(o)
+
+    def __lshift__(self, other: int) -> typing.Self:
+        o = super().__lshift__(other)
+        return self.__class__(o)
+
+    def __rshift__(self, other: int) -> typing.Self:
+        o = super().__rshift__(other)
+        return self.__class__(o)
+
+    def __and__(self, other: int) -> typing.Self:
+        o = super().__and__(other)
+        return self.__class__(o)
+
+    def __xor__(self, other: int) -> typing.Self:
+        o = super().__xor__(other)
+        return self.__class__(o)
+
+    def __or__(self, other: int) -> typing.Self:
+        o = super().__or__(other)
+        return self.__class__(o)
+
+    def __radd__(self, other: int) -> typing.Self:
+        o = super().__radd__(other)
+        return self.__class__(o)
+
+    def __rsub__(self, other: int) -> typing.Self:
+        o = super().__rsub__(other)
+        return self.__class__(o)
+
+    def __rmul__(self, other: int) -> typing.Self:
+        o = super().__rmul__(other)
+        return self.__class__(o)
+
+    def __rtruediv__(self, other: int) -> typing.Self:
+        o = super().__rtruediv__(other)
+        return self.__class__(o)
+
+    def __rfloordiv__(self, other: int) -> typing.Self:
+        o = super().__rfloordiv__(other)
+        return self.__class__(o)
+
+    def __rmod__(self, other: int) -> typing.Self:
+        o = super().__rmod__(other)
+        return self.__class__(o)
+
+    def __rdivmod__(self, other: int) -> typing.Self:
+        o = super().__rdivmod__(other)
+        return self.__class__(o)
+
+    def __rpow__(self, other: int, modulo: None | int = None) -> typing.Self:
+        o = super().__rpow__(other, modulo)
+        return self.__class__(o)
+
+    def __rlshift__(self, other: int) -> typing.Self:
+        o = super().__rlshift__(other)
+        return self.__class__(o)
+
+    def __rrshift__(self, other: int) -> typing.Self:
+        o = super().__rrshift__(other)
+        return self.__class__(o)
+
+    def __rand__(self, other: int) -> typing.Self:
+        o = super().__rand__(other)
+        return self.__class__(o)
+
+    def __rxor__(self, other: int) -> typing.Self:
+        o = super().__rxor__(other)
+        return self.__class__(o)
+
+    def __ror__(self, other: int) -> typing.Self:
+        o = super().__ror__(other)
+        return self.__class__(o)
+
+    def __neg__(self) -> typing.Self:
+        o = super().__neg__()
+        return self.__class__(o)
+
+    def __pos__(self) -> typing.Self:
+        o = super().__pos__()
+        return self.__class__(o)
+
+    def __abs__(self) -> typing.Self:
+        o = super().__abs__()
+        return self.__class__(o)
+
+    def __invert__(self) -> typing.Self:
+        o = super().__invert__()
+        return self.__class__(o)
 
 
 class Long(int, Basic):
@@ -195,18 +788,142 @@ class Long(int, Basic):
     size: int = struct.calcsize('>q')
     magic_byte: int = 0x02
 
+    def __new__(cls, *args, **kwargs) -> typing.Self:
+        return super().__new__(*args, **kwargs)
+
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}{{{int(self)}}}"
 
     @classmethod
-    def read(cls, cursor: Cursor, magic_byte: bool = True) -> Long:
+    def create(cls, cursor: Cursor, magic_byte: bool = True) -> typing.Self:
         magic_byte_ = cls.magic_byte if magic_byte else None
         return cls(cls._read_unpack(cursor, '>q', magic_byte_))
 
     @classmethod
-    def write(cls, cursor: Cursor, o: int | Long, magic_byte: bool = True):
+    def write(
+            cls, cursor: Cursor, o: int | typing.Self, magic_byte: bool = True):
         magic_byte_ = cls.magic_byte if magic_byte else None
         cls._write_pack(cursor, o, '>q', magic_byte_)
+
+    def __add__(self, other: int) -> typing.Self:
+        o = super().__add__(other)
+        return self.__class__(o)
+
+    def __sub__(self, other: int) -> typing.Self:
+        o = super().__sub__(other)
+        return self.__class__(o)
+
+    def __mul__(self, other: int) -> typing.Self:
+        o = super().__mul__(other)
+        return self.__class__(o)
+
+    def __truediv__(self, other: int) -> typing.Self:
+        o = super().__truediv__(other)
+        return self.__class__(o)
+
+    def __floordiv__(self, other: int) -> typing.Self:
+        o = super().__floordiv__(other)
+        return self.__class__(o)
+
+    def __mod__(self, other: int) -> typing.Self:
+        o = super().__mod__(other)
+        return self.__class__(o)
+
+    def __divmod__(self, other: int) -> typing.Self:
+        o = super().__divmod__(other)
+        return self.__class__(o)
+
+    def __pow__(self, other: int, modulo: None | int = None) -> typing.Self:
+        o = super().__pow__(other, modulo)
+        return self.__class__(o)
+
+    def __lshift__(self, other: int) -> typing.Self:
+        o = super().__lshift__(other)
+        return self.__class__(o)
+
+    def __rshift__(self, other: int) -> typing.Self:
+        o = super().__rshift__(other)
+        return self.__class__(o)
+
+    def __and__(self, other: int) -> typing.Self:
+        o = super().__and__(other)
+        return self.__class__(o)
+
+    def __xor__(self, other: int) -> typing.Self:
+        o = super().__xor__(other)
+        return self.__class__(o)
+
+    def __or__(self, other: int) -> typing.Self:
+        o = super().__or__(other)
+        return self.__class__(o)
+
+    def __radd__(self, other: int) -> typing.Self:
+        o = super().__radd__(other)
+        return self.__class__(o)
+
+    def __rsub__(self, other: int) -> typing.Self:
+        o = super().__rsub__(other)
+        return self.__class__(o)
+
+    def __rmul__(self, other: int) -> typing.Self:
+        o = super().__rmul__(other)
+        return self.__class__(o)
+
+    def __rtruediv__(self, other: int) -> typing.Self:
+        o = super().__rtruediv__(other)
+        return self.__class__(o)
+
+    def __rfloordiv__(self, other: int) -> typing.Self:
+        o = super().__rfloordiv__(other)
+        return self.__class__(o)
+
+    def __rmod__(self, other: int) -> typing.Self:
+        o = super().__rmod__(other)
+        return self.__class__(o)
+
+    def __rdivmod__(self, other: int) -> typing.Self:
+        o = super().__rdivmod__(other)
+        return self.__class__(o)
+
+    def __rpow__(self, other: int, modulo: None | int = None) -> typing.Self:
+        o = super().__rpow__(other, modulo)
+        return self.__class__(o)
+
+    def __rlshift__(self, other: int) -> typing.Self:
+        o = super().__rlshift__(other)
+        return self.__class__(o)
+
+    def __rrshift__(self, other: int) -> typing.Self:
+        o = super().__rrshift__(other)
+        return self.__class__(o)
+
+    def __rand__(self, other: int) -> typing.Self:
+        o = super().__rand__(other)
+        return self.__class__(o)
+
+    def __rxor__(self, other: int) -> typing.Self:
+        o = super().__rxor__(other)
+        return self.__class__(o)
+
+    def __ror__(self, other: int) -> typing.Self:
+        o = super().__ror__(other)
+        return self.__class__(o)
+
+    def __neg__(self) -> typing.Self:
+        o = super().__neg__()
+        return self.__class__(o)
+
+    def __pos__(self) -> typing.Self:
+        o = super().__pos__()
+        return self.__class__(o)
+
+    def __abs__(self) -> typing.Self:
+        o = super().__abs__()
+        return self.__class__(o)
+
+    def __invert__(self) -> typing.Self:
+        o = super().__invert__()
+        return self.__class__(o)
 
 
 class Float(float, Basic):
@@ -215,18 +932,101 @@ class Float(float, Basic):
     size: int = struct.calcsize('>f')
     magic_byte: int = 0x06
 
+    def __new__(cls, *args, **kwargs) -> typing.Self:
+        return super().__new__(*args, **kwargs)
+
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}{{{float(self)}}}"
 
     @classmethod
-    def read(cls, cursor: Cursor, magic_byte: bool = True) -> Float:
+    def create(cls, cursor: Cursor, magic_byte: bool = True) -> typing.Self:
         magic_byte_ = cls.magic_byte if magic_byte else None
         return cls(cls._read_unpack(cursor, '>f', magic_byte_))
 
     @classmethod
-    def write(cls, cursor: Cursor, o: float | Float, magic_byte: bool = True):
+    def write(
+            cls,
+            cursor: Cursor,
+            o: float | typing.Self,
+            magic_byte: bool = True):
         magic_byte_ = cls.magic_byte if magic_byte else None
         cls._write_pack(cursor, o, '>f', magic_byte_)
+
+    def __add__(self, other: float) -> typing.Self:
+        o = super().__add__(other)
+        return self.__class__(o)
+
+    def __sub__(self, other: float) -> typing.Self:
+        o = super().__sub__(other)
+        return self.__class__(o)
+
+    def __mul__(self, other: float) -> typing.Self:
+        o = super().__mul__(other)
+        return self.__class__(o)
+
+    def __truediv__(self, other: float) -> typing.Self:
+        o = super().__truediv__(other)
+        return self.__class__(o)
+
+    def __floordiv__(self, other: float) -> typing.Self:
+        o = super().__floordiv__(other)
+        return self.__class__(o)
+
+    def __mod__(self, other: float) -> typing.Self:
+        o = super().__mod__(other)
+        return self.__class__(o)
+
+    def __divmod__(self, other: float) -> typing.Self:
+        o = super().__divmod__(other)
+        return self.__class__(o)
+
+    def __pow__(self, other: float, modulo: None = None) -> typing.Self:
+        o = super().__pow__(other, modulo)
+        return self.__class__(o)
+
+    def __radd__(self, other: float) -> typing.Self:
+        o = super().__radd__(other)
+        return self.__class__(o)
+
+    def __rsub__(self, other: float) -> typing.Self:
+        o = super().__rsub__(other)
+        return self.__class__(o)
+
+    def __rmul__(self, other: float) -> typing.Self:
+        o = super().__rmul__(other)
+        return self.__class__(o)
+
+    def __rtruediv__(self, other: float) -> typing.Self:
+        o = super().__rtruediv__(other)
+        return self.__class__(o)
+
+    def __rfloordiv__(self, other: float) -> typing.Self:
+        o = super().__rfloordiv__(other)
+        return self.__class__(o)
+
+    def __rmod__(self, other: float) -> typing.Self:
+        o = super().__rmod__(other)
+        return self.__class__(o)
+
+    def __rdivmod__(self, other: float) -> typing.Self:
+        o = super().__rdivmod__(other)
+        return self.__class__(o)
+
+    def __rpow__(self, other: float, modulo: None = None) -> typing.Self:
+        o = super().__rpow__(other, modulo)
+        return self.__class__(o)
+
+    def __neg__(self) -> typing.Self:
+        o = super().__neg__()
+        return self.__class__(o)
+
+    def __pos__(self) -> typing.Self:
+        o = super().__pos__()
+        return self.__class__(o)
+
+    def __abs__(self) -> typing.Self:
+        o = super().__abs__()
+        return self.__class__(o)
 
 
 class Double(float, Basic):
@@ -235,18 +1035,101 @@ class Double(float, Basic):
     size: int = struct.calcsize('>d')
     magic_byte: int = 0x04
 
+    def __new__(cls, *args, **kwargs) -> typing.Self:
+        return super().__new__(*args, **kwargs)
+
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}{{{float(self)}}}"
 
     @classmethod
-    def read(cls, cursor: Cursor, magic_byte: bool = True) -> Double:
+    def create(cls, cursor: Cursor, magic_byte: bool = True) -> typing.Self:
         magic_byte_ = cls.magic_byte if magic_byte else None
         return cls(cls._read_unpack(cursor, '>d', magic_byte_))
 
     @classmethod
-    def write(cls, cursor: Cursor, o: float | Double, magic_byte: bool = True):
+    def write(
+            cls,
+            cursor: Cursor,
+            o: float | typing.Self,
+            magic_byte: bool = True):
         magic_byte_ = cls.magic_byte if magic_byte else None
         cls._write_pack(cursor, o, '>d', magic_byte_)
+
+    def __add__(self, other: float) -> typing.Self:
+        o = super().__add__(other)
+        return self.__class__(o)
+
+    def __sub__(self, other: float) -> typing.Self:
+        o = super().__sub__(other)
+        return self.__class__(o)
+
+    def __mul__(self, other: float) -> typing.Self:
+        o = super().__mul__(other)
+        return self.__class__(o)
+
+    def __truediv__(self, other: float) -> typing.Self:
+        o = super().__truediv__(other)
+        return self.__class__(o)
+
+    def __floordiv__(self, other: float) -> typing.Self:
+        o = super().__floordiv__(other)
+        return self.__class__(o)
+
+    def __mod__(self, other: float) -> typing.Self:
+        o = super().__mod__(other)
+        return self.__class__(o)
+
+    def __divmod__(self, other: float) -> typing.Self:
+        o = super().__divmod__(other)
+        return self.__class__(o)
+
+    def __pow__(self, other: float, modulo: None = None) -> typing.Self:
+        o = super().__pow__(other, modulo)
+        return self.__class__(o)
+
+    def __radd__(self, other: float) -> typing.Self:
+        o = super().__radd__(other)
+        return self.__class__(o)
+
+    def __rsub__(self, other: float) -> typing.Self:
+        o = super().__rsub__(other)
+        return self.__class__(o)
+
+    def __rmul__(self, other: float) -> typing.Self:
+        o = super().__rmul__(other)
+        return self.__class__(o)
+
+    def __rtruediv__(self, other: float) -> typing.Self:
+        o = super().__rtruediv__(other)
+        return self.__class__(o)
+
+    def __rfloordiv__(self, other: float) -> typing.Self:
+        o = super().__rfloordiv__(other)
+        return self.__class__(o)
+
+    def __rmod__(self, other: float) -> typing.Self:
+        o = super().__rmod__(other)
+        return self.__class__(o)
+
+    def __rdivmod__(self, other: float) -> typing.Self:
+        o = super().__rdivmod__(other)
+        return self.__class__(o)
+
+    def __rpow__(self, other: float, modulo: None = None) -> typing.Self:
+        o = super().__rpow__(other, modulo)
+        return self.__class__(o)
+
+    def __neg__(self) -> typing.Self:
+        o = super().__neg__()
+        return self.__class__(o)
+
+    def __pos__(self) -> typing.Self:
+        o = super().__pos__()
+        return self.__class__(o)
+
+    def __abs__(self) -> typing.Self:
+        o = super().__abs__()
+        return self.__class__(o)
 
 
 class Utf8Str(str, Basic):
@@ -256,11 +1139,14 @@ class Utf8Str(str, Basic):
     builtin: typing.Final[type[int | float | str]] = str
     magic_byte: int = 0x03
 
+    def __new__(cls, *args, **kwargs) -> typing.Self:
+        return super().__new__(*args, **kwargs)
+
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}{{\"{str(self)}\"}}"
 
     @classmethod
-    def read(cls, cursor: Cursor, magic_byte: bool = True) -> Utf8Str:
+    def create(cls, cursor: Cursor, magic_byte: bool = True) -> typing.Self:
         if magic_byte and not cursor.eat(cls.magic_byte):
             raise UnexpectedDataTypeError(
                 cursor.tell(), cls.magic_byte, cursor.peek())
@@ -275,7 +1161,8 @@ class Utf8Str(str, Basic):
         return cls(cursor.read(string_len).decode("utf-8"))
 
     @classmethod
-    def write(cls, cursor: Cursor, o: str | Utf8Str, magic_byte: bool = True):
+    def write(
+            cls, cursor: Cursor, o: str | typing.Self, magic_byte: bool = True):
         if magic_byte:
             cursor.write(cls.magic_byte)
 
@@ -285,6 +1172,22 @@ class Utf8Str(str, Basic):
             encoded = o.encode("utf-8")
             cursor.write(struct.pack(">H", len(encoded)))
             cursor.write(encoded)
+
+    def __add__(self, other: str) -> typing.Self:
+        o = super().__add__(other)
+        return self.__class__(o)
+
+    def __mul__(self, other: typing.SupportsIndex) -> typing.Self:
+        o = super().__mul__(other)
+        return self.__class__(o)
+
+    def __mod__(self, other: str) -> typing.Self:
+        o = super().__mod__(other)
+        return self.__class__(o)
+
+    def __rmul__(self, other: typing.SupportsIndex) -> typing.Self:
+        o = super().__rmul__(other)
+        return self.__class__(o)
 
 
 ALL_BASIC_TYPES: typing.Final[tuple[type, ...]] = (
@@ -298,6 +1201,44 @@ ALL_BASIC_TYPES: typing.Final[tuple[type, ...]] = (
     Double,
     Utf8Str,
 )
+
+
+class Object(Value):
+    # named object data structure (name utf8str + data)
+    object_begin: int = 0xfe
+    # end of data for object
+    object_end: int = 0xff
+
+    def __init__(self, *args, _name: None | str = None, **kwargs):
+        super().__init__()
+        self._name: str = _name or ''
+
+    @classmethod
+    def create(cls, cursor: Cursor, *init_args, **init_kwargs) -> typing.Self:
+        init_kwargs = init_kwargs.copy()
+        name = init_kwargs.pop('_name')
+        o = cls(*init_args, **init_kwargs)
+        o._name = name or ''
+        cls.read(cursor, o)
+        return o
+
+    @classmethod
+    def read(cls, cursor: Cursor, o: typing.Self):
+        raise NotImplementedError("Must be implemented by the subclass.")
+
+    @classmethod
+    def write(cls, cursor: Cursor, o: typing.Self):
+        raise NotImplementedError("Must be implemented by the subclass.")
+
+    def __eq__(self, other: typing.Self) -> bool:
+        raise NotImplementedError("Must be implemented by the subclass.")
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+    def __str__(self) -> str:
+        return f"{self.__class__.__name__}{{{self._name}}}"
 
 
 T = typing.TypeVar("T", bound=Byte | Char | Bool | Short | Int | Long \
@@ -322,9 +1263,9 @@ class ValueFactory(typing.Generic[T]):
 
     def create(self, cursor: None | Cursor = None) -> T:
         if issubclass(self._cls, Basic) and cursor:
-            return cursor.read_value(self._cls)  # type: ignore
+            return self._cls.create(cursor, *self._args, **self._kwargs)
         if issubclass(self._cls, Object) and cursor:
-            return self._cls.read(cursor, *self._args, **self._kwargs)
+            return self._cls.create(cursor, *self._args, **self._kwargs)
         return self._cls(*self._args, **self._kwargs)
 
     def is_basic(self) -> bool:
