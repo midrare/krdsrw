@@ -286,6 +286,8 @@ class _TypeCheckedDict(collections.OrderedDict[K, T]):
 
 
 class DynamicMap(_TypeCheckedDict[str, T], Object):
+    # DynamicMap contains only Basics, no Objects.
+
     def __init__(
         self,
         key_cls: type[str],
@@ -328,7 +330,7 @@ class DynamicMap(_TypeCheckedDict[str, T], Object):
         return super().__eq__(other)
 
 
-class FixedMap(_TypeCheckedDict[str, T], Object):
+class Record(_TypeCheckedDict[str, T], Object):
     def __init__(
         self,
         required: typing.Dict[str, ValueFactory[T]],

@@ -3,7 +3,7 @@ from .containers import NameMap
 from .containers import Array
 from .containers import DateTime
 from .containers import DynamicMap
-from .containers import FixedMap
+from .containers import Record
 from .containers import Json
 from .containers import LastPageRead
 from .containers import Position
@@ -34,7 +34,7 @@ __all__ = [
     "Array",
     "DateTime",
     "DynamicMap",
-    "FixedMap",
+    "Record",
     "Json",
     "LastPageRead",
     "Position",

@@ -1354,22 +1354,54 @@ class ValueFactory(typing.Generic[T]):
 # - set basic into existing index
 # - set object into existing index
 #
+# reading basic/object: one common interface?
+#   - magic_byte
+#   - object name
+# writing basic/object: one common interface?
+#
+# should object name be stored in the object or its enclosing container?
+#   - every object is always stored in a container of some sort, except DataStore, which is the top-level container.
+#
+# ValMaker is only for new instances of Objects
+#
+# NamedValue is only used in SwitchMap and NameMap; maybe merge SwitchMap and NameMap? Different schema?
+#
+# Each basic must support:
+#   - new instance from cursor
+#   - cannot read cursor into itself
+#   - itself write to cursor
+#
+# Each container must support:
+#   - new instance from cursor? (what about schema?)
+#
+#   - read cursor into itself
+#      - create new basic
+#      - create new object
+#
 # Array
 #   - factory<T>
-#   read(self, cursor):
-#       # object_begin
-#       # object name
+#   read(self, cursor: Cursor):
+#       if self.name:
+#           self._read_header(cursor)
+#
+#       self.clear()
 #       size = cursor.read_int()
-#       for i in range(size):
-#           # read basic?
-#           # read object?
-#           # use factory?
-#           self.append(o)
-#       # object_end
-#   write(self, cursor):
+#       for _ in range(size):
+#           self.append(self._maker.create(cursor))
+#
+#       if self.name:
+#           self._read_footer(cursor)
+#
+#   write(self, cursor: Cursor):
+#       if self.name:
+#           self._write_header(cursor)
+#
 #       cursor.write_int(len(self))
 #       for e in self:
 #           e.write(cursor)
+#
+#       if self.name:
+#           self._write_footer(cursor)
 # DynamicMap
 #   - map of factories
 #   read(self, cursor):
@@ -1385,12 +1417,30 @@ class ValueFactory(typing.Generic[T]):
 #           cursor.write_utf8str(k)
 #           v.write(cursor)
 # NameMap
-#  read(self, cursor):
-#       name = cursor.peek_object_name()
-#       assert name, 'object must have non-blank name'
-#       self[name] = cursor.read_object() (or basic?)
+#   read(self, cursor):
+#       if self.name:
+#           self._read_header(cursor)
+#
+#       self.clear()
+#       size = cursor.read_int()
+#       for _ in range(size):
+#           name = cursor.peek_object_name()
+#           assert name, 'object must have non-blank name'
+#           self[name] = cursor.read_object()
+#
+#       if self.name:
+#           self._read_footer(cursor)
 #   write(self, cursor):
-#       value.write(cursor)
+#       if self.name:
+#           self._write_header(cursor)
+#
+#       cursor.write_int(len(self))
+#       for name, value in self.items():
+#           assert name == value.name, "object name mismatch"
+#           value.write(cursor)
+#
+#       if self.name:
+#           self._write_footer(cursor)
 # FixedMap
 #   read(self, cursor):
 #       self.clear()

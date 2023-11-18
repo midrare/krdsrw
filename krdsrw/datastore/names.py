@@ -33,12 +33,12 @@ def _timer_model() -> ValueFactory:
     global _timer_model_factory
     if not _timer_model_factory:
         from .containers import Array
-        from .containers import FixedMap
+        from .containers import Record
         from .containers import ValueFactory
 
         # timer.model
         _timer_model_factory = ValueFactory(
-            FixedMap,
+            Record,
             {
                 "version":
                 _long,
@@ -52,7 +52,7 @@ def _timer_model() -> ValueFactory:
                 # timer.average.calculator
                 "average_calculator":
                 ValueFactory(
-                    FixedMap,
+                    Record,
                     {
                         "samples1":
                         ValueFactory(Array, _double),
@@ -64,7 +64,7 @@ def _timer_model() -> ValueFactory:
                         ValueFactory(
                             Array,
                             ValueFactory(
-                                FixedMap, {
+                                Record, {
                                     "count": _long,
                                     "sum": _double,
                                     "sum_of_squares": _double,
@@ -82,10 +82,10 @@ def _timer_model() -> ValueFactory:
 def _font_prefs() -> ValueFactory:
     global _font_prefs_factory
     if not _font_prefs_factory:
-        from .containers import FixedMap
+        from .containers import Record
 
         _font_prefs_factory = ValueFactory(
-            FixedMap, {
+            Record, {
                 "typeface": _utf8str,
                 "line_sp": _int,
                 "size": _int,
@@ -110,11 +110,11 @@ def _font_prefs() -> ValueFactory:
 def _reader_state_preferences() -> ValueFactory:
     global _reader_state_preferences_factory
     if not _reader_state_preferences_factory:
-        from .containers import FixedMap
+        from .containers import Record
 
         # reader.state.preferences
         _reader_state_preferences_factory = ValueFactory(
-            FixedMap, {
+            Record, {
                 "font_preferences": _font_prefs(),
                 "left_margin": _int,
                 "right_margin": _int,
@@ -174,7 +174,7 @@ def _annotation_personal() -> ValueFactory:
     global _annotation_personal_factory
     if not _annotation_personal_factory:
         from .containers import DateTime
-        from .containers import FixedMap
+        from .containers import Record
         from .containers import Position
 
         # annotation.personal.bookmark
@@ -182,7 +182,7 @@ def _annotation_personal() -> ValueFactory:
         # annotation.personal.highlight
         # annotation.personal.note
         _annotation_personal_factory = ValueFactory(
-            FixedMap, {
+            Record, {
                 "start_pos": Position,
                 "end_pos": Position,
                 "creation_time": DateTime,
@@ -200,7 +200,7 @@ def _name_to_factory() -> dict[str, None | ValueFactory]:
         from .containers import Array
         from .containers import DateTime
         from .containers import DynamicMap
-        from .containers import FixedMap
+        from .containers import Record
         from .containers import Json
         from .containers import LastPageRead
         from .containers import Position
@@ -251,7 +251,7 @@ def _name_to_factory() -> dict[str, None | ValueFactory]:
             ValueFactory(LastPageRead),
             "fpr":
             ValueFactory(
-                FixedMap, {
+                Record, {
                     "pos": ValueFactory(Position),
                 }, {
                     "timestamp": ValueFactory(DateTime),
@@ -261,7 +261,7 @@ def _name_to_factory() -> dict[str, None | ValueFactory]:
                 }),
             "updated_lpr":
             ValueFactory(
-                FixedMap, {
+                Record, {
                     "pos": ValueFactory(Position),
                 }, {
                     "timestamp": ValueFactory(DateTime),
@@ -273,7 +273,7 @@ def _name_to_factory() -> dict[str, None | ValueFactory]:
             # amzn page num xref (i.e. page num map)
             "apnx.key":
             ValueFactory(
-                FixedMap, {
+                Record, {
                     "asin": _utf8str,
                     "cde_type": _utf8str,
                     "sidecar_available": _bool,
@@ -285,44 +285,44 @@ def _name_to_factory() -> dict[str, None | ValueFactory]:
                 }),
             "fixed.layout.data":
             ValueFactory(
-                FixedMap, {
+                Record, {
                     "unknown1": _bool,
                     "unknown2": _bool,
                     "unknown3": _bool,
                 }),
             "sharing.limits":
             ValueFactory(
-                FixedMap,
+                Record,
                 {
                     # TODO discover structure for sharing.limits
                     "accumulated": None
                 }),
             "language.store":
-            ValueFactory(FixedMap, {
+            ValueFactory(Record, {
                 "language": _utf8str,
                 "unknown1": _int,
             }),
             "periodicals.view.state":
-            ValueFactory(FixedMap, {
+            ValueFactory(Record, {
                 "unknown1": _utf8str,
                 "unknown2": _int,
             }),
             "purchase.state.data":
             ValueFactory(
-                FixedMap, {
+                Record, {
                     "state": _int,
                     "time": ValueFactory(DateTime),
                 }),
             "timer.data.store":
             ValueFactory(
-                FixedMap, {
+                Record, {
                     "on": _bool,
                     "reading_timer_model": _timer_model(),
                     "version": _int,
                 }),
             "timer.data.store.v2":
             ValueFactory(
-                FixedMap, {
+                Record, {
                     "on": _bool,
                     "reading_timer_model": _timer_model(),
                     "version": _int,
@@ -330,7 +330,7 @@ def _name_to_factory() -> dict[str, None | ValueFactory]:
                 }),
             "book.info.store":
             ValueFactory(
-                FixedMap, {
+                Record, {
                     "num_words": _long,
                     "percent_of_book": _double,
                 }),
@@ -338,7 +338,7 @@ def _name_to_factory() -> dict[str, None | ValueFactory]:
             ValueFactory(
                 Array,
                 ValueFactory(
-                    FixedMap, {
+                    Record, {
                         "pos": ValueFactory(Position),
                         "time": ValueFactory(DateTime),
                     })),
