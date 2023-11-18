@@ -23,7 +23,7 @@ class DataStore(Object):
         self.value.read(cursor)
 
     @staticmethod
-    def _eat_signature_or_error(cursor):
+    def _eat_signature_or_error(cursor: Cursor):
         if not cursor.eat(DataStore.SIGNATURE):
             raise MagicStrNotFoundError(
                 "Expected signature 0x%s at pos %d but got 0x%s" % (
@@ -33,7 +33,7 @@ class DataStore(Object):
                 ))
 
     @staticmethod
-    def _eat_fixed_mystery_num_or_error(cursor):
+    def _eat_fixed_mystery_num_or_error(cursor: Cursor):
         cursor.save()
         value = cursor.read_long()
         if value != DataStore.FIXED_MYSTERY_NUM:
