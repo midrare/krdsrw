@@ -367,7 +367,7 @@ class Cursor:
         if magic_byte:
             self._write_raw_byte(_OBJECT_BEGIN_INDICATOR)
 
-        o.write(self, o)
+        o.write(self)
 
         if magic_byte:
             self._write_raw_byte(_OBJECT_END_INDICATOR)
