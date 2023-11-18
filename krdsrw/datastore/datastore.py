@@ -7,29 +7,23 @@ from .error import MagicStrNotFoundError
 from .types import Object
 
 
-class DataStore(Object):
-    SIGNATURE: typing.Final[bytes] = b"\x00\x00\x00\x00\x00\x1A\xB1\x26"
+class DataStore(NameMap):
+    MAGIC_STR: typing.Final[bytes] = b"\x00\x00\x00\x00\x00\x1A\xB1\x26"
     FIXED_MYSTERY_NUM: typing.Final[int] = (
         1  # present after the signature; unknown what this number means
     )
 
     def __init__(self):
-        self.value: NameMap = NameMap()
-
-    def read(self, cursor: Cursor):
-        self.value = NameMap()
-        self._eat_signature_or_error(cursor)
-        self._eat_fixed_mystery_num_or_error(cursor)
-        self.value.read(cursor)
+        super().__init__()
 
     @staticmethod
     def _eat_signature_or_error(cursor: Cursor):
-        if not cursor.eat(DataStore.SIGNATURE):
+        if not cursor.eat(DataStore.MAGIC_STR):
             raise MagicStrNotFoundError(
                 "Expected signature 0x%s at pos %d but got 0x%s" % (
-                    DataStore.SIGNATURE.hex(),
+                    DataStore.MAGIC_STR.hex(),
                     cursor.tell(),
-                    cursor.peek(len(DataStore.SIGNATURE)),
+                    cursor.peek(len(DataStore.MAGIC_STR)),
                 ))
 
     @staticmethod
@@ -43,15 +37,16 @@ class DataStore(Object):
                 (DataStore.FIXED_MYSTERY_NUM, cursor.tell(), value))
         cursor.unsave()
 
-    def write(self, cursor: Cursor):
-        cursor.write(DataStore.SIGNATURE)
-        cursor.write_long(DataStore.FIXED_MYSTERY_NUM)
-        self.value.write(cursor)
+    def read(self, cursor: Cursor):
+        self.clear()
+        self._eat_signature_or_error(cursor)
+        self._eat_fixed_mystery_num_or_error(cursor)
+        self.read(cursor)
 
-    def __eq__(self, other: typing.Any) -> bool:
-        if isinstance(other, self.__class__):
-            return self.value == other.value
-        return super().__eq__(other)
+    def write(self, cursor: Cursor):
+        cursor.write(DataStore.MAGIC_STR)
+        cursor.write_long(DataStore.FIXED_MYSTERY_NUM)
+        self.write(cursor)
 
     def __str__(self) -> str:
-        return "%s{%s}" % (self.__class__.__name__, str(self.value))
+        return f"{self.__class__.__name__}{{{str(self)}}}"
