@@ -67,24 +67,11 @@ def _is_type_compatible(t: type, cls_: type) -> bool:
     return issubclass(t, cls_)
 
 
-def _read_by_magic_byte(cursor: Cursor) \
--> None|Bool|Char|Byte|Short|Int|Long|Float|Double|Utf8Str|Object:
+def _read_basic(cursor: Cursor) \
+-> None|Bool|Char|Byte|Short|Int|Long|Float|Double|Utf8Str:
     for t in [ Bool, Byte, Char, Short, Int, Long, Float, Double, Utf8Str ]:
         if cursor._peek_raw_byte() == t.magic_byte:
             return t.create(cursor)
-
-    if cursor._peek_raw_byte() == Object.object_begin:
-        cursor._eat_raw_byte(Object.object_begin)
-
-        name = cursor.read_utf8str(False)
-        fct = names.get_maker_by_name(name)
-        assert fct, f'Unsupported name \"{name}\".'
-        o = fct.create(cursor)
-        assert o.name == name, 'mismatched object name'
-        if not cursor._eat_raw_byte(Object.object_end):
-            raise UnexpectedDataTypeError(
-                cursor._data.tell(), Object.object_end, cursor._peek_raw_byte())
-        return o
 
     return None
 
@@ -305,7 +292,7 @@ class DynamicMap(_TypeCheckedDict[str, T], Object):
         size = cursor.read_int()
         for _ in range(size):
             key = cursor.read_utf8str()
-            value = _read_by_magic_byte(cursor)
+            value = _read_basic(cursor)
             assert value, 'value not found'
             self[key] = value
 
