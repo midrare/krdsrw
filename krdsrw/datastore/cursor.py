@@ -1,4 +1,5 @@
 from __future__ import annotations
+import contextlib
 import io
 import struct
 import typing
@@ -319,6 +320,17 @@ class Cursor:
             encoded = value.encode("utf-8")
             self._write_raw_bytes(struct.pack(">H", len(encoded)))
             self._write_raw_bytes(encoded)
+
+    def peek_basic_type(self) -> None | type:
+        from . import types
+        b = self._peek_raw_byte()
+
+        for t in [types.Bool, types.Byte, types.Char, types.Short, types.Int,
+                  types.Long, types.Float, types.Double, types.Utf8Str]:
+            if b == t.magic_byte:
+                return t
+
+        return None
 
     def peek_object_name(self, magic_byte: bool = True) -> None | str:
         name = None

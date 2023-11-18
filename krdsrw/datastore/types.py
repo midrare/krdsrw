@@ -8,13 +8,7 @@ from .error import UnexpectedDataTypeError
 
 
 class Value:
-    @classmethod
-    def create(cls, cursor: Cursor) -> typing.Self:
-        raise NotImplementedError("Must be implemented by the subclass.")
-
-    @classmethod
-    def write(cls, cursor: Cursor, o: typing.Self):
-        raise NotImplementedError("Must be implemented by the subclass.")
+    pass
 
 
 class Basic(Value):
@@ -25,8 +19,7 @@ class Basic(Value):
     def create(cls, cursor: Cursor, magic_byte: bool = True) -> typing.Self:
         raise NotImplementedError("Must be implemented by the subclass.")
 
-    @classmethod
-    def write(cls, cursor: Cursor, o: typing.Self, magic_byte: bool = True):
+    def write(self, cursor: Cursor, magic_byte: bool = True):
         raise NotImplementedError("Must be implemented by the subclass.")
 
     @staticmethod
@@ -190,11 +183,9 @@ class Byte(int, Basic):
         magic_byte_ = cls.magic_byte if magic_byte else None
         return cls(cls._read_unpack(cursor, '>b', magic_byte_))
 
-    @classmethod
-    def write(
-            cls, cursor: Cursor, o: int | typing.Self, magic_byte: bool = True):
-        magic_byte_ = cls.magic_byte if magic_byte else None
-        cls._write_pack(cursor, o, '>b', magic_byte_)
+    def write(self, cursor: Cursor, magic_byte: bool = True):
+        magic_byte_ = self.magic_byte if magic_byte else None
+        self._write_pack(cursor, self, '>b', magic_byte_)
 
 
 class Char(int, Basic):
@@ -217,11 +208,9 @@ class Char(int, Basic):
         magic_byte_ = cls.magic_byte if magic_byte else None
         return cls(cls._read_unpack(cursor, '>B', magic_byte_))
 
-    @classmethod
-    def write(
-            cls, cursor: Cursor, o: int | typing.Self, magic_byte: bool = True):
-        magic_byte_ = cls.magic_byte if magic_byte else None
-        cls._write_pack(cursor, o, '>B', magic_byte_)
+    def write(self, cursor: Cursor, magic_byte: bool = True):
+        magic_byte_ = self.magic_byte if magic_byte else None
+        self._write_pack(cursor, self, '>B', magic_byte_)
 
     def __add__(self, other: int) -> typing.Self:
         o = super().__add__(other)
@@ -364,14 +353,9 @@ class Bool(int, Basic):
         magic_byte_ = cls.magic_byte if magic_byte else None
         return cls(cls._read_unpack(cursor, '>?', magic_byte_))
 
-    @classmethod
-    def write(
-            cls,
-            cursor: Cursor,
-            o: bool | int | typing.Self,
-            magic_byte: bool = True):
-        magic_byte_ = cls.magic_byte if magic_byte else None
-        cls._write_pack(cursor, int(o), '>?', magic_byte_)
+    def write(self, cursor: Cursor, magic_byte: bool = True):
+        magic_byte_ = self.magic_byte if magic_byte else None
+        self._write_pack(cursor, int(self), '>?', magic_byte_)
 
     def __add__(self, other: int) -> typing.Self:
         o = super().__add__(other)
@@ -511,11 +495,9 @@ class Short(int, Basic):
         magic_byte_ = cls.magic_byte if magic_byte else None
         return cls(cls._read_unpack(cursor, '>h', magic_byte_))
 
-    @classmethod
-    def write(
-            cls, cursor: Cursor, o: int | typing.Self, magic_byte: bool = True):
-        magic_byte_ = cls.magic_byte if magic_byte else None
-        cls._write_pack(cursor, o, '>h', magic_byte_)
+    def write(self, cursor: Cursor, magic_byte: bool = True):
+        magic_byte_ = self.magic_byte if magic_byte else None
+        self._write_pack(cursor, self, '>h', magic_byte_)
 
     def __add__(self, other: int) -> typing.Self:
         o = super().__add__(other)
@@ -655,11 +637,9 @@ class Int(int, Basic):
         magic_byte_ = cls.magic_byte if magic_byte else None
         return cls(cls._read_unpack(cursor, '>l', magic_byte_))
 
-    @classmethod
-    def write(
-            cls, cursor: Cursor, o: int | typing.Self, magic_byte: bool = True):
-        magic_byte_ = cls.magic_byte if magic_byte else None
-        cls._write_pack(cursor, o, '>l', magic_byte_)
+    def write(self, cursor: Cursor, magic_byte: bool = True):
+        magic_byte_ = self.magic_byte if magic_byte else None
+        self._write_pack(cursor, self, '>l', magic_byte_)
 
     def __add__(self, other: int) -> typing.Self:
         o = super().__add__(other)
@@ -799,11 +779,9 @@ class Long(int, Basic):
         magic_byte_ = cls.magic_byte if magic_byte else None
         return cls(cls._read_unpack(cursor, '>q', magic_byte_))
 
-    @classmethod
-    def write(
-            cls, cursor: Cursor, o: int | typing.Self, magic_byte: bool = True):
-        magic_byte_ = cls.magic_byte if magic_byte else None
-        cls._write_pack(cursor, o, '>q', magic_byte_)
+    def write(self, cursor: Cursor, magic_byte: bool = True):
+        magic_byte_ = self.magic_byte if magic_byte else None
+        self._write_pack(cursor, self, '>q', magic_byte_)
 
     def __add__(self, other: int) -> typing.Self:
         o = super().__add__(other)
@@ -943,14 +921,9 @@ class Float(float, Basic):
         magic_byte_ = cls.magic_byte if magic_byte else None
         return cls(cls._read_unpack(cursor, '>f', magic_byte_))
 
-    @classmethod
-    def write(
-            cls,
-            cursor: Cursor,
-            o: float | typing.Self,
-            magic_byte: bool = True):
-        magic_byte_ = cls.magic_byte if magic_byte else None
-        cls._write_pack(cursor, o, '>f', magic_byte_)
+    def write(self, cursor: Cursor, magic_byte: bool = True):
+        magic_byte_ = self.magic_byte if magic_byte else None
+        self._write_pack(cursor, self, '>f', magic_byte_)
 
     def __add__(self, other: float) -> typing.Self:
         o = super().__add__(other)
@@ -1046,14 +1019,9 @@ class Double(float, Basic):
         magic_byte_ = cls.magic_byte if magic_byte else None
         return cls(cls._read_unpack(cursor, '>d', magic_byte_))
 
-    @classmethod
-    def write(
-            cls,
-            cursor: Cursor,
-            o: float | typing.Self,
-            magic_byte: bool = True):
-        magic_byte_ = cls.magic_byte if magic_byte else None
-        cls._write_pack(cursor, o, '>d', magic_byte_)
+    def write(self, cursor: Cursor, magic_byte: bool = True):
+        magic_byte_ = self.magic_byte if magic_byte else None
+        self._write_pack(cursor, self, '>d', magic_byte_)
 
     def __add__(self, other: float) -> typing.Self:
         o = super().__add__(other)
@@ -1160,16 +1128,13 @@ class Utf8Str(str, Basic):
             ">H", cursor.read(struct.calcsize(">H")))[0]
         return cls(cursor.read(string_len).decode("utf-8"))
 
-    @classmethod
-    def write(
-            cls, cursor: Cursor, o: str | typing.Self, magic_byte: bool = True):
+    def write(self, cursor: Cursor, magic_byte: bool = True):
         if magic_byte:
-            cursor.write(cls.magic_byte)
+            cursor.write(self.magic_byte)
 
-        is_str_null = o is None
-        cursor.write(int(is_str_null))
-        if not is_str_null:
-            encoded = o.encode("utf-8")
+        cursor.write(int(bool(self)))
+        if bool(self):
+            encoded = self.encode("utf-8")
             cursor.write(struct.pack(">H", len(encoded)))
             cursor.write(encoded)
 
@@ -1209,29 +1174,38 @@ class Object(Value):
     # end of data for object
     object_end: int = 0xff
 
-    def __init__(self, *args, _name: None | str = None, **kwargs):
+    def __init__(self, name: None | str = None):
         super().__init__()
-        self._name: str = _name or ''
+        self._name: str = name or ''
 
-    @classmethod
-    def create(cls, cursor: Cursor, *init_args, **init_kwargs) -> typing.Self:
-        init_kwargs = init_kwargs.copy()
-        name = init_kwargs.pop('_name')
-        o = cls(*init_args, **init_kwargs)
-        o._name = name or ''
-        cls.read(cursor, o)
-        return o
-
-    @classmethod
-    def read(cls, cursor: Cursor, o: typing.Self):
+    def read(self, cursor: Cursor, magic_byte: bool = True):
         raise NotImplementedError("Must be implemented by the subclass.")
 
-    @classmethod
-    def write(cls, cursor: Cursor, o: typing.Self):
+    def write(self, cursor: Cursor, magic_byte: bool = True):
         raise NotImplementedError("Must be implemented by the subclass.")
 
     def __eq__(self, other: typing.Self) -> bool:
         raise NotImplementedError("Must be implemented by the subclass.")
+
+    def _read_header(self, cursor: Cursor, magic_byte: bool = True):
+        if magic_byte and not cursor.eat(self.object_begin):
+            raise UnexpectedDataTypeError(
+                cursor.tell(), self.object_end, cursor.peek())
+        self._name = cursor.read_utf8str(False)
+
+    def _read_footer(self, cursor: Cursor, magic_byte: bool = True):
+        if magic_byte and not cursor.eat(self.object_end):
+            raise UnexpectedDataTypeError(
+                cursor.tell(), self.object_end, cursor.peek())
+
+    def _write_header(self, cursor: Cursor, magic_byte: bool = True):
+        if magic_byte:
+            cursor.write_byte(self.object_begin)
+        cursor.write_utf8str(self.name, False)
+
+    def _write_footer(self, cursor: Cursor, magic_byte: bool = True):
+        if magic_byte:
+            cursor.write_byte(self.object_end, False)
 
     @property
     def name(self) -> str:
@@ -1265,7 +1239,10 @@ class ValueFactory(typing.Generic[T]):
         if issubclass(self._cls, Basic) and cursor:
             return self._cls.create(cursor, *self._args, **self._kwargs)
         if issubclass(self._cls, Object) and cursor:
-            return self._cls.create(cursor, *self._args, **self._kwargs)
+            o = self._cls(*self._args, **self._kwargs)
+            assert isinstance(o, Object)
+            o.read(cursor)
+            return o
         return self._cls(*self._args, **self._kwargs)
 
     def is_basic(self) -> bool:
@@ -1366,3 +1343,109 @@ class ValueFactory(typing.Generic[T]):
 
 #     raise MagicStrNotFoundError(
 #         f"Unrecognized type indicator byte \"{type_byte}\".")
+
+# Redesign notes:
+# - reading cursor creating new basic
+# - reading cursor creating new object
+# - reading cursor into existing basic
+# - reading cursor into existing object
+# - set basic into new index (expected or dynamic)
+# - set object into new index (expected or dynamic)
+# - set basic into existing index
+# - set object into existing index
+#
+# Array
+#   - factory<T>
+#   read(self, cursor):
+#       # object_begin
+#       # object name
+#       size = cursor.read_int()
+#       for i in range(size):
+#           # read basic?
+#           # read object?
+#           # use factory?
+#           self.append(o)
+#       # object_end
+#   write(self, cursor):
+#       cursor.write_int(len(self))
+#       for e in self:
+#           e.write(cursor)
+# DynamicMap
+#   - map of factories
+#   read(self, cursor):
+#       self.clear()
+#       size = cursor.read_int()
+#       for i in range(size):
+#           name = cursor.read_utf8str()
+#           value = cursor.read_any()
+#           self[name] = value
+#   write(self, cursor):
+#       cursor.write_int(len(self))
+#       for k, v in self.items():
+#           cursor.write_utf8str(k)
+#           v.write(cursor)
+# NameMap
+#  read(self, cursor):
+#       name = cursor.peek_object_name()
+#       assert name, 'object must have non-blank name'
+#       self[name] = cursor.read_object() (or basic?)
+#   write(self, cursor):
+#       value.write(cursor)
+# FixedMap
+#   read(self, cursor):
+#       self.clear()
+#
+#       for name, val_maker in self._required.items():
+#           if not self._read_next(cursor, name, val_maker):
+#               raise FieldNotFoundError(
+#                   'Expected field with name "%s" but was not found' % name)
+#
+#       for name, val_maker in self._optional.items():
+#           if not self._read_next(cursor, name, val_maker):
+#               break
+#   write(self, cursor):
+#       for name, val_maker in self._required.items():
+#           assert isinstance(self[name], val_maker.cls_)
+#           self[name].write(cursor)
+#
+#       for name, val_maker in self._optional.items():
+#           value = self.get(name)
+#           if value is None:
+#               break
+#           assert isinstance(value, val_maker.cls_)
+#           value.write(cursor)
+# SwitchMap
+#   read(self, cursor):
+#       self.clear()
+#
+#       size = cursor.read_int()
+#       for _ in range(size):
+#           id_ = cursor.read_int()
+#           if id_ not in self._id_to_name:
+#               raise UnexpectedFieldError('Unrecognized field ID "%d"' % id_)
+#
+#           if not (name := cursor.peek_object_name()) \
+#           or self._id_to_name[id_] != name:
+#               raise UnexpectedFieldError(
+#                   f'Expected name "{self._id_to_name[id_]}" '
+#                   + f'but got "{name}"')
+#
+#           assert id_ in self._id_to_maker, f'no factory for id "{id_}"'
+#           self[id_] = self._id_to_maker[id_].create(cursor)
+#
+#   write(self, cursor):
+#       id_to_non_null_value = {
+#           k: v
+#           for k, v in self.items()
+#           if v is not None
+#       }
+#       cursor.write_int(len(id_to_non_null_value))
+#       for id_, val in id_to_non_null_value.items():
+#           cursor.write_int(id_)
+#           val.write(cursor)
+#
+# DateTime
+# Json
+# LastPageRead
+# Position
+# TimeZoneOffset

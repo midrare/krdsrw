@@ -9,6 +9,10 @@ import typing
 
 from . import names
 from .cursor import Cursor
+from .error import FieldNotFoundError
+from .error import UnexpectedDataTypeError
+from .error import UnexpectedNameError
+from .error import UnexpectedFieldError
 from .types import Object
 from .types import ValueFactory
 from .types import Basic
@@ -63,6 +67,28 @@ def _is_type_compatible(t: type, cls_: type) -> bool:
     return issubclass(t, cls_)
 
 
+def _read_by_magic_byte(cursor: Cursor) \
+-> None|Bool|Char|Byte|Short|Int|Long|Float|Double|Utf8Str|Object:
+    for t in [ Bool, Byte, Char, Short, Int, Long, Float, Double, Utf8Str ]:
+        if cursor._peek_raw_byte() == t.magic_byte:
+            return t.create(cursor)
+
+    if cursor._peek_raw_byte() == Object.object_begin:
+        cursor._eat_raw_byte(Object.object_begin)
+
+        name = cursor.read_utf8str(False)
+        fct = names.get_maker_by_name(name)
+        assert fct, f'Unsupported name \"{name}\".'
+        o = fct.create(cursor)
+        assert o.name == name, 'mismatched object name'
+        if not cursor._eat_raw_byte(Object.object_end):
+            raise UnexpectedDataTypeError(
+                cursor._data.tell(), Object.object_end, cursor._peek_raw_byte())
+        return o
+
+    return None
+
+
 class _TypeCheckedList(list[T]):
     def __init__(self, cls_: type[T]):
         super().__init__()
@@ -90,10 +116,11 @@ class _TypeCheckedList(list[T]):
         | T | typing.Iterable[int | float | str | T]):
         if not isinstance(i, slice):
             o = _convert_value(o, self._cls)
-            super().__setitem__(i, o)  # type: ignore
+            assert isinstance(o, self._cls)
+            super().__setitem__(i, o)
         else:
             assert isinstance(o, collections.abc.Iterable)
-            o = [_convert_value(e, self._cls) for e in o]
+            o = [_convert_value(e, self._cls) for e in o]  # type: ignore
             super().__setitem__(i, o)  # type: ignore
 
     def __add__(
@@ -124,23 +151,36 @@ class _TypeCheckedList(list[T]):
 
 
 class Array(_TypeCheckedList[T], Object):
-    def __init__(self, maker: type[T] | ValueFactory[T]):
+    def __init__(
+            self, maker: type[T] | ValueFactory[T], name: None | str = None):
         if not isinstance(maker, ValueFactory):
             maker = ValueFactory(maker)
         _TypeCheckedList.__init__(self, maker.cls_)
-        Object.__init__(self)
+        Object.__init__(self, name=name)
         self._maker: typing.Final[ValueFactory[T]] = maker
 
     def read(self, cursor: Cursor):
+        if self.name:
+            self._read_header(cursor)
+
         self.clear()
         size = cursor.read_int()
         for _ in range(size):
             self.append(self._maker.create(cursor))
 
+        if self.name:
+            self._read_footer(cursor)
+
     def write(self, cursor: Cursor):
+        if self.name:
+            self._write_header(cursor)
+
         cursor.write_int(len(self))
         for e in self:
-            cursor.write_value(type(e), e)
+            e.write(cursor)
+
+        if self.name:
+            self._write_footer(cursor)
 
     @property
     def cls_(self) -> type[T]:
@@ -202,7 +242,9 @@ class _TypeCheckedDict(collections.OrderedDict[K, T]):
         return self._val_maker.create()
 
     @classmethod
-    def fromkeys(cls, iterable: typing.Iterable, value: T) -> dict:
+    def fromkeys(
+            cls, iterable: typing.Iterable[int | float | str],
+            value: T) -> dict:
         raise NotImplementedError("Unsupported for this container")
 
     def setdefault(self, key: K, default: T) -> T:
@@ -248,23 +290,37 @@ class DynamicMap(_TypeCheckedDict[str, T], Object):
         self,
         key_cls: type[str],
         val_maker: ValueFactory[T] | dict[K, ValueFactory[T]],
+        name: None | str = None,
     ):
         _TypeCheckedDict.__init__(self, key_cls, val_maker)
-        Object.__init__(self)
+        Object.__init__(self, name=name)
 
     def read(self, cursor: Cursor):
+        if self.name:
+            self._read_header(cursor)
+
         self.clear()
         size = cursor.read_int()
         for _ in range(size):
-            name = cursor.read_utf8str()
-            value = cursor.read_value()
-            self[name] = value
+            key = cursor.read_utf8str()
+            value = _read_by_magic_byte(cursor)
+            assert value, 'value not found'
+            self[key] = value
+
+        if self.name:
+            self._read_footer(cursor)
 
     def write(self, cursor: Cursor):
+        if self.name:
+            self._write_header(cursor)
+
         cursor.write_int(len(self))
         for key, value in self.items():
             cursor.write_utf8str(key)
-            cursor.write_value(type(value), value)
+            value.write(cursor)
+
+        if self.name:
+            self._write_footer(cursor)
 
     def __eq__(self, other: typing.Any) -> bool:
         if isinstance(other, self.__class__):
@@ -277,9 +333,10 @@ class FixedMap(_TypeCheckedDict[str, T], Object):
         self,
         required: typing.Dict[str, ValueFactory[T]],
         optional: None | typing.Dict[str, ValueFactory[T]] = None,
+        name: None | str = None,
     ):
         _TypeCheckedDict.__init__(self, str, required | (optional or {}))
-        Object.__init__(self)
+        Object.__init__(self, name=name)
 
         self._required: typing.Final[typing.Dict[str, ValueFactory[T]]] \
             = collections.OrderedDict(required)
@@ -298,6 +355,9 @@ class FixedMap(_TypeCheckedDict[str, T], Object):
         return { k: v.cls_ for k, v in self._optional.items() }
 
     def read(self, cursor: Cursor):
+        if self.name:
+            self._read_header(cursor)
+
         self.clear()
 
         for name, val_maker in self._required.items():
@@ -308,6 +368,9 @@ class FixedMap(_TypeCheckedDict[str, T], Object):
         for name, val_maker in self._optional.items():
             if not self._read_next(cursor, name, val_maker):
                 break
+
+        if self.name:
+            self._read_footer(cursor)
 
     def _read_next(
             self, cursor: Cursor, name: str,
@@ -322,16 +385,22 @@ class FixedMap(_TypeCheckedDict[str, T], Object):
             return False
 
     def write(self, cursor: Cursor):
+        if self.name:
+            self._write_header(cursor)
+
         for name, val_maker in self._required.items():
             assert isinstance(self[name], val_maker.cls_)
-            cursor.write_value(type(self[name]), self[name])
+            self[name].write(cursor)
 
         for name, val_maker in self._optional.items():
             value = self.get(name)
             if value is None:
                 break
             assert isinstance(value, val_maker.cls_)
-            cursor.write_value(type(value), value)
+            value.write(cursor)
+
+        if self.name:
+            self._write_footer(cursor)
 
     def __eq__(self, other: typing.Any) -> bool:
         if isinstance(other, self.__class__):
@@ -349,14 +418,15 @@ class FixedMap(_TypeCheckedDict[str, T], Object):
 
 
 class SwitchMap(_TypeCheckedDict[int, Object], Object):
-    def __init__(self, id_to_name: typing.Dict[int, str]):
+    def __init__(
+            self, id_to_name: typing.Dict[int, str], name: None | str = None):
         id_to_maker = {
             k: names.get_maker_by_name(v)
             for k, v in id_to_name.items()
         }
 
         _TypeCheckedDict.__init__(self, int, self._id_to_maker)
-        Object.__init__(self)
+        Object.__init__(self, name=name)
 
         assert all(v is not None for v in id_to_maker.values())
         self._id_to_maker: typing.Final[dict[int, ValueFactory[Object]]] \
@@ -365,6 +435,9 @@ class SwitchMap(_TypeCheckedDict[int, Object], Object):
             = dict(id_to_name)
 
     def read(self, cursor: Cursor):
+        if self.name:
+            self._read_header(cursor)
+
         self.clear()
 
         size = cursor.read_int()
@@ -373,7 +446,7 @@ class SwitchMap(_TypeCheckedDict[int, Object], Object):
             if id_ not in self._id_to_name:
                 raise UnexpectedFieldError('Unrecognized field ID "%d"' % id_)
 
-            if not (name := cursor.peek_demarcated_name()) \
+            if not (name := cursor.peek_object_name()) \
             or self._id_to_name[id_] != name:
                 raise UnexpectedFieldError(
                     f'Expected name "{self._id_to_name[id_]}" '
@@ -382,7 +455,13 @@ class SwitchMap(_TypeCheckedDict[int, Object], Object):
             assert id_ in self._id_to_maker, f'no factory for id "{id_}"'
             self[id_] = self._id_to_maker[id_].create(cursor)
 
+        if self.name:
+            self._read_footer(cursor)
+
     def write(self, cursor: Cursor):
+        if self.name:
+            self._write_header(cursor)
+
         id_to_non_null_value = {
             k: v
             for k, v in self.items()
@@ -391,7 +470,10 @@ class SwitchMap(_TypeCheckedDict[int, Object], Object):
         cursor.write_int(len(id_to_non_null_value))
         for id_, val in id_to_non_null_value.items():
             cursor.write_int(id_)
-            cursor.write_value(type(val), val)
+            val.write(cursor)
+
+        if self.name:
+            self._write_footer(cursor)
 
     def __eq__(self, other: typing.Any) -> bool:
         if isinstance(other, self.__class__):
@@ -413,23 +495,35 @@ class SwitchMap(_TypeCheckedDict[int, Object], Object):
 
 
 class NameMap(_TypeCheckedDict[str, Object], Object):
-    def __init__(self):
+    def __init__(self, name: None | str = None):
         _TypeCheckedDict.__init__(self, str, names.get_maker_by_name)
-        Object.__init__(self)
+        Object.__init__(self, name=name)
 
     def read(self, cursor: Cursor):
+        if self.name:
+            self._read_header(cursor)
+
         self.clear()
         size = cursor.read_int()
         for _ in range(size):
-            name = cursor.peek_demarcated_name()
+            name = cursor.peek_object_name()
             assert name, 'object must have non-blank name'
-            self[name] = cursor.read_demarcated_value()
+            self[name] = cursor.read_object()
+
+        if self.name:
+            self._read_footer(cursor)
 
     def write(self, cursor: Cursor):
+        if self.name:
+            self._write_header(cursor)
+
         cursor.write_int(len(self))
         for name, value in self.items():
             assert name == value.name, "object name mismatch"
             value.write(cursor)
+
+        if self.name:
+            self._write_footer(cursor)
 
     def __eq__(self, other: typing.Any) -> bool:
         if isinstance(other, self.__class__):
@@ -438,7 +532,8 @@ class NameMap(_TypeCheckedDict[str, Object], Object):
 
 
 class DateTime(Object):
-    def __init__(self):
+    def __init__(self, name: None | str = None):
+        Object.__init__(self, name=name)
         self._value: int = -1  # -1 is null
 
     @property
@@ -464,7 +559,8 @@ class DateTime(Object):
 
 
 class Json(Object):
-    def __init__(self):
+    def __init__(self, name: None | str = None):
+        Object.__init__(self, name=name)
         self._value: None | bool | int | float | str | list | dict = None
 
     @property
@@ -496,8 +592,8 @@ class Json(Object):
 class LastPageRead(Object):  # aka LPR. this is kindle reading pos info
     EXTENDED_LPR_VERSION: typing.Final[int] = 2
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, name: None | str = None):
+        Object.__init__(self, name=name)
         self._pos: Position = Position()
         self._timestamp: int = -1
         self._lpr_version: int = -1
@@ -534,10 +630,10 @@ class LastPageRead(Object):  # aka LPR. this is kindle reading pos info
         self._lpr_version = -1
 
         type_byte = cursor.peek()
-        if type_byte == UTF8STR_TYPE_INDICATOR:
+        if type_byte == Utf8Str.magic_byte:
             # old LPR version'
             self._pos.read(cursor)
-        elif type_byte == BYTE_TYPE_INDICATOR:
+        elif type_byte == Byte.magic_byte:
             # new LPR version
             self._lpr_version = cursor.read_byte()
             self._pos.read(cursor)
@@ -578,7 +674,8 @@ class LastPageRead(Object):  # aka LPR. this is kindle reading pos info
 class Position(Object):
     PREFIX_VERSION1: typing.Final[int] = 0x01
 
-    def __init__(self):
+    def __init__(self, name: None | str = None):
+        Object.__init__(self, name=name)
         self._chunk_eid: int = -1
         self._chunk_pos: int = -1
         self._value: int = -1
@@ -660,7 +757,8 @@ class Position(Object):
 
 
 class TimeZoneOffset(Object):
-    def __init__(self):
+    def __init__(self, name: None | str = None):
+        Object.__init__(self, name=name)
         self._value: int = -1  # -1 is null
 
     @property
