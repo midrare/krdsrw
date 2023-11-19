@@ -318,6 +318,8 @@ class DynamicMap(_TypeCheckedDict[str, T], Object):
 
 
 class Record(_TypeCheckedDict[str, T], Object):
+    # Record can contain basics and other containers
+
     def __init__(
         self,
         required: typing.Dict[str, ValueFactory[T]],
