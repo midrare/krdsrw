@@ -16,7 +16,7 @@ from .error import UnexpectedFieldError
 from .error import FieldNotFoundError
 from .error import NameNotSupportedError
 from .error import UnexpectedNameError
-from .error import UnexpectedDataTypeError
+from .error import UnexpectedBytesError
 from .error import MagicStrNotFoundError
 from .types import Byte
 from .types import Bool
@@ -46,7 +46,7 @@ __all__ = [
     "FieldNotFoundError",
     "NameNotSupportedError",
     "UnexpectedNameError",
-    "UnexpectedDataTypeError",
+    "UnexpectedBytesError",
     "DemarcationError",
     "MagicStrNotFoundError",
     "Byte",

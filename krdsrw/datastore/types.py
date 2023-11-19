@@ -4,7 +4,7 @@ import struct
 import typing
 
 from .cursor import Cursor
-from .error import UnexpectedDataTypeError
+from .error import UnexpectedBytesError
 
 
 class Value:
@@ -14,6 +14,7 @@ class Value:
 class Basic(Value):
     builtin: type[int | float | str] = NotImplemented  # type: ignore
     magic_byte: int = NotImplemented
+    _fmt: str = NotImplemented
 
     @classmethod
     def create(cls, cursor: Cursor, magic_byte: bool = True) -> typing.Self:
@@ -22,18 +23,19 @@ class Basic(Value):
     def write(self, cursor: Cursor, magic_byte: bool = True):
         raise NotImplementedError("Must be implemented by the subclass.")
 
-    @staticmethod
+    @classmethod
     def _read_unpack(
+            cls,
             cursor: Cursor,
             fmt: str,
             magic_byte: None | int = None) -> int | float | str | bytes:
         if magic_byte is not None and not cursor.eat(magic_byte):
-            raise UnexpectedDataTypeError(
-                cursor.tell(), magic_byte, cursor.peek())
+            raise UnexpectedBytesError(cursor.tell(), magic_byte, cursor.peek())
         return struct.unpack_from(fmt, cursor.read(struct.calcsize(fmt)))[0]
 
-    @staticmethod
+    @classmethod
     def _write_pack(
+            cls,
             cursor: Cursor,
             o: int | float | str,
             fmt: str,
@@ -41,6 +43,10 @@ class Basic(Value):
         if magic_byte is not None:
             cursor.write(magic_byte)
         cursor.write(struct.pack(fmt, o))
+
+    @classmethod
+    def to_bytes(cls, o: int | float | str | typing.Self) -> bytes:
+        raise NotImplementedError("Must be implemented by the subclass.")
 
 
 class Byte(int, Basic):
@@ -187,6 +193,10 @@ class Byte(int, Basic):
         magic_byte_ = self.magic_byte if magic_byte else None
         self._write_pack(cursor, self, '>b', magic_byte_)
 
+    @classmethod
+    def to_bytes(cls, o: int | typing.Self) -> bytes:
+        return struct.pack('>b', o)
+
 
 class Char(int, Basic):
     # unsigned (?) char
@@ -211,6 +221,10 @@ class Char(int, Basic):
     def write(self, cursor: Cursor, magic_byte: bool = True):
         magic_byte_ = self.magic_byte if magic_byte else None
         self._write_pack(cursor, self, '>B', magic_byte_)
+
+    @classmethod
+    def to_bytes(cls, o: int | typing.Self) -> bytes:
+        return struct.pack('>B', o)
 
     def __add__(self, other: int) -> typing.Self:
         o = super().__add__(other)
@@ -357,6 +371,10 @@ class Bool(int, Basic):
         magic_byte_ = self.magic_byte if magic_byte else None
         self._write_pack(cursor, int(self), '>?', magic_byte_)
 
+    @classmethod
+    def to_bytes(cls, o: bool | int | typing.Self) -> bytes:
+        return struct.pack('>?', o)
+
     def __add__(self, other: int) -> typing.Self:
         o = super().__add__(other)
         return self.__class__(o)
@@ -498,6 +516,10 @@ class Short(int, Basic):
     def write(self, cursor: Cursor, magic_byte: bool = True):
         magic_byte_ = self.magic_byte if magic_byte else None
         self._write_pack(cursor, self, '>h', magic_byte_)
+
+    @classmethod
+    def to_bytes(cls, o: int | typing.Self) -> bytes:
+        return struct.pack('>h', o)
 
     def __add__(self, other: int) -> typing.Self:
         o = super().__add__(other)
@@ -641,6 +663,10 @@ class Int(int, Basic):
         magic_byte_ = self.magic_byte if magic_byte else None
         self._write_pack(cursor, self, '>l', magic_byte_)
 
+    @classmethod
+    def to_bytes(cls, o: int | typing.Self) -> bytes:
+        return struct.pack('>l', o)
+
     def __add__(self, other: int) -> typing.Self:
         o = super().__add__(other)
         return self.__class__(o)
@@ -782,6 +808,10 @@ class Long(int, Basic):
     def write(self, cursor: Cursor, magic_byte: bool = True):
         magic_byte_ = self.magic_byte if magic_byte else None
         self._write_pack(cursor, self, '>q', magic_byte_)
+
+    @classmethod
+    def to_bytes(cls, o: int | typing.Self) -> bytes:
+        return struct.pack('>q', o)
 
     def __add__(self, other: int) -> typing.Self:
         o = super().__add__(other)
@@ -925,6 +955,10 @@ class Float(float, Basic):
         magic_byte_ = self.magic_byte if magic_byte else None
         self._write_pack(cursor, self, '>f', magic_byte_)
 
+    @classmethod
+    def to_bytes(cls, o: float | typing.Self) -> bytes:
+        return struct.pack('>f', o)
+
     def __add__(self, other: float) -> typing.Self:
         o = super().__add__(other)
         return self.__class__(o)
@@ -1023,6 +1057,10 @@ class Double(float, Basic):
         magic_byte_ = self.magic_byte if magic_byte else None
         self._write_pack(cursor, self, '>d', magic_byte_)
 
+    @classmethod
+    def to_bytes(cls, o: float | typing.Self) -> bytes:
+        return struct.pack('>d', o)
+
     def __add__(self, other: float) -> typing.Self:
         o = super().__add__(other)
         return self.__class__(o)
@@ -1116,7 +1154,7 @@ class Utf8Str(str, Basic):
     @classmethod
     def create(cls, cursor: Cursor, magic_byte: bool = True) -> typing.Self:
         if magic_byte and not cursor.eat(cls.magic_byte):
-            raise UnexpectedDataTypeError(
+            raise UnexpectedBytesError(
                 cursor.tell(), cls.magic_byte, cursor.peek())
 
         if cursor.read() > 0:  # 1-byte bool, true if str is empty
@@ -1137,6 +1175,10 @@ class Utf8Str(str, Basic):
             encoded = self.encode("utf-8")
             cursor.write(struct.pack(">H", len(encoded)))
             cursor.write(encoded)
+
+    @classmethod
+    def to_bytes(cls, o: str | typing.Self) -> bytes:
+        return o.encode("utf-8")
 
     def __add__(self, other: str) -> typing.Self:
         o = super().__add__(other)
@@ -1189,13 +1231,13 @@ class Object(Value):
 
     def _read_header(self, cursor: Cursor, magic_byte: bool = True):
         if magic_byte and not cursor.eat(self.object_begin):
-            raise UnexpectedDataTypeError(
+            raise UnexpectedBytesError(
                 cursor.tell(), self.object_end, cursor.peek())
         self._name = cursor.read_utf8str(False)
 
     def _read_footer(self, cursor: Cursor, magic_byte: bool = True):
         if magic_byte and not cursor.eat(self.object_end):
-            raise UnexpectedDataTypeError(
+            raise UnexpectedBytesError(
                 cursor.tell(), self.object_end, cursor.peek())
 
     def _write_header(self, cursor: Cursor, magic_byte: bool = True):

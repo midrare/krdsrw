@@ -10,7 +10,7 @@ import typing
 from . import names
 from .cursor import Cursor
 from .error import FieldNotFoundError
-from .error import UnexpectedDataTypeError
+from .error import UnexpectedBytesError
 from .error import UnexpectedNameError
 from .error import UnexpectedFieldError
 from .types import Object
@@ -371,7 +371,7 @@ class Record(_TypeCheckedDict[str, T], Object):
             self[name] = val_maker.create(cursor)
             cursor.unsave()
             return True
-        except UnexpectedDataTypeError:
+        except UnexpectedBytesError:
             cursor.restore()
             return False
 

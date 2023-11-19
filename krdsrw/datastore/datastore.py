@@ -3,7 +3,8 @@ import typing
 
 from .containers import NameMap
 from .cursor import Cursor
-from .error import MagicStrNotFoundError
+from .error import UnexpectedBytesError
+from .types import Long
 from .types import Object
 
 
@@ -19,12 +20,11 @@ class DataStore(NameMap):
     @staticmethod
     def _eat_signature_or_error(cursor: Cursor):
         if not cursor.eat(DataStore.MAGIC_STR):
-            raise MagicStrNotFoundError(
-                "Expected signature 0x%s at pos %d but got 0x%s" % (
-                    DataStore.MAGIC_STR.hex(),
-                    cursor.tell(),
-                    cursor.peek(len(DataStore.MAGIC_STR)),
-                ))
+            raise UnexpectedBytesError(
+                cursor.tell(),
+                DataStore.MAGIC_STR,
+                cursor.peek(len(DataStore.MAGIC_STR)),
+            )
 
     @staticmethod
     def _eat_fixed_mystery_num_or_error(cursor: Cursor):
@@ -32,9 +32,11 @@ class DataStore(NameMap):
         value = cursor.read_long()
         if value != DataStore.FIXED_MYSTERY_NUM:
             cursor.restore()
-            raise MagicStrNotFoundError(
-                "Expected fixed num 0x%08x at pos %d but got 0x%08x" %
-                (DataStore.FIXED_MYSTERY_NUM, cursor.tell(), value))
+            raise UnexpectedBytesError(
+                cursor.tell(),
+                Long.to_bytes(DataStore.FIXED_MYSTERY_NUM),
+                Long.to_bytes(value),
+            )
         cursor.unsave()
 
     def read(self, cursor: Cursor):

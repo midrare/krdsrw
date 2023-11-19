@@ -4,8 +4,7 @@ import io
 import struct
 import typing
 
-from .error import MagicStrNotFoundError
-from .error import UnexpectedDataTypeError
+from .error import UnexpectedBytesError
 from .error import DemarcationError
 
 _BYTE_SIZE: typing.Final[int] = 1
@@ -209,7 +208,7 @@ class Cursor:
             fmt: str,
             magic_byte: None | int = None) -> int | float | str | bytes:
         if magic_byte is not None and not self._eat_raw_byte(magic_byte):
-            raise UnexpectedDataTypeError(
+            raise UnexpectedBytesError(
                 self._data.tell(), magic_byte, self._peek_raw_byte())
         return struct.unpack_from(
             fmt, self._read_raw_bytes(struct.calcsize(fmt)))[0]
@@ -297,7 +296,7 @@ class Cursor:
 
     def read_utf8str(self, magic_byte: bool = True) -> str:
         if magic_byte and not self._eat_raw_byte(_UTF8STR_MAGIC_BYTE):
-            raise UnexpectedDataTypeError(
+            raise UnexpectedBytesError(
                 self._data.tell(), _UTF8STR_MAGIC_BYTE, self._peek_raw_byte())
 
         if self._read_raw_byte() > 0:  # true if empty string
@@ -358,7 +357,7 @@ class Cursor:
         from . import names
 
         if magic_byte and not self._eat_raw_byte(_OBJECT_BEGIN_INDICATOR):
-            raise UnexpectedDataTypeError(
+            raise UnexpectedBytesError(
                 self._data.tell(), _OBJECT_BEGIN_INDICATOR,
                 self._peek_raw_byte())
 
@@ -367,7 +366,7 @@ class Cursor:
         assert fct, f'Unsupported name \"{name}\".'
         o = fct.create(self)
         if magic_byte and not self._eat_raw_byte(_OBJECT_END_INDICATOR):
-            raise UnexpectedDataTypeError(
+            raise UnexpectedBytesError(
                 self._data.tell(), _OBJECT_END_INDICATOR, self._peek_raw_byte())
         return o
 
