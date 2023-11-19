@@ -17,25 +17,25 @@ class DataStore(NameMap):
     def __init__(self):
         super().__init__()
 
-    @staticmethod
-    def _eat_signature_or_error(cursor: Cursor):
-        if not cursor.eat(DataStore.MAGIC_STR):
+    @classmethod
+    def _eat_signature_or_error(cls, cursor: Cursor):
+        if not cursor.eat(cls.MAGIC_STR):
             raise UnexpectedBytesError(
                 cursor.tell(),
-                DataStore.MAGIC_STR,
-                cursor.peek(len(DataStore.MAGIC_STR)),
+                cls.MAGIC_STR,
+                cursor.peek(len(cls.MAGIC_STR)),
             )
 
-    @staticmethod
-    def _eat_fixed_mystery_num_or_error(cursor: Cursor):
+    @classmethod
+    def _eat_fixed_mystery_num_or_error(cls, cursor: Cursor):
         cursor.save()
         value = cursor.read_long()
-        if value != DataStore.FIXED_MYSTERY_NUM:
+        if value != cls.FIXED_MYSTERY_NUM:
             cursor.restore()
             raise UnexpectedBytesError(
                 cursor.tell(),
-                Long.to_bytes(DataStore.FIXED_MYSTERY_NUM),
-                Long.to_bytes(value),
+                Long(cls.FIXED_MYSTERY_NUM).to_bytes(),
+                Long(value).to_bytes(),
             )
         cursor.unsave()
 
@@ -46,8 +46,8 @@ class DataStore(NameMap):
         self.read(cursor)
 
     def write(self, cursor: Cursor):
-        cursor.write(DataStore.MAGIC_STR)
-        cursor.write_long(DataStore.FIXED_MYSTERY_NUM)
+        cursor.write(self.MAGIC_STR)
+        cursor.write_long(self.FIXED_MYSTERY_NUM)
         self.write(cursor)
 
     def __str__(self) -> str:

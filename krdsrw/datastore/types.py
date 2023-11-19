@@ -14,7 +14,6 @@ class Value:
 class Basic(Value):
     builtin: type[int | float | str] = NotImplemented  # type: ignore
     magic_byte: int = NotImplemented
-    _fmt: str = NotImplemented
 
     @classmethod
     def create(cls, cursor: Cursor, magic_byte: bool = True) -> typing.Self:
@@ -44,8 +43,7 @@ class Basic(Value):
             cursor.write(magic_byte)
         cursor.write(struct.pack(fmt, o))
 
-    @classmethod
-    def to_bytes(cls, o: int | float | str | typing.Self) -> bytes:
+    def to_bytes(self) -> bytes:
         raise NotImplementedError("Must be implemented by the subclass.")
 
 
@@ -63,6 +61,18 @@ class Byte(int, Basic):
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}{{0x{hex(self)}}}"
+
+    @classmethod
+    def create(cls, cursor: Cursor, magic_byte: bool = True) -> typing.Self:
+        magic_byte_ = cls.magic_byte if magic_byte else None
+        return cls(cls._read_unpack(cursor, '>b', magic_byte_))
+
+    def write(self, cursor: Cursor, magic_byte: bool = True):
+        magic_byte_ = self.magic_byte if magic_byte else None
+        self._write_pack(cursor, self, '>b', magic_byte_)
+
+    def to_bytes(self) -> bytes:
+        return struct.pack('>b', self)
 
     def __add__(self, other: int) -> typing.Self:
         o = super().__add__(other)
@@ -184,19 +194,6 @@ class Byte(int, Basic):
         o = super().__invert__()
         return self.__class__(o)
 
-    @classmethod
-    def create(cls, cursor: Cursor, magic_byte: bool = True) -> typing.Self:
-        magic_byte_ = cls.magic_byte if magic_byte else None
-        return cls(cls._read_unpack(cursor, '>b', magic_byte_))
-
-    def write(self, cursor: Cursor, magic_byte: bool = True):
-        magic_byte_ = self.magic_byte if magic_byte else None
-        self._write_pack(cursor, self, '>b', magic_byte_)
-
-    @classmethod
-    def to_bytes(cls, o: int | typing.Self) -> bytes:
-        return struct.pack('>b', o)
-
 
 class Char(int, Basic):
     # unsigned (?) char
@@ -222,9 +219,8 @@ class Char(int, Basic):
         magic_byte_ = self.magic_byte if magic_byte else None
         self._write_pack(cursor, self, '>B', magic_byte_)
 
-    @classmethod
-    def to_bytes(cls, o: int | typing.Self) -> bytes:
-        return struct.pack('>B', o)
+    def to_bytes(self) -> bytes:
+        return struct.pack('>B', self)
 
     def __add__(self, other: int) -> typing.Self:
         o = super().__add__(other)
@@ -371,9 +367,8 @@ class Bool(int, Basic):
         magic_byte_ = self.magic_byte if magic_byte else None
         self._write_pack(cursor, int(self), '>?', magic_byte_)
 
-    @classmethod
-    def to_bytes(cls, o: bool | int | typing.Self) -> bytes:
-        return struct.pack('>?', o)
+    def to_bytes(self) -> bytes:
+        return struct.pack('>?', self)
 
     def __add__(self, other: int) -> typing.Self:
         o = super().__add__(other)
@@ -517,9 +512,8 @@ class Short(int, Basic):
         magic_byte_ = self.magic_byte if magic_byte else None
         self._write_pack(cursor, self, '>h', magic_byte_)
 
-    @classmethod
-    def to_bytes(cls, o: int | typing.Self) -> bytes:
-        return struct.pack('>h', o)
+    def to_bytes(self) -> bytes:
+        return struct.pack('>h', self)
 
     def __add__(self, other: int) -> typing.Self:
         o = super().__add__(other)
@@ -663,9 +657,8 @@ class Int(int, Basic):
         magic_byte_ = self.magic_byte if magic_byte else None
         self._write_pack(cursor, self, '>l', magic_byte_)
 
-    @classmethod
-    def to_bytes(cls, o: int | typing.Self) -> bytes:
-        return struct.pack('>l', o)
+    def to_bytes(self) -> bytes:
+        return struct.pack('>l', self)
 
     def __add__(self, other: int) -> typing.Self:
         o = super().__add__(other)
@@ -809,9 +802,8 @@ class Long(int, Basic):
         magic_byte_ = self.magic_byte if magic_byte else None
         self._write_pack(cursor, self, '>q', magic_byte_)
 
-    @classmethod
-    def to_bytes(cls, o: int | typing.Self) -> bytes:
-        return struct.pack('>q', o)
+    def to_bytes(self) -> bytes:
+        return struct.pack('>q', self)
 
     def __add__(self, other: int) -> typing.Self:
         o = super().__add__(other)
@@ -955,9 +947,8 @@ class Float(float, Basic):
         magic_byte_ = self.magic_byte if magic_byte else None
         self._write_pack(cursor, self, '>f', magic_byte_)
 
-    @classmethod
-    def to_bytes(cls, o: float | typing.Self) -> bytes:
-        return struct.pack('>f', o)
+    def to_bytes(self) -> bytes:
+        return struct.pack('>f', self)
 
     def __add__(self, other: float) -> typing.Self:
         o = super().__add__(other)
@@ -1057,9 +1048,8 @@ class Double(float, Basic):
         magic_byte_ = self.magic_byte if magic_byte else None
         self._write_pack(cursor, self, '>d', magic_byte_)
 
-    @classmethod
-    def to_bytes(cls, o: float | typing.Self) -> bytes:
-        return struct.pack('>d', o)
+    def to_bytes(self) -> bytes:
+        return struct.pack('>d', self)
 
     def __add__(self, other: float) -> typing.Self:
         o = super().__add__(other)
@@ -1176,9 +1166,8 @@ class Utf8Str(str, Basic):
             cursor.write(struct.pack(">H", len(encoded)))
             cursor.write(encoded)
 
-    @classmethod
-    def to_bytes(cls, o: str | typing.Self) -> bytes:
-        return o.encode("utf-8")
+    def to_bytes(self) -> bytes:
+        return self.encode("utf-8")
 
     def __add__(self, other: str) -> typing.Self:
         o = super().__add__(other)
