@@ -23,11 +23,6 @@ class UnexpectedFieldError(Exception):
         super().__init__(*args)
 
 
-class MagicStrNotFoundError(Exception):
-    def __init__(self, *args: object) -> None:
-        super().__init__(*args)
-
-
 class UnexpectedBytesError(Exception):
     def __init__(
             self, pos: int, expected: int | bytes, actual: None | int | bytes):

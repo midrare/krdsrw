@@ -17,7 +17,6 @@ from .error import FieldNotFoundError
 from .error import NameNotSupportedError
 from .error import UnexpectedNameError
 from .error import UnexpectedBytesError
-from .error import MagicStrNotFoundError
 from .types import Byte
 from .types import Bool
 from .types import Char
@@ -48,7 +47,6 @@ __all__ = [
     "UnexpectedNameError",
     "UnexpectedBytesError",
     "DemarcationError",
-    "MagicStrNotFoundError",
     "Byte",
     "Bool",
     "Char",
