@@ -28,7 +28,7 @@ class UnexpectedBytesError(Exception):
             self, pos: int, expected: int | bytes, actual: None | int | bytes):
         s = f"@{pos} expected "
         s += f"0x{expected:02x} " if isinstance(
-            expected, int) else f"{str(bytes)} "
+            expected, int) else f"{str(expected)} "
 
         if actual is None:
             s += "but not found."
