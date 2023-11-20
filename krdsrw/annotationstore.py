@@ -6,7 +6,7 @@
 # from .datastore import DataStore
 # from .datastore import keys
 # from .datastore import NamedValue
-# from .datastore import names
+# from .datastore import schemas
 # from .datastore import SwitchMap
 # from .datastore import Value
 
@@ -142,11 +142,11 @@
 
 # class Bookmark(Annotation):
 #     def __init__(self, _value: None | NamedValue = None):
-#         super().__init__(names.ANNOTATION_PERSONAL_BOOKMARK, _value)
+#         super().__init__(schemas.ANNOTATION_PERSONAL_BOOKMARK, _value)
 
 # class Note(Annotation):
 #     def __init__(self, _value: None | NamedValue = None):
-#         super().__init__(names.ANNOTATION_PERSONAL_NOTE, _value)
+#         super().__init__(schemas.ANNOTATION_PERSONAL_NOTE, _value)
 
 #     @property
 #     def note(self) -> None | str:
@@ -171,17 +171,17 @@
 
 # class ClipArticle(Annotation):
 #     def __init__(self, _value: None | NamedValue = None):
-#         super().__init__(names.ANNOTATION_PERSONAL_CLIP_ARTICLE, _value)
+#         super().__init__(schemas.ANNOTATION_PERSONAL_CLIP_ARTICLE, _value)
 
 # class Highlight(Annotation):
 #     def __init__(self, _value: None | NamedValue = None):
-#         super().__init__(names.ANNOTATION_PERSONAL_HIGHLIGHT, _value)
+#         super().__init__(schemas.ANNOTATION_PERSONAL_HIGHLIGHT, _value)
 
 # class AnnotationCache:
 #     def __init__(self, _value: None | NamedValue[SwitchMap] = None):
 #         if _value is None:
-#             _value = NamedValue(names.ANNOTATION_CACHE_OBJECT)
-#         assert _value.name == names.ANNOTATION_CACHE_OBJECT, "wrong value class"
+#             _value = NamedValue(schemas.ANNOTATION_CACHE_OBJECT)
+#         assert _value.name == schemas.ANNOTATION_CACHE_OBJECT, "wrong value class"
 
 #         self._value: NamedValue[SwitchMap] = _value
 #         self._bookmarks: None | typing.List[Bookmark] = None
@@ -195,13 +195,13 @@
 
 #     @staticmethod
 #     def _to_obj(value: NamedValue) -> Bookmark | Highlight | Note | ClipArticle:
-#         if value.name == names.ANNOTATION_PERSONAL_BOOKMARK:
+#         if value.name == schemas.ANNOTATION_PERSONAL_BOOKMARK:
 #             return Bookmark(value)
-#         elif value.name == names.ANNOTATION_PERSONAL_HIGHLIGHT:
+#         elif value.name == schemas.ANNOTATION_PERSONAL_HIGHLIGHT:
 #             return Highlight(value)
-#         elif value.name == names.ANNOTATION_PERSONAL_NOTE:
+#         elif value.name == schemas.ANNOTATION_PERSONAL_NOTE:
 #             return Note(value)
-#         elif value.name == names.ANNOTATION_PERSONAL_CLIP_ARTICLE:
+#         elif value.name == schemas.ANNOTATION_PERSONAL_CLIP_ARTICLE:
 #             return ClipArticle(value)
 
 #     @property
@@ -279,12 +279,12 @@
 #     @property
 #     def sync_lpr(self) -> bool:
 #         root = self._get_datastore_map()
-#         return root.compute_if_absent(names.SYNC_LPR).value.value
+#         return root.compute_if_absent(schemas.SYNC_LPR).value.value
 
 #     @sync_lpr.setter
 #     def sync_lpr(self, value: bool):
 #         root = self._get_datastore_map()
-#         root.compute_if_absent(names.SYNC_LPR).value.value = value
+#         root.compute_if_absent(schemas.SYNC_LPR).value.value = value
 
 #     @property
 #     def annotation_cache(self) -> AnnotationCache:
@@ -302,8 +302,8 @@
 #         anno_cache_obj = None
 #         if root:
 #             anno_cache_obj = (
-#                 root.compute_if_absent(names.ANNOTATION_CACHE_OBJECT) if
-#                 compute_if_absent else root.get(names.ANNOTATION_CACHE_OBJECT)
+#                 root.compute_if_absent(schemas.ANNOTATION_CACHE_OBJECT) if
+#                 compute_if_absent else root.get(schemas.ANNOTATION_CACHE_OBJECT)
 #             )
 #         return anno_cache_obj
 

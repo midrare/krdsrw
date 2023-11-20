@@ -1,16 +1,15 @@
-from . import names
-from .containers import NameMap
-from .containers import Array
+from . import schemas
+from .containers import DataStore
+from .containers import Vector
 from .containers import DateTime
 from .containers import DynamicMap
 from .containers import Record
 from .containers import Json
 from .containers import LastPageRead
 from .containers import Position
-from .containers import SwitchMap
+from .containers import IntMap
 from .containers import TimeZoneOffset
 from .cursor import Cursor
-from .datastore import DataStore
 from .error import DemarcationError
 from .error import UnexpectedFieldError
 from .error import FieldNotFoundError
@@ -30,14 +29,14 @@ from .types import Object
 
 __all__ = [
     "Cursor",
-    "Array",
+    "Vector",
     "DateTime",
     "DynamicMap",
     "Record",
     "Json",
     "LastPageRead",
     "Position",
-    "SwitchMap",
+    "IntMap",
     "NameMap",
     "TimeZoneOffset",
     "DataStore",
@@ -57,5 +56,5 @@ __all__ = [
     "Double",
     "Utf8Str",
     "Object",
-    "names",
+    "schemas",
 ]

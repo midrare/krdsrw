@@ -7,13 +7,15 @@ import inspect
 import json
 import typing
 
-from . import names
+from . import schemas
 from .cursor import Cursor
 from .error import FieldNotFoundError
 from .error import UnexpectedBytesError
 from .error import UnexpectedNameError
 from .error import UnexpectedFieldError
+from .types import ALL_BASIC_TYPES
 from .types import Object
+from .types import Value
 from .types import ValueFactory
 from .types import Basic
 from .types import Byte
@@ -31,15 +33,15 @@ T = typing.TypeVar("T", bound=Byte | Char | Bool | Short | Int | Long \
     | Float | Double | Utf8Str | Object)
 
 
-def _convert_value(o: typing.Any, cls_: type) -> typing.Any:
+def _to_ctype(o: typing.Any, cls_: type) -> typing.Any:
     if isinstance(o, dict):
         for key in list(o.keys()):
-            o[key] = _convert_value(o[key], cls_)
+            o[key] = _to_ctype(o[key], cls_)
         return o
 
     if isinstance(o, list):
         for i in range(len(o)):
-            o[i] = _convert_value(o[i], cls_)
+            o[i] = _to_ctype(o[i], cls_)
         return o
 
     if issubclass(cls_, Basic) and isinstance(o, cls_.builtin):
@@ -76,15 +78,49 @@ def _read_basic(cursor: Cursor) \
     return None
 
 
-class _TypeCheckedList(list[T]):
-    def __init__(self, cls_: type[T]):
-        super().__init__()
-        self._cls: typing.Final[type[T]] = cls_
+def _read_object(
+    cursor: Cursor
+) -> tuple[Bool | Char | Byte | Short | Int | Long | Float | Double | Utf8Str
+           | Object, None | str]:
+    # named object data structure (schema utf8str + data)
+    OBJECT_BEGIN: typing.Final[int] = 0xfe
+    # end of data for object
+    OBJECT_END: typing.Final[int] = 0xff
 
-    def __eq__(self, o: typing.Any) -> bool:
-        if isinstance(o, self.__class__):
-            return self._cls == o._cls and list(self) == list(o)
-        return super().__eq__(o)
+    if not cursor.eat(OBJECT_BEGIN):
+        raise UnexpectedBytesError(cursor.tell(), OBJECT_BEGIN, cursor.peek())
+
+    schema = cursor.read_utf8str(False)
+    if not schema:
+        raise UnexpectedNameError('Failed to read schema for object.')
+
+    if maker := schemas.get_maker_by_schema(schema):
+        assert maker, f"Unsupported schema {schema}"
+        value = maker.create()
+        value.read(cursor)
+    else:
+        value = _read_basic(cursor)
+
+    assert isinstance(
+        value,
+        (Bool, Char, Byte, Short, Int, Long, Float, Double, Utf8Str,
+         Object)), 'Value is of unsupported type'
+
+    if not cursor.eat(OBJECT_END):
+        raise UnexpectedBytesError(cursor.tell(), OBJECT_END, cursor.peek())
+
+    return value, schema
+
+
+class _TypeCheckedList(list[T]):
+    def __init__(self):
+        super().__init__()
+
+    def _is_write_allowed(self, o: typing.Any) -> bool:
+        return True
+
+    def _transform_write(self, o: typing.Any) -> T:
+        return o
 
     @typing.overload
     def __setitem__(self, i: typing.SupportsIndex, o: int | float | str | T):
@@ -102,232 +138,206 @@ class _TypeCheckedList(list[T]):
             self, i: typing.SupportsIndex | slice, o: int | float | str
         | T | typing.Iterable[int | float | str | T]):
         if not isinstance(i, slice):
-            o = _convert_value(o, self._cls)
-            assert isinstance(o, self._cls)
+            if not self._is_write_allowed(o):
+                raise ValueError(f"Value \"{o}\" is not allowed.")
+            o = self._transform_write(o)
             super().__setitem__(i, o)
         else:
             assert isinstance(o, collections.abc.Iterable)
-            o = [_convert_value(e, self._cls) for e in o]  # type: ignore
-            super().__setitem__(i, o)  # type: ignore
+            o = list(o)  # type: ignore
+            for e in o:
+                if not self._is_write_allowed(e):
+                    raise ValueError(f"Value \"{e}\" is not allowed.")
+            o = [self._transform_write(e) for e in o]
+            super().__setitem__(i, o)
 
     def __add__(
             self, other: typing.Iterable[int | float | str | T]) -> typing.Self:
+        other = list(other)
+        for e in other:
+            if not self._is_write_allowed(e):
+                raise ValueError(f"Value \"{e}\" is not allowed.")
         o = self.copy()
-        o.extend(_convert_value(other, self._cls))
+        o.extend(self._transform_write(e) for e in other)
         return o
 
     def __iadd__(
             self, other: typing.Iterable[int | float | str | T]) -> typing.Self:
-        self.extend(_convert_value(other, self._cls))
+        other = list(other)
+        for e in other:
+            if not self._is_write_allowed(e):
+                raise ValueError(f"Value \"{e}\" is not allowed.")
+        self.extend(self._transform_write(e) for e in other)
         return self
 
     def append(self, o: int | float | str | T):
-        super().append(_convert_value(o, self._cls))
+        if not self._is_write_allowed(o):
+            raise ValueError(f"Value \"{o}\" is not allowed.")
+        super().append(self._transform_write(o))
 
     def insert(self, i: int, o: int | float | str | T):
-        super().insert(i, _convert_value(o, self._cls))
+        if not self._is_write_allowed(o):
+            raise ValueError(f"Value \"{o}\" is not allowed.")
+        super().insert(i, self._transform_write(o))
 
     def copy(self) -> typing.Self:
         return copy.copy(self)
 
     def extend(self, other: typing.Iterable[int | float | str | T]):
-        super().extend(_convert_value(other, self._cls))
+        other = list(other)
+        for e in other:
+            if not self._is_write_allowed(e):
+                raise ValueError(f"Value \"{e}\" is not allowed.")
+        super().extend(self._transform_write(e) for e in other)
 
-    def count(self, o: typing.Any) -> int:
-        return super().count(o)
+    def count(self, o: bool | int | float | str | T) -> int:
+        return super().count(o)  # type: ignore
 
 
-class Array(_TypeCheckedList[T], Object):
-    def __init__(
-            self, maker: type[T] | ValueFactory[T], name: None | str = None):
+class Vector(_TypeCheckedList[T], Object):
+    # Array can contain Basic and other containers
+
+    def __init__(self, maker: type[T] | ValueFactory[T]):
+        super().__init__()
         if not isinstance(maker, ValueFactory):
             maker = ValueFactory(maker)
-        _TypeCheckedList.__init__(self, maker.cls_)
-        Object.__init__(self, name=name)
         self._maker: typing.Final[ValueFactory[T]] = maker
 
+    @typing.override
     def read(self, cursor: Cursor):
-        if self.name:
-            self._read_header(cursor)
-
         self.clear()
         size = cursor.read_int()
         for _ in range(size):
             self.append(self._maker.create(cursor))
 
-        if self.name:
-            self._read_footer(cursor)
-
+    @typing.override
     def write(self, cursor: Cursor):
-        if self.name:
-            self._write_header(cursor)
-
         cursor.write_int(len(self))
         for e in self:
             e.write(cursor)
-
-        if self.name:
-            self._write_footer(cursor)
 
     @property
     def cls_(self) -> type[T]:
         return self._maker.cls_
 
+    @typing.override
+    def _is_write_allowed(self, o: typing.Any) -> bool:
+        return isinstance(o, self._maker.cls_)
+
+    @typing.override
+    def _transform_write(self, o: typing.Any) -> T:
+        return o
+
 
 class _TypeCheckedDict(collections.OrderedDict[K, T]):
-    def __init__(
-            self, key_cls: type[K],
-            val_maker: type[T] | ValueFactory[T] | dict[K, ValueFactory[T]]):
-        if not isinstance(val_maker, (ValueFactory, dict)):
-            val_maker = ValueFactory(val_maker)
-        super().__init__()
-        self._key_cls: type[K] = key_cls
-        self._val_maker: ValueFactory[T] \
-        | dict[K, ValueFactory[T]] \
-        | typing.Callable[[K], None|ValueFactory[T]] \
-        = copy.copy(val_maker)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
-    @property
-    def key_cls(self) -> type[K]:
-        return self._key_cls
-
-    @property
-    def val_cls(self) -> type[T] | dict[K, type[T]]:
-        if isinstance(self._val_maker, dict):
-            return { k: v.cls_ for k, v in self._val_maker.items() }
-        return self._val_maker.cls_
-
-    def _key_to_val_cls(self, key: K) -> type[T]:
-        if isinstance(self._val_maker, dict):
-            return self._val_maker[key].cls_
-        if callable(self._val_maker):
-            maker = self._val_maker(key)
-            assert maker, f'no factory for \"{key}\".'
-            return maker.cls_
-
-        return self._val_maker.cls_
-
-    def __setitem__(self, key: K, item: int | float | str | T):
-        key = _convert_value(key, self._key_cls)
-        item = _convert_value(item, self._key_to_val_cls(key))
-        super().__setitem__(key, item)  # type: ignore
-
-    def _is_key_allowed(self, key: K) -> bool:
-        if isinstance(self._val_maker, dict):
-            return key in self._val_maker
-        if callable(self._val_maker):
-            return bool(self._val_maker(key))
+    def _is_read_allowed(self, key: typing.Any) -> bool:
         return True
 
-    def _make_val(self, key: K) -> T:
-        if isinstance(self._val_maker, dict):
-            return self._val_maker[key].create()
-        if callable(self._val_maker):
-            maker = self._val_maker(key)
-            assert maker, f'no factory for \"{key}\".'
-            return maker.create()
-        return self._val_maker.create()
+    def _is_write_allowed(self, key: typing.Any, value: typing.Any) -> bool:
+        return True
+
+    def _transform_read(self, key: typing.Any) -> K:
+        return key
+
+    def _transform_write(self, key: typing.Any,
+                         value: typing.Any) -> tuple[K, T]:
+        return value
 
     @classmethod
     def fromkeys(
-            cls, iterable: typing.Iterable[int | float | str],
-            value: T) -> dict:
-        raise NotImplementedError("Unsupported for this container")
+        cls,
+        iterable: typing.Iterable[bool | int | float | str],
+        value: T,
+    ) -> typing.Self:
+        keys = list(iterable)
 
-    def setdefault(self, key: K, default: T) -> T:
-        key = _convert_value(key, self._key_cls)
-        default = _convert_value(default, self._key_to_val_cls(key))
+        def cast(key, val) -> tuple[K, T]:
+            if not key in keys:
+                raise ValueError(f"Key \"{key}\" is not allowed.")
+
+            if val is None:
+                val = copy.deepcopy(value)
+
+            val = _to_ctype(val, value.__class__)
+            if not isinstance(val, value.__class__):
+                raise ValueError(f"Value \"{value}\" is not allowed.")
+
+            return key, val
+
+        o = cls(cast)
+        for key in keys:
+            o[key] = value  # type: ignore
+
+        return o
+
+    @typing.override
+    def setdefault(self, key: K, default: None | T = None) -> T:
+        if not self._is_write_allowed(key, default):
+            raise ValueError(
+                f"Write to key \"{key}\" of"
+                + f" value \"{default}\" is not allowed.")
+
+        key, default = self._transform_write(key, default)
         return super().setdefault(key, default)
 
+    @typing.override
     def update(self, *args: typing.Mapping[K, T], **kwargs: T):
-        d = {}
-        d.update(*args, **kwargs)
-
-        if not all(_is_val_compatible(e, self._key_cls) for e in d.keys()):
-            raise TypeError(f'Key(s) is of wrong type for this container')
-
-        if not all(_is_val_compatible(e, self._key_to_val_cls(e))
-                   for e in d.values()):
-            raise TypeError(f"Value(s) is of wrong class for this container")
-
-        for key in list(d.keys()):
-            d[key] = _convert_value(d[key], self._key_to_val_cls(key))
-
+        d = collections.OrderedDict()
+        for key, value in collections.OrderedDict(*args, **kwargs).items():
+            if not self._is_write_allowed(key, value):
+                raise ValueError(
+                    f"Write to key \"{key}\" of"
+                    + f" value \"{value}\" is not allowed.")
+            key, value = self._transform_write(key, value)
+            d[key] = value
         super().update(d)
 
     def __eq__(self, o: typing.Any) -> bool:
         if isinstance(o, self.__class__):
-            return (
-                o._key_cls == self._key_cls \
-                and o._val_maker == self._val_maker \
-                and dict(o) == dict(self)
-            )
+            return dict(o) == dict(self)
         return super().__eq__(o)
 
-    def compute_if_absent(self, key: K) -> T:
-        if self._is_key_allowed(key):
-            raise KeyError(f'Key "{key}" is invalid for this container')
-        if key not in self:
-            self[key] = self._make_val(key)
-        return self[key]
+    def __contains__(self, key: typing.Any) -> bool:
+        key = self._transform_read(key)
+        return super().__contains__(key)
 
+    def __delitem__(self, key: K):
+        if not self._is_read_allowed(key):
+            raise KeyError(f"Key \"{key}\" cannot be read.")
+        key = self._transform_read(key)
+        return super().__delitem__(key)
 
-class DynamicMap(_TypeCheckedDict[str, T], Object):
-    # DynamicMap contains only Basics, no Objects.
+    def __getitem__(self, key: K) -> T:
+        if not self._is_read_allowed(key):
+            raise KeyError(f"Key \"{key}\" cannot be read.")
 
-    def __init__(
-        self,
-        key_cls: type[str],
-        val_maker: ValueFactory[T] | dict[K, ValueFactory[T]],
-        name: None | str = None,
-    ):
-        _TypeCheckedDict.__init__(self, key_cls, val_maker)
-        Object.__init__(self, name=name)
+        key = self._transform_read(key)
+        return super().__getitem__(key)
 
-    def read(self, cursor: Cursor):
-        if self.name:
-            self._read_header(cursor)
-
-        self.clear()
-        size = cursor.read_int()
-        for _ in range(size):
-            key = cursor.read_utf8str()
-            value = _read_basic(cursor)
-            assert value, 'value not found'
-            self[key] = value
-
-        if self.name:
-            self._read_footer(cursor)
-
-    def write(self, cursor: Cursor):
-        if self.name:
-            self._write_header(cursor)
-
-        cursor.write_int(len(self))
-        for key, value in self.items():
-            cursor.write_utf8str(key)
-            value.write(cursor)
-
-        if self.name:
-            self._write_footer(cursor)
-
-    def __eq__(self, other: typing.Any) -> bool:
-        if isinstance(other, self.__class__):
-            return dict(self) == dict(other)
-        return super().__eq__(other)
+    def __setitem__(self, key: K, item: int | float | str | T):
+        if not self._is_write_allowed(key, item):
+            raise ValueError(
+                f"Write to key \"{key}\" of"
+                + f" value \"{item}\" is not allowed.")
+        key, item = self._transform_write(key, item)
+        super().__setitem__(key, item)
 
 
 class Record(_TypeCheckedDict[str, T], Object):
     # Record can contain basics and other containers
+    # keys are just arbitrary aliases for convenience. values are
+    # hardcoded and # telling the difference between what is what
+    # is determined # by their order of appearance
 
     def __init__(
         self,
         required: typing.Dict[str, ValueFactory[T]],
         optional: None | typing.Dict[str, ValueFactory[T]] = None,
-        name: None | str = None,
     ):
-        _TypeCheckedDict.__init__(self, str, required | (optional or {}))
-        Object.__init__(self, name=name)
+        super().__init__()
 
         self._required: typing.Final[typing.Dict[str, ValueFactory[T]]] \
             = collections.OrderedDict(required)
@@ -337,6 +347,38 @@ class Record(_TypeCheckedDict[str, T], Object):
         for k, v in self._required.items():
             self[k] = v.create()
 
+    @typing.override
+    def _is_read_allowed(self, key: typing.Any) -> bool:
+        return isinstance(key, str) \
+        and (key in self._required or key in self._optional)
+
+    @typing.override
+    def _is_write_allowed(self, key: typing.Any, value: typing.Any) -> bool:
+        if not isinstance(key, str):
+            return False
+        if not key in self._required and not key in self._optional:
+            return False
+        if value is not None:
+            maker = self._required.get(key) or self._optional.get(key)
+            if maker and not isinstance(value, maker.cls_):
+                return False
+        return True
+
+    @typing.override
+    def _transform_read(self, key: typing.Any) -> str:
+        return key
+
+    @typing.override
+    def _transform_write(self, key: typing.Any,
+                         value: typing.Any) -> tuple[str, T]:
+        if value is None:
+            maker = self._required.get(key) or self._optional.get(key)
+            if not maker:
+                raise Exception(f"No default value for key \"{key}\".")
+            value = maker.create()
+            assert value is not None, 'Maker failed to create value'
+        return key, value
+
     @property
     def required(self) -> dict[str, type[T]]:
         return { k: v.cls_ for k, v in self._required.items() }
@@ -345,53 +387,47 @@ class Record(_TypeCheckedDict[str, T], Object):
     def optional(self) -> dict[str, type[T]]:
         return { k: v.cls_ for k, v in self._optional.items() }
 
+    @typing.override
     def read(self, cursor: Cursor):
-        if self.name:
-            self._read_header(cursor)
-
         self.clear()
 
-        for name, val_maker in self._required.items():
-            if not self._read_next(cursor, name, val_maker):
+        for schema, val_maker in self._required.items():
+            if not self._read_next(cursor, schema, val_maker):
                 raise FieldNotFoundError(
-                    'Expected field with name "%s" but was not found' % name)
+                    'Expected field with schema "%s" but was not found'
+                    % schema)
 
-        for name, val_maker in self._optional.items():
-            if not self._read_next(cursor, name, val_maker):
+        for schema, val_maker in self._optional.items():
+            if not self._read_next(cursor, schema, val_maker):
                 break
 
-        if self.name:
-            self._read_footer(cursor)
-
     def _read_next(
-            self, cursor: Cursor, name: str,
-            val_maker: ValueFactory[T]) -> bool:
+        self,
+        cursor: Cursor,
+        schema: str,
+        val_maker: ValueFactory[T],
+    ) -> bool:
         cursor.save()
         try:
-            self[name] = val_maker.create(cursor)
+            self[schema] = val_maker.create(cursor)
             cursor.unsave()
             return True
         except UnexpectedBytesError:
             cursor.restore()
             return False
 
+    @typing.override
     def write(self, cursor: Cursor):
-        if self.name:
-            self._write_header(cursor)
+        for schema, val_maker in self._required.items():
+            assert isinstance(self[schema], val_maker.cls_)
+            self[schema].write(cursor)
 
-        for name, val_maker in self._required.items():
-            assert isinstance(self[name], val_maker.cls_)
-            self[name].write(cursor)
-
-        for name, val_maker in self._optional.items():
-            value = self.get(name)
+        for schema, val_maker in self._optional.items():
+            value = self.get(schema)
             if value is None:
                 break
             assert isinstance(value, val_maker.cls_)
             value.write(cursor)
-
-        if self.name:
-            self._write_footer(cursor)
 
     def __eq__(self, other: typing.Any) -> bool:
         if isinstance(other, self.__class__):
@@ -408,138 +444,154 @@ class Record(_TypeCheckedDict[str, T], Object):
         return f"{self.__class__.__name__}{str(d)}"
 
 
-class SwitchMap(_TypeCheckedDict[int, Object], Object):
+class IntMap(_TypeCheckedDict[int, Bool | Char | Byte | Short | Int | Long
+                              | Float | Double | Utf8Str | Object], Object):
+    # named object data structure (schema utf8str + data)
+    _OBJECT_BEGIN: typing.Final[int] = 0xfe
+    # end of data for object
+    _OBJECT_END: typing.Final[int] = 0xff
+
     def __init__(
-            self, id_to_name: typing.Dict[int, str], name: None | str = None):
-        id_to_maker = {
-            k: names.get_maker_by_name(v)
-            for k, v in id_to_name.items()
-        }
+        self,
+        idx_to_schema: None | dict[int | str, str],
+        idx_to_type: None | dict[int | str, type[Basic | Object]],
+        idx_to_alias: None | dict[int | str, str],
+    ):
+        super().__init__()
 
-        _TypeCheckedDict.__init__(self, int, self._id_to_maker)
-        Object.__init__(self, name=name)
+        self._idx_to_schema: dict[int|str, str] = \
+        copy.deepcopy(idx_to_schema or {})
+        self._idx_to_type: dict[int|str, type[Basic|Object]] = \
+        copy.deepcopy(idx_to_type or {})
+        self._idx_to_alias: dict[int|str, str] = \
+        copy.deepcopy(idx_to_alias or {})
 
-        assert all(v is not None for v in id_to_maker.values())
-        self._id_to_maker: typing.Final[dict[int, ValueFactory[Object]]] \
-        = id_to_maker  # type: ignore
-        self._id_to_name: typing.Final[typing.Dict[int, str]] \
-            = dict(id_to_name)
+    @typing.override
+    def _is_read_allowed(self, key: typing.Any) -> bool:
+        return key in self._idx_to_schema \
+        or key in self._idx_to_type \
+        or key in self._idx_to_alias \
+        or key in self._idx_to_alias.values()
 
+    @typing.override
+    def _is_write_allowed(self, key: typing.Any, value: typing.Any) -> bool:
+        if not key in self._idx_to_schema \
+        and not key in self._idx_to_type \
+        and not key in self._idx_to_alias \
+        and not key in self._idx_to_alias.values():
+            return False
+
+        if not isinstance(value, self._idx_to_type[key]):
+            return False
+
+        return True
+
+    @typing.override
+    def _transform_read(self, key: typing.Any) -> int | str:
+        return next((k for k, v in self._idx_to_alias.items() if v == key), key)
+
+    @typing.override
+    def _transform_write(
+        self, key: typing.Any, value: typing.Any
+    ) -> tuple[int | str, Bool | Char | Byte | Short | Int | Long | Float
+               | Double | Utf8Str | Object]:
+        key = next((k for k, v in self._idx_to_alias.items() if v == key), key)
+        return key, value
+
+    @typing.override
     def read(self, cursor: Cursor):
-        if self.name:
-            self._read_header(cursor)
-
-        self.clear()
-
-        size = cursor.read_int()
-        for _ in range(size):
-            id_ = cursor.read_int()
-            if id_ not in self._id_to_name:
-                raise UnexpectedFieldError('Unrecognized field ID "%d"' % id_)
-
-            if not (name := cursor.peek_object_name()) \
-            or self._id_to_name[id_] != name:
-                raise UnexpectedFieldError(
-                    f'Expected name "{self._id_to_name[id_]}" '
-                    + f'but got "{name}"')
-
-            assert id_ in self._id_to_maker, f'no factory for id "{id_}"'
-            self[id_] = self._id_to_maker[id_].create(cursor)
-
-        if self.name:
-            self._read_footer(cursor)
-
-    def write(self, cursor: Cursor):
-        if self.name:
-            self._write_header(cursor)
-
-        id_to_non_null_value = {
-            k: v
-            for k, v in self.items()
-            if v is not None
-        }
-        cursor.write_int(len(id_to_non_null_value))
-        for id_, val in id_to_non_null_value.items():
-            cursor.write_int(id_)
-            val.write(cursor)
-
-        if self.name:
-            self._write_footer(cursor)
-
-    def __eq__(self, other: typing.Any) -> bool:
-        if isinstance(other, self.__class__):
-            id_to_non_null_value1 = {
-                k: v
-                for k, v in self.items()
-                if v is not None
-            }
-            id_to_non_null_value2 = {
-                k: v
-                for k, v in other.items()
-                if v is not None
-            }
-            return (
-                self._id_to_name == other._id_to_name
-                and id_to_non_null_value1 == id_to_non_null_value2
-                and self._id_to_maker == other._id_to_maker)
-        return super().__eq__(other)
-
-
-class NameMap(_TypeCheckedDict[str, Object], Object):
-    def __init__(self, name: None | str = None):
-        _TypeCheckedDict.__init__(self, str, names.get_maker_by_name)
-        Object.__init__(self, name=name)
-
-    def read(self, cursor: Cursor):
-        if self.name:
-            self._read_header(cursor)
-
         self.clear()
         size = cursor.read_int()
         for _ in range(size):
-            name = cursor.peek_object_name()
-            assert name, 'object must have non-blank name'
-            self[name] = cursor.read_object()
+            idxnum = cursor.read_int()
 
-        if self.name:
-            self._read_footer(cursor)
+            if not idxnum in self._idx_to_schema \
+            and not idxnum in self._idx_to_type \
+            and not idxnum in self._idx_to_alias:
+                raise UnexpectedNameError(
+                    f"Object index number {idxnum} not recognized")
 
+            value, schema = _read_object(cursor)
+            assert schema == self._idx_to_schema[idxnum], 'Schema mismatch'
+            self[idxnum] = value
+
+    @typing.override
     def write(self, cursor: Cursor):
-        if self.name:
-            self._write_header(cursor)
-
         cursor.write_int(len(self))
-        for name, value in self.items():
-            assert name == value.name, "object name mismatch"
+
+        for idx, value in self.items():
+            cursor.write_int(idx)
+            cursor.write_byte(self._OBJECT_BEGIN)
+
+            schema = self._idx_to_schema[idx]
+            cursor.write_utf8str(schema, False)
             value.write(cursor)
+            cursor.write_byte(self._OBJECT_END, False)
 
-        if self.name:
-            self._write_footer(cursor)
 
-    def __eq__(self, other: typing.Any) -> bool:
-        if isinstance(other, self.__class__):
-            return dict(self) == dict(other)
-        return super().__eq__(other)
+class DynamicMap(_TypeCheckedDict[str, Bool | Char | Byte | Short | Int | Long
+                                  | Float | Double | Utf8Str | Object], Object):
+    def __init__(self):
+        super().__init__()
+
+    @typing.override
+    def _is_read_allowed(self, key: typing.Any) -> bool:
+        return isinstance(key, str)
+
+    @typing.override
+    def _is_write_allowed(self, key: typing.Any, value: typing.Any) -> bool:
+        return isinstance(key, str) and isinstance(value, (Basic, Object))
+
+    @typing.override
+    def _transform_read(self, key: typing.Any) -> str:
+        return key
+
+    @typing.override
+    def _transform_write(
+        self, key: typing.Any, value: typing.Any
+    ) -> tuple[str, Bool | Char | Byte | Short | Int | Long | Float | Double
+               | Utf8Str | Object]:
+        return key, value
+
+    @typing.override
+    def read(self, cursor: Cursor):
+        self.clear()
+        size = cursor.read_int()
+        for _ in range(size):
+            key = cursor.read_utf8str()
+            value = _read_basic(cursor)
+            assert value is not None, 'Value not found'
+            self[key] = value
+
+    @typing.override
+    def write(self, cursor: Cursor):
+        cursor.write_int(len(self))
+        for idx, value in self.items():
+            assert isinstance(idx, str)
+            cursor.write_utf8str(idx)
+            value.write(cursor)
 
 
 class DateTime(Object):
-    def __init__(self, name: None | str = None):
-        Object.__init__(self, name=name)
+    def __init__(self):
+        super().__init__()
         self._value: int = -1  # -1 is null
 
     @property
-    def value(self) -> int:
+    def epoch_ms(self) -> int:
         return self._value
 
-    @value.setter
-    def value(self, value: int):
+    @epoch_ms.setter
+    def epoch_ms(self, value: int):
         if not isinstance(value, int):
             raise TypeError(f"Value must be an {int.__name__}")
         self._value = max(-1, value)
 
+    @typing.override
     def read(self, cursor: Cursor):
         self._value = cursor.read_long()
 
+    @typing.override
     def write(self, cursor: Cursor):
         cursor.write_long(max(-1, self._value))
 
@@ -550,8 +602,8 @@ class DateTime(Object):
 
 
 class Json(Object):
-    def __init__(self, name: None | str = None):
-        Object.__init__(self, name=name)
+    def __init__(self):
+        super().__init__()
         self._value: None | bool | int | float | str | list | dict = None
 
     @property
@@ -566,10 +618,12 @@ class Json(Object):
             raise TypeError(f"value is must be one of {class_names}")
         self._value = value
 
+    @typing.override
     def read(self, cursor: Cursor):
         s = cursor.read_utf8str()
         self._value = json.loads(s) if s is not None and s else None
 
+    @typing.override
     def write(self, cursor: Cursor):
         s = json.dumps(self._value) if self._value is not None else ""
         cursor.write_utf8str(s)
@@ -583,8 +637,8 @@ class Json(Object):
 class LastPageRead(Object):  # aka LPR. this is kindle reading pos info
     EXTENDED_LPR_VERSION: typing.Final[int] = 2
 
-    def __init__(self, name: None | str = None):
-        Object.__init__(self, name=name)
+    def __init__(self):
+        super().__init__()
         self._pos: Position = Position()
         self._timestamp: int = -1
         self._lpr_version: int = -1
@@ -613,6 +667,7 @@ class LastPageRead(Object):  # aka LPR. this is kindle reading pos info
             raise TypeError(f"value is not of type {int.__name__}")
         self._timestamp = value
 
+    @typing.override
     def read(self, cursor: Cursor):
         self._pos.char_pos = -1
         self._pos.chunk_eid = -1
@@ -633,6 +688,7 @@ class LastPageRead(Object):  # aka LPR. this is kindle reading pos info
             raise UnexpectedFieldError(
                 f"Expected Utf8Str or byte but got {type_byte}")
 
+    @typing.override
     def write(self, cursor: Cursor):
         # XXX may cause problems if kindle expects the original LPR format
         #   version when datastore file is re-written
@@ -665,8 +721,8 @@ class LastPageRead(Object):  # aka LPR. this is kindle reading pos info
 class Position(Object):
     PREFIX_VERSION1: typing.Final[int] = 0x01
 
-    def __init__(self, name: None | str = None):
-        Object.__init__(self, name=name)
+    def __init__(self):
+        super().__init__()
         self._chunk_eid: int = -1
         self._chunk_pos: int = -1
         self._value: int = -1
@@ -701,6 +757,7 @@ class Position(Object):
             raise TypeError(f"value is not of type {int.__name__}")
         self._value = value
 
+    @typing.override
     def read(self, cursor: Cursor):
         s = cursor.read_utf8str()
         split = s.split(":", 2)
@@ -718,6 +775,7 @@ class Position(Object):
         else:
             self._value = int(s)
 
+    @typing.override
     def write(self, cursor: Cursor):
         s = ""
         if self._chunk_eid >= 0 and self._chunk_pos >= 0:
@@ -748,8 +806,8 @@ class Position(Object):
 
 
 class TimeZoneOffset(Object):
-    def __init__(self, name: None | str = None):
-        Object.__init__(self, name=name)
+    def __init__(self):
+        super().__init__()
         self._value: int = -1  # -1 is null
 
     @property
@@ -762,9 +820,11 @@ class TimeZoneOffset(Object):
             raise TypeError(f"value must be an {int.__name__}")
         self._value = value
 
+    @typing.override
     def read(self, cursor: Cursor):
         self._value = cursor.read_long()
 
+    @typing.override
     def write(self, cursor: Cursor):
         cursor.write_long(max(-1, self._value))
 
@@ -773,3 +833,62 @@ class TimeZoneOffset(Object):
             return self._value == other._value
 
         return super().__eq__(other)
+
+
+class DataStore(_TypeCheckedDict[str, Bool | Char | Byte | Short | Int | Long
+                                 | Float | Double | Utf8Str | Object], Object):
+    MAGIC_STR: typing.Final[bytes] = b"\x00\x00\x00\x00\x00\x1A\xB1\x26"
+    FIXED_MYSTERY_NUM: typing.Final[int] = (
+        1  # present after the signature; unknown what this number means
+    )
+
+    # named object data structure (schema utf8str + data)
+    _OBJECT_BEGIN: typing.Final[int] = 0xfe
+    # end of data for object
+    _OBJECT_END: typing.Final[int] = 0xff
+
+    def __init__(self):
+        super().__init__()
+
+    @classmethod
+    def _eat_signature_or_error(cls, cursor: Cursor):
+        if not cursor.eat(cls.MAGIC_STR):
+            raise UnexpectedBytesError(
+                cursor.tell(),
+                cls.MAGIC_STR,
+                cursor.peek(len(cls.MAGIC_STR)),
+            )
+
+    @classmethod
+    def _eat_fixed_mystery_num_or_error(cls, cursor: Cursor):
+        cursor.save()
+        value = cursor.read_long()
+        if value != cls.FIXED_MYSTERY_NUM:
+            cursor.restore()
+            raise UnexpectedBytesError(
+                cursor.tell(),
+                Long(cls.FIXED_MYSTERY_NUM).to_bytes(),
+                Long(value).to_bytes(),
+            )
+        cursor.unsave()
+
+    def read(self, cursor: Cursor):
+        self.clear()
+        self._eat_signature_or_error(cursor)
+        self._eat_fixed_mystery_num_or_error(cursor)
+
+        size = cursor.read_int()
+        for _ in range(size):
+            value, schema = _read_object(cursor)
+            assert schema, 'Object has blank schema.'
+            self[schema] = value
+
+    def write(self, cursor: Cursor):
+        cursor.write(self.MAGIC_STR)
+        cursor.write_long(self.FIXED_MYSTERY_NUM)
+        cursor.write_int(len(self))
+        for _, value in self.items():
+            value.write(cursor)
+
+    def __str__(self) -> str:
+        return f"{self.__class__.__name__}{{{dict(self)}}}"

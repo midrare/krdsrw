@@ -331,39 +331,39 @@ class Cursor:
 
         return None
 
-    def peek_object_name(self, magic_byte: bool = True) -> None | str:
-        name = None
+    def peek_object_schema(self, magic_byte: bool = True) -> None | str:
+        schema = None
         self.save()
         if not magic_byte or self._eat_raw_byte(_OBJECT_BEGIN_INDICATOR):
-            name = self.read_utf8str(False)
+            schema = self.read_utf8str(False)
         self.restore()
-        return name
+        return schema
 
     def peek_object_type(self, magic_byte: bool = True) -> None | type:
-        from . import names
+        from . import schemas
         cls_ = None
         self.save()
 
         if not magic_byte or self._eat_raw_byte(_OBJECT_BEGIN_INDICATOR):
-            name = self.read_utf8str(False)
-            fct = names.get_maker_by_name(name)
-            assert fct, f'Unsupported name \"{name}\".'
+            schema = self.read_utf8str(False)
+            fct = schemas.get_maker_by_name(schema)
+            assert fct, f'Unsupported schema \"{schema}\".'
             cls_ = fct.cls_
 
         self.restore()
         return cls_
 
     def read_object(self, magic_byte: bool = True) -> typing.Any:
-        from . import names
+        from . import schemas
 
         if magic_byte and not self._eat_raw_byte(_OBJECT_BEGIN_INDICATOR):
             raise UnexpectedBytesError(
                 self._data.tell(), _OBJECT_BEGIN_INDICATOR,
                 self._peek_raw_byte())
 
-        name = self.read_utf8str(False)
-        fct = names.get_maker_by_name(name)
-        assert fct, f'Unsupported name \"{name}\".'
+        schema = self.read_utf8str(False)
+        fct = schemas.get_maker_by_name(schema)
+        assert fct, f'Unsupported schema \"{schema}\".'
         o = fct.create(self)
         if magic_byte and not self._eat_raw_byte(_OBJECT_END_INDICATOR):
             raise UnexpectedBytesError(

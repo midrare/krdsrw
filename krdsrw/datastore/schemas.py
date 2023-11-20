@@ -32,7 +32,7 @@ _name_to_factory_map: dict[str, None | ValueFactory] = {}
 def _timer_model() -> ValueFactory:
     global _timer_model_factory
     if not _timer_model_factory:
-        from .containers import Array
+        from .containers import Vector
         from .containers import Record
         from .containers import ValueFactory
 
@@ -55,14 +55,14 @@ def _timer_model() -> ValueFactory:
                     Record,
                     {
                         "samples1":
-                        ValueFactory(Array, _double),
+                        ValueFactory(Vector, _double),
                         "samples2":
-                        ValueFactory(Array, _double),
+                        ValueFactory(Vector, _double),
 
                         # timer.average.calculator.distribution.normal
                         "normal_distributions":
                         ValueFactory(
-                            Array,
+                            Vector,
                             ValueFactory(
                                 Record, {
                                     "count": _long,
@@ -72,7 +72,7 @@ def _timer_model() -> ValueFactory:
 
                         # timer.average.calculator.outliers
                         "outliers":
-                        ValueFactory(Array, ValueFactory(Array, _double)),
+                        ValueFactory(Vector, ValueFactory(Vector, _double)),
                     }),
             })
 
@@ -129,13 +129,13 @@ def _reader_state_preferences() -> ValueFactory:
 def _annotation_object_cache() -> ValueFactory:
     global _annotation_object_cache_factory
     if not _annotation_object_cache_factory:
-        from .containers import Array
-        from .containers import SwitchMap
+        from .containers import Vector
+        from .containers import IntMap
         from .types import Object
 
         # annotation.cache.object
         _annotation_object_cache_factory = ValueFactory(
-            SwitchMap,
+            IntMap,
             {
                 0: "saved.avl.interval.tree",  # bookmarks
                 1: "saved.avl.interval.tree",  # highlights
@@ -143,25 +143,25 @@ def _annotation_object_cache() -> ValueFactory:
                 3: "saved.avl.interval.tree",  # clip articles
             },
             {
-                # annotation.personal.bookmark
-                0:
+
+                0:  # annotation.personal.bookmark
                 ValueFactory(
-                    Array,
+                    Vector,
                     ValueFactory(Object, _name="annotation.personal.bookmark"),
-                ),  # annotation.personal.highlight
-                1:
+                ),
+                1:  # annotation.personal.highlight
                 ValueFactory(
-                    Array,
+                    Vector,
                     ValueFactory(Object, _name="annotation.personal.highlight"),
-                ),  # annotation.personal.note
-                2:
+                ),
+                2:  # annotation.personal.note
                 ValueFactory(
-                    Array,
+                    Vector,
                     ValueFactory(Object, _name="annotation.personal.note"),
-                ),  # annotation.personal.clip_article
-                3:
+                ),
+                3:  # annotation.personal.clip_article
                 ValueFactory(
-                    Array,
+                    Vector,
                     ValueFactory(
                         Object, _name="annotation.personal.clip_article"),
                 ),
@@ -194,12 +194,12 @@ def _annotation_personal() -> ValueFactory:
     return _annotation_personal_factory
 
 
-def _name_to_factory() -> dict[str, None | ValueFactory]:
+def _schema_to_factory() -> dict[str, None | ValueFactory]:
     global _name_to_factory_map
     if not _name_to_factory_map:
-        from .containers import Array
+        from .containers import Vector
         from .containers import DateTime
-        from .containers import DynamicMap
+        from .containers import Map
         from .containers import Record
         from .containers import Json
         from .containers import LastPageRead
@@ -277,7 +277,7 @@ def _name_to_factory() -> dict[str, None | ValueFactory]:
                     "asin": _utf8str,
                     "cde_type": _utf8str,
                     "sidecar_available": _bool,
-                    "opn_to_pos": ValueFactory(Array, _int),
+                    "opn_to_pos": ValueFactory(Vector, _int),
                     "first": _int,
                     "unknown1": _int,
                     "unknown2": _int,
@@ -336,7 +336,7 @@ def _name_to_factory() -> dict[str, None | ValueFactory]:
                 }),
             "page.history.store":
             ValueFactory(
-                Array,
+                Vector,
                 ValueFactory(
                     Record, {
                         "pos": ValueFactory(Position),
@@ -360,5 +360,5 @@ def _name_to_factory() -> dict[str, None | ValueFactory]:
     return _name_to_factory_map
 
 
-def get_maker_by_name(name: str) -> None | ValueFactory:
-    return _name_to_factory().get(name)
+def get_maker_by_schema(schema: str) -> None | ValueFactory:
+    return _schema_to_factory().get(schema)

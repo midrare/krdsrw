@@ -3,7 +3,7 @@
 # class FontPrefs:
 #     def __init__(self, _value: datastore.NamedValue):
 #         assert (
-#             not _value or _value.name == datastore.names.FONT_PREFS
+#             not _value or _value.name == datastore.schemas.FONT_PREFS
 #         ), "wrong value class"
 #         # NamedValue -> FixedMap -> TemplatizedDict[font.prefs]
 #         self._value: datastore.NamedValue = _value
