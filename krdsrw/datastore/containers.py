@@ -581,6 +581,12 @@ class DateTime(Object):
             return self._value == other._value
         return super().__eq__(other)
 
+    def __str__(self) -> str:
+        return f"{self.__class__.__name__}{{{self._value}}}"
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}{{{self._value}}}"
+
 
 class Json(Object):
     def __init__(self):
@@ -613,6 +619,12 @@ class Json(Object):
         if isinstance(other, self.__class__):
             return self._value == other._value
         return super().__eq__(other)
+
+    def __str__(self) -> str:
+        return f"{self.__class__.__name__}{{{str(self._value)}}}"
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}{{{str(self._value)}}}"
 
 
 class LastPageRead(Object):  # aka LPR. this is kindle reading pos info
@@ -691,12 +703,20 @@ class LastPageRead(Object):  # aka LPR. this is kindle reading pos info
         return super().__eq__(other)
 
     def __str__(self) -> str:
-        return (
-            self.__class__.__name__ + ":" + str({
-                "lpr_version": self._lpr_version,
-                "timestamp": self._timestamp,
-                "pos": self._pos,
-            }))
+        d = {
+            "lpr_version": self._lpr_version,
+            "timestamp": self._timestamp,
+            "pos": self._pos,
+        }
+        return f"{self.__class__.__name__}{{{str(d)}}}"
+
+    def __repr__(self) -> str:
+        d = {
+            "lpr_version": self._lpr_version,
+            "timestamp": self._timestamp,
+            "pos": self._pos,
+        }
+        return f"{self.__class__.__name__}{{{str(d)}}}"
 
 
 class Position(Object):
@@ -782,8 +802,7 @@ class Position(Object):
             "chunk_pos": self._chunk_pos,
             "char_pos": self._value,
         }
-        d = { k: v for k, v in d.items() if v >= 0 }
-        return f"{self.__class__.__name__}{str(d)}"
+        return f"{self.__class__.__name__}{{{str(d)}}}"
 
     def __repr__(self) -> str:
         d = {
@@ -791,7 +810,7 @@ class Position(Object):
             "chunk_pos": self._chunk_pos,
             "char_pos": self._value,
         }
-        return f"{self.__class__.__name__}{str(d)}"
+        return f"{self.__class__.__name__}{{{str(d)}}}"
 
 
 class TimeZoneOffset(Object):
@@ -822,6 +841,14 @@ class TimeZoneOffset(Object):
             return self._value == other._value
 
         return super().__eq__(other)
+
+    def __str__(self) -> str:
+        d = { "offset": self._value }
+        return f"{self.__class__.__name__}{{{str(d)}}}"
+
+    def __repr__(self) -> str:
+        d = { "offset": self._value }
+        return f"{self.__class__.__name__}{{{str(d)}}}"
 
 
 class DataStore(_TypeCheckedDict[str, Bool | Char | Byte | Short | Int | Long
