@@ -158,10 +158,10 @@ def _annotation_personal_element() -> Spec:
 
         _annotation_personal_element_factory = Spec(
             Record, {
-                "start_pos": Position,
-                "end_pos": Position,
-                "creation_time": DateTime,
-                "last_modification_time": DateTime,
+                "start_pos": Spec(Position),
+                "end_pos": Spec(Position),
+                "creation_time": Spec(DateTime),
+                "last_modification_time": Spec(DateTime),
                 "template": _utf8str,
             }, {
                 "note": _utf8str,
@@ -230,7 +230,7 @@ def _name_to_factory() -> dict[str, None | Spec]:
                     "pos": Spec(Position),
                 }, {
                     "timestamp": Spec(DateTime),
-                    "timezone_offset": TimeZoneOffset,
+                    "timezone_offset": Spec(TimeZoneOffset),
                     "country": _utf8str,
                     "device": _utf8str,
                 }),
@@ -240,7 +240,7 @@ def _name_to_factory() -> dict[str, None | Spec]:
                     "pos": Spec(Position),
                 }, {
                     "timestamp": Spec(DateTime),
-                    "timezone_offset": TimeZoneOffset,
+                    "timezone_offset": Spec(TimeZoneOffset),
                     "country": _utf8str,
                     "device": _utf8str,
                 }),
