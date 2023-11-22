@@ -933,6 +933,203 @@ class DataStore(_TypeCheckedDict[str, Bool | Char | Byte | Short | Int | Long
         return f"{self.__class__.__name__}{{{dict(self)}}}"
 
 
+AnnotationPersonalElement = typing.TypedDict(
+    'AnnotationPersonalElement', {
+        "start_pos": Position,
+        "end_pos": Position,
+        "creation_time": DateTime,
+        "last_modification_time": DateTime,
+        "template": Utf8Str,
+        "note": typing.NotRequired[Utf8Str],
+    })
+
+ReadingPos = typing.TypedDict(
+    'ReadingPos', {
+        "pos": Position,
+        "timestamp": typing.NotRequired[DateTime],
+        "timezone_offset": typing.NotRequired[TimeZoneOffset],
+        "country": typing.NotRequired[Utf8Str],
+        "device": typing.NotRequired[Utf8Str],
+    })
+
+ApnxKey = typing.TypedDict(
+    "ApnxKey", {
+        "asin": Utf8Str,
+        "cde_type": Utf8Str,
+        "sidecar_available": Bool,
+        "opn_to_pos": Array[Int],
+        "first": Int,
+        "unknown1": Int,
+        "unknown2": Int,
+        "page_map": Utf8Str,
+    })
+
+FixedLayoutData = typing.TypedDict(
+    "FixedLayoutData", {
+        "unknown1": Bool,
+        "unknown2": Bool,
+        "unknown3": Bool,
+    })
+
+SharingLimits = typing.TypedDict(
+    "SharingLimits",
+    {
+        # TODO discover structure for sharing.limits
+        "accumulated": None
+    })
+
+LanguageStore = typing.TypedDict(
+    "LanguageStore", {
+        "language": Utf8Str,
+        "unknown1": Int,
+    })
+
+PeriodicalsViewState = typing.TypedDict(
+    "PeriodicalsViewState", {
+        "unknown1": Utf8Str,
+        "unknown2": Int,
+    })
+
+PurchaseStateData = typing.TypedDict(
+    "PurchaseStateData", {
+        "state": Int,
+        "time": DateTime,
+    })
+
+NormalDistribution = typing.TypedDict(
+    "NormalDistribution", {
+        "count": Long,
+        "sum": Double,
+        "sum_of_squares": Double,
+    })
+
+AverageCalculator = typing.TypedDict(
+    "AverageCalculator", {
+        "samples1": Array[Double],
+        "samples2": Array[Double],
+        "normal_distributions": Array[NormalDistribution],
+        "outliers": Array[Array[Double]],
+    })
+
+TimerModel = typing.TypedDict(
+    "TimerModel", {
+        "version": Long,
+        "total_time": Long,
+        "total_words": Long,
+        "total_percent": Double,
+        "average_calculator": AverageCalculator,
+    })
+
+TimerDataStore = typing.TypedDict(
+    "TimerDataStore", {
+        "on": Bool,
+        "reading_timer_model": TimerModel,
+        "version": Int,
+    })
+
+TimerDataStoreV2 = typing.TypedDict(
+    "TimerDataStoreV2", {
+        "on": Bool,
+        "reading_timer_model": TimerModel,
+        "version": Int,
+        "last_option": Int,
+    })
+
+BookInfoStore = typing.TypedDict(
+    "BookInfoStore", {
+        "num_words": Long,
+        "percent_of_book": Double,
+    })
+
+PageHistoryStoreElement = typing.TypedDict(
+    "PageHistoryStoreElement", {
+        "pos": Position,
+        "time": DateTime,
+    })
+
+FontPrefs = typing.TypedDict(
+    "FontPrefs", {
+        "typeface": Utf8Str,
+        "line_sp": Int,
+        "size": Int,
+        "align": Int,
+        "inset_top": Int,
+        "inset_left": Int,
+        "inset_bottom": Int,
+        "inset_right": Int,
+        "unknown1": Int,
+        "bold": typing.NotRequired[Int],
+        "user_sideloadable_font": typing.NotRequired[Utf8Str],
+        "custom_font_index": typing.NotRequired[Int],
+        "mobi7_system_font": typing.NotRequired[Utf8Str],
+        "mobi7_restore_font": typing.NotRequired[Bool],
+        "reading_preset_selected": typing.NotRequired[Utf8Str],
+    })
+
+ReaderStatePreferences = typing.TypedDict(
+    "ReaderStatePreferences", {
+        "font_preferences": FontPrefs,
+        "left_margin": Int,
+        "right_margin": Int,
+        "top_margin": Int,
+        "bottom_margin": Int,
+        "unknown1": Bool,
+    })
+
+AnnotationCacheObject = typing.TypedDict(
+    "AnnotationCacheObject", {
+        "bookmarks": Array[AnnotationPersonalElement],
+        "highlights": Array[AnnotationPersonalElement],
+        "notes": Array[AnnotationPersonalElement],
+        "clip_articles": Array[AnnotationPersonalElement],
+    },
+    total=False)
+
+Root = typing.TypedDict(
+    'Root', {
+        "clock.data.store": None,
+        "dictionary": Utf8Str,
+        "lpu": None,
+        "pdf.contrast": None,
+        "sync_lpr": bool,
+        "tpz.line.spacing": None,
+        "XRAY_OTA_UPDATE_STATE": None,
+        "XRAY_SHOWING_SPOILERS": None,
+        "XRAY_SORTING_STATE": None,
+        "XRAY_TAB_STATE": None,
+        "dict.prefs.v2": DynamicMap,
+        "EndActions": DynamicMap,
+        "ReaderMetrics": DynamicMap,
+        "StartActions": DynamicMap,
+        "Translator": DynamicMap,
+        "Wikipedia": DynamicMap,
+        "buy.asin.response.data": Json,
+        "next.in.series.info.data": Json,
+        "price.info.data": Json,
+        "erl": Position,
+        "lpr": LastPageRead,
+        "fpr": ReadingPos,
+        "updated_lpr": ReadingPos,
+        "apnx.key": ApnxKey,
+        "fixed.layout.data": FixedLayoutData,
+        "sharing.limits": SharingLimits,
+        "language.store": LanguageStore,
+        "periodicals.view.state": PeriodicalsViewState,
+        "purchase.state.data": PurchaseStateData,
+        "timer.data.store": TimerDataStore,
+        "timer.data.store.v2": TimerDataStoreV2,
+        "book.info.store": BookInfoStore,
+        "page.history.store": Array[PageHistoryStoreElement],
+        "reader.state.preferences": ReaderStatePreferences,
+        "font.prefs": FontPrefs,
+        "annotation.cache.object": AnnotationCacheObject,
+        "annotation.personal.bookmark": AnnotationPersonalElement,
+        "annotation.personal.highlight": AnnotationPersonalElement,
+        "annotation.personal.note": AnnotationPersonalElement,
+        "annotation.personal.clip_article": AnnotationPersonalElement,
+    },
+    total=False)
+
 ALL_OBJECT_TYPES: typing.Final[tuple[type[Object], ...]] = (
     Array,
     Record,
