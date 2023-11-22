@@ -9,37 +9,35 @@ from .types import Long
 from .types import Float
 from .types import Double
 from .types import Utf8Str
-from .types import ValueFactory
+from .types import Spec
 
-_bool: typing.Final[ValueFactory[Bool]] = ValueFactory(Bool)
-_byte: typing.Final[ValueFactory[Byte]] = ValueFactory(Byte)
-_char: typing.Final[ValueFactory[Char]] = ValueFactory(Char)
-_short: typing.Final[ValueFactory[Short]] = ValueFactory(Short)
-_int: typing.Final[ValueFactory[Int]] = ValueFactory(Int)
-_long: typing.Final[ValueFactory[Long]] = ValueFactory(Long)
-_float: typing.Final[ValueFactory[Float]] = ValueFactory(Float)
-_double: typing.Final[ValueFactory[Double]] = ValueFactory(Double)
-_utf8str: typing.Final[ValueFactory[Utf8Str]] = ValueFactory(Utf8Str)
+_bool: typing.Final[Spec[Bool]] = Spec(Bool)
+_byte: typing.Final[Spec[Byte]] = Spec(Byte)
+_char: typing.Final[Spec[Char]] = Spec(Char)
+_short: typing.Final[Spec[Short]] = Spec(Short)
+_int: typing.Final[Spec[Int]] = Spec(Int)
+_long: typing.Final[Spec[Long]] = Spec(Long)
+_float: typing.Final[Spec[Float]] = Spec(Float)
+_double: typing.Final[Spec[Double]] = Spec(Double)
+_utf8str: typing.Final[Spec[Utf8Str]] = Spec(Utf8Str)
 
-_timer_model_factory: None | ValueFactory = None
-_font_prefs_factory: None | ValueFactory = None
-_reader_state_preferences_factory: None | ValueFactory = None
-_annotation_object_cache_factory: None | ValueFactory = None
-_annotation_personal_factory: None | ValueFactory = None
-_name_to_factory_map: dict[str, None | ValueFactory] = {}
+_timer_model_factory: None | Spec = None
+_font_prefs_factory: None | Spec = None
+_reader_state_preferences_factory: None | Spec = None
+_annotation_object_cache_factory: None | Spec = None
+_annotation_personal_element_factory: None | Spec = None
+_name_to_factory_map: dict[str, None | Spec] = {}
 
 
-def _timer_model() -> ValueFactory:
+def _timer_model() -> Spec:
     global _timer_model_factory
     if not _timer_model_factory:
-        from .containers import Vector
+        from .containers import Array
         from .containers import Record
-        from .containers import ValueFactory
+        from .containers import Spec
 
-        # timer.model
-        _timer_model_factory = ValueFactory(
-            Record,
-            {
+        _timer_model_factory = Spec(
+            Record, {
                 "version":
                 _long,
                 "total_time":
@@ -48,43 +46,36 @@ def _timer_model() -> ValueFactory:
                 _long,
                 "total_percent":
                 _double,
-
-                # timer.average.calculator
                 "average_calculator":
-                ValueFactory(
-                    Record,
-                    {
+                Spec(
+                    Record, {
                         "samples1":
-                        ValueFactory(Vector, _double),
+                        Spec(Array, _double),
                         "samples2":
-                        ValueFactory(Vector, _double),
-
-                        # timer.average.calculator.distribution.normal
+                        Spec(Array, _double),
                         "normal_distributions":
-                        ValueFactory(
-                            Vector,
-                            ValueFactory(
+                        Spec(
+                            Array,
+                            Spec(
                                 Record, {
                                     "count": _long,
                                     "sum": _double,
                                     "sum_of_squares": _double,
                                 })),
-
-                        # timer.average.calculator.outliers
                         "outliers":
-                        ValueFactory(Vector, ValueFactory(Vector, _double)),
+                        Spec(Array, Spec(Array, _double)),
                     }),
             })
 
     return _timer_model_factory
 
 
-def _font_prefs() -> ValueFactory:
+def _font_prefs() -> Spec:
     global _font_prefs_factory
     if not _font_prefs_factory:
         from .containers import Record
 
-        _font_prefs_factory = ValueFactory(
+        _font_prefs_factory = Spec(
             Record, {
                 "typeface": _utf8str,
                 "line_sp": _int,
@@ -107,13 +98,12 @@ def _font_prefs() -> ValueFactory:
     return _font_prefs_factory
 
 
-def _reader_state_preferences() -> ValueFactory:
+def _reader_state_preferences() -> Spec:
     global _reader_state_preferences_factory
     if not _reader_state_preferences_factory:
         from .containers import Record
 
-        # reader.state.preferences
-        _reader_state_preferences_factory = ValueFactory(
+        _reader_state_preferences_factory = Spec(
             Record, {
                 "font_preferences": _font_prefs(),
                 "left_margin": _int,
@@ -126,62 +116,47 @@ def _reader_state_preferences() -> ValueFactory:
     return _reader_state_preferences_factory
 
 
-def _annotation_object_cache() -> ValueFactory:
+def _annotation_cache_object() -> Spec:
     global _annotation_object_cache_factory
     if not _annotation_object_cache_factory:
-        from .containers import Vector
+        from .containers import Array
         from .containers import IntMap
-        from .types import Object
 
-        # annotation.cache.object
-        _annotation_object_cache_factory = ValueFactory(
-            IntMap,
-            {
-                0: "saved.avl.interval.tree",  # bookmarks
-                1: "saved.avl.interval.tree",  # highlights
-                2: "saved.avl.interval.tree",  # notes
-                3: "saved.avl.interval.tree",  # clip articles
-            },
-            {
-
-                0:  # annotation.personal.bookmark
-                ValueFactory(
-                    Vector,
-                    ValueFactory(Object, _name="annotation.personal.bookmark"),
-                ),
-                1:  # annotation.personal.highlight
-                ValueFactory(
-                    Vector,
-                    ValueFactory(Object, _name="annotation.personal.highlight"),
-                ),
-                2:  # annotation.personal.note
-                ValueFactory(
-                    Vector,
-                    ValueFactory(Object, _name="annotation.personal.note"),
-                ),
-                3:  # annotation.personal.clip_article
-                ValueFactory(
-                    Vector,
-                    ValueFactory(
-                        Object, _name="annotation.personal.clip_article"),
-                ),
-            })
+        _annotation_object_cache_factory = Spec(
+            IntMap, [
+                (
+                    0, "bookmarks", "saved.avl.interval.tree",
+                    Spec(
+                        Array, _annotation_personal_element(),
+                        "annotation.personal.bookmark")),
+                (
+                    1, "highlights", "saved.avl.interval.tree",
+                    Spec(
+                        Array, _annotation_personal_element(),
+                        "annotation.personal.highlight")),
+                (
+                    2, "notes", "saved.avl.interval.tree",
+                    Spec(
+                        Array, _annotation_personal_element(),
+                        "annotation.personal.note")),
+                (
+                    3, "clip_articles", "saved.avl.interval.tree",
+                    Spec(
+                        Array, _annotation_personal_element(),
+                        "annotation.personal.clip_article")),
+            ])
 
     return _annotation_object_cache_factory
 
 
-def _annotation_personal() -> ValueFactory:
-    global _annotation_personal_factory
-    if not _annotation_personal_factory:
+def _annotation_personal_element() -> Spec:
+    global _annotation_personal_element_factory
+    if not _annotation_personal_element_factory:
         from .containers import DateTime
         from .containers import Record
         from .containers import Position
 
-        # annotation.personal.bookmark
-        # annotation.personal.clip_article
-        # annotation.personal.highlight
-        # annotation.personal.note
-        _annotation_personal_factory = ValueFactory(
+        _annotation_personal_element_factory = Spec(
             Record, {
                 "start_pos": Position,
                 "end_pos": Position,
@@ -191,15 +166,15 @@ def _annotation_personal() -> ValueFactory:
             }, {
                 "note": _utf8str,
             })
-    return _annotation_personal_factory
+    return _annotation_personal_element_factory
 
 
-def _schema_to_factory() -> dict[str, None | ValueFactory]:
+def _name_to_factory() -> dict[str, None | Spec]:
     global _name_to_factory_map
     if not _name_to_factory_map:
-        from .containers import Vector
         from .containers import DateTime
-        from .containers import Map
+        from .containers import DynamicMap
+        from .containers import Array
         from .containers import Record
         from .containers import Json
         from .containers import LastPageRead
@@ -228,43 +203,43 @@ def _schema_to_factory() -> dict[str, None | ValueFactory]:
             "XRAY_TAB_STATE":
             None,
             "dict.prefs.v2":
-            ValueFactory(DynamicMap),
+            Spec(DynamicMap),
             "EndActions":
-            ValueFactory(DynamicMap),
+            Spec(DynamicMap),
             "ReaderMetrics":
-            ValueFactory(DynamicMap),
+            Spec(DynamicMap),
             "StartActions":
-            ValueFactory(DynamicMap),
+            Spec(DynamicMap),
             "Translator":
-            ValueFactory(DynamicMap),
+            Spec(DynamicMap),
             "Wikipedia":
-            ValueFactory(DynamicMap),
+            Spec(DynamicMap),
             "buy.asin.response.data":
-            ValueFactory(Json),
+            Spec(Json),
             "next.in.series.info.data":
-            ValueFactory(Json),
+            Spec(Json),
             "price.info.data":
-            ValueFactory(Json),
+            Spec(Json),
             "erl":
-            ValueFactory(Position),
+            Spec(Position),
             "lpr":
-            ValueFactory(LastPageRead),
+            Spec(LastPageRead),
             "fpr":
-            ValueFactory(
+            Spec(
                 Record, {
-                    "pos": ValueFactory(Position),
+                    "pos": Spec(Position),
                 }, {
-                    "timestamp": ValueFactory(DateTime),
+                    "timestamp": Spec(DateTime),
                     "timezone_offset": TimeZoneOffset,
                     "country": _utf8str,
                     "device": _utf8str,
                 }),
             "updated_lpr":
-            ValueFactory(
+            Spec(
                 Record, {
-                    "pos": ValueFactory(Position),
+                    "pos": Spec(Position),
                 }, {
-                    "timestamp": ValueFactory(DateTime),
+                    "timestamp": Spec(DateTime),
                     "timezone_offset": TimeZoneOffset,
                     "country": _utf8str,
                     "device": _utf8str,
@@ -272,56 +247,55 @@ def _schema_to_factory() -> dict[str, None | ValueFactory]:
 
             # amzn page num xref (i.e. page num map)
             "apnx.key":
-            ValueFactory(
+            Spec(
                 Record, {
                     "asin": _utf8str,
                     "cde_type": _utf8str,
                     "sidecar_available": _bool,
-                    "opn_to_pos": ValueFactory(Vector, _int),
+                    "opn_to_pos": Spec(Array, _int),
                     "first": _int,
                     "unknown1": _int,
                     "unknown2": _int,
                     "page_map": _utf8str,
                 }),
             "fixed.layout.data":
-            ValueFactory(
+            Spec(
                 Record, {
                     "unknown1": _bool,
                     "unknown2": _bool,
                     "unknown3": _bool,
                 }),
             "sharing.limits":
-            ValueFactory(
+            Spec(
                 Record,
                 {
                     # TODO discover structure for sharing.limits
                     "accumulated": None
                 }),
             "language.store":
-            ValueFactory(Record, {
+            Spec(Record, {
                 "language": _utf8str,
                 "unknown1": _int,
             }),
             "periodicals.view.state":
-            ValueFactory(Record, {
+            Spec(Record, {
                 "unknown1": _utf8str,
                 "unknown2": _int,
             }),
             "purchase.state.data":
-            ValueFactory(
-                Record, {
-                    "state": _int,
-                    "time": ValueFactory(DateTime),
-                }),
+            Spec(Record, {
+                "state": _int,
+                "time": Spec(DateTime),
+            }),
             "timer.data.store":
-            ValueFactory(
+            Spec(
                 Record, {
                     "on": _bool,
                     "reading_timer_model": _timer_model(),
                     "version": _int,
                 }),
             "timer.data.store.v2":
-            ValueFactory(
+            Spec(
                 Record, {
                     "on": _bool,
                     "reading_timer_model": _timer_model(),
@@ -329,36 +303,35 @@ def _schema_to_factory() -> dict[str, None | ValueFactory]:
                     "last_option": _int,
                 }),
             "book.info.store":
-            ValueFactory(
-                Record, {
-                    "num_words": _long,
-                    "percent_of_book": _double,
-                }),
+            Spec(Record, {
+                "num_words": _long,
+                "percent_of_book": _double,
+            }),
             "page.history.store":
-            ValueFactory(
-                Vector,
-                ValueFactory(
+            Spec(
+                Array,
+                Spec(
                     Record, {
-                        "pos": ValueFactory(Position),
-                        "time": ValueFactory(DateTime),
+                        "pos": Spec(Position),
+                        "time": Spec(DateTime),
                     })),
             "reader.state.preferences":
             _reader_state_preferences(),
             "font.prefs":
             _font_prefs(),
             "annotation.cache.object":
-            _annotation_object_cache(),
+            _annotation_cache_object(),
             "annotation.personal.bookmark":
-            _annotation_personal(),
+            _annotation_personal_element(),
             "annotation.personal.highlight":
-            _annotation_personal(),
+            _annotation_personal_element(),
             "annotation.personal.note":
-            _annotation_personal(),
+            _annotation_personal_element(),
             "annotation.personal.clip_article":
-            _annotation_personal(),
+            _annotation_personal_element(),
         }
     return _name_to_factory_map
 
 
-def get_maker_by_schema(schema: str) -> None | ValueFactory:
-    return _schema_to_factory().get(schema)
+def get_spec_by_name(name: str) -> None | Spec:
+    return _name_to_factory().get(name)

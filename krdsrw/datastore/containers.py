@@ -16,7 +16,7 @@ from .error import UnexpectedFieldError
 from .types import ALL_BASIC_TYPES
 from .types import Object
 from .types import Value
-from .types import ValueFactory
+from .types import Spec
 from .types import Basic
 from .types import Byte
 from .types import Char
@@ -94,12 +94,9 @@ def _read_object(
     if not schema:
         raise UnexpectedNameError('Failed to read schema for object.')
 
-    if maker := schemas.get_maker_by_schema(schema):
-        assert maker, f"Unsupported schema {schema}"
-        value = maker.create()
-        value.read(cursor)
-    else:
-        value = _read_basic(cursor)
+    maker = schemas.get_spec_by_name(schema)
+    assert maker, f"Unsupported schema {schema}"
+    value = maker.read(cursor)
 
     assert isinstance(
         value,
@@ -139,7 +136,7 @@ class _TypeCheckedList(list[T]):
         | T | typing.Iterable[int | float | str | T]):
         if not isinstance(i, slice):
             if not self._is_write_allowed(o):
-                raise ValueError(f"Value \"{o}\" is not allowed.")
+                raise TypeError(f"Value \"{o}\" is not allowed.")
             o = self._transform_write(o)
             super().__setitem__(i, o)
         else:
@@ -147,7 +144,7 @@ class _TypeCheckedList(list[T]):
             o = list(o)  # type: ignore
             for e in o:
                 if not self._is_write_allowed(e):
-                    raise ValueError(f"Value \"{e}\" is not allowed.")
+                    raise TypeError(f"Value \"{e}\" is not allowed.")
             o = [self._transform_write(e) for e in o]
             super().__setitem__(i, o)
 
@@ -156,7 +153,7 @@ class _TypeCheckedList(list[T]):
         other = list(other)
         for e in other:
             if not self._is_write_allowed(e):
-                raise ValueError(f"Value \"{e}\" is not allowed.")
+                raise TypeError(f"Value \"{e}\" is not allowed.")
         o = self.copy()
         o.extend(self._transform_write(e) for e in other)
         return o
@@ -166,18 +163,18 @@ class _TypeCheckedList(list[T]):
         other = list(other)
         for e in other:
             if not self._is_write_allowed(e):
-                raise ValueError(f"Value \"{e}\" is not allowed.")
+                raise TypeError(f"Value \"{e}\" is not allowed.")
         self.extend(self._transform_write(e) for e in other)
         return self
 
     def append(self, o: int | float | str | T):
         if not self._is_write_allowed(o):
-            raise ValueError(f"Value \"{o}\" is not allowed.")
+            raise TypeError(f"Value \"{o}\" is not allowed.")
         super().append(self._transform_write(o))
 
     def insert(self, i: int, o: int | float | str | T):
         if not self._is_write_allowed(o):
-            raise ValueError(f"Value \"{o}\" is not allowed.")
+            raise TypeError(f"Value \"{o}\" is not allowed.")
         super().insert(i, self._transform_write(o))
 
     def copy(self) -> typing.Self:
@@ -187,49 +184,52 @@ class _TypeCheckedList(list[T]):
         other = list(other)
         for e in other:
             if not self._is_write_allowed(e):
-                raise ValueError(f"Value \"{e}\" is not allowed.")
+                raise TypeError(f"Value \"{e}\" is not allowed.")
         super().extend(self._transform_write(e) for e in other)
 
     def count(self, o: bool | int | float | str | T) -> int:
         return super().count(o)  # type: ignore
 
 
-class Vector(_TypeCheckedList[T], Object):
+class Array(_TypeCheckedList[T], Object):
     # Array can contain Basic and other containers
-
-    def __init__(self, maker: type[T] | ValueFactory[T]):
+    def __init__(self, elmt_spec: Spec[T], elmt_name: None | str = None):
         super().__init__()
-        if not isinstance(maker, ValueFactory):
-            maker = ValueFactory(maker)
-        self._maker: typing.Final[ValueFactory[T]] = maker
+        self._elmt_spec: typing.Final[Spec[T]] = elmt_spec
+        self._elmt_name: typing.Final[str] = elmt_name or ''
 
     @typing.override
     def read(self, cursor: Cursor):
         self.clear()
         size = cursor.read_int()
         for _ in range(size):
-            self.append(self._maker.create(cursor))
+            e = self._elmt_spec.read(cursor, self._elmt_name)
+            self.append(e)
 
     @typing.override
     def write(self, cursor: Cursor):
         cursor.write_int(len(self))
         for e in self:
-            e.write(cursor)
+            self._elmt_spec.write(cursor, e, self._elmt_name)
 
     @property
-    def cls_(self) -> type[T]:
-        return self._maker.cls_
+    def elmt_cls(self) -> type[T]:
+        return self._elmt_spec.cls_
+
+    @property
+    def elmt_name(self) -> str:
+        return self._elmt_name
 
     @typing.override
     def _is_write_allowed(self, o: typing.Any) -> bool:
-        return isinstance(o, self._maker.cls_)
+        return self._elmt_spec.is_castable(o)
 
     @typing.override
     def _transform_write(self, o: typing.Any) -> T:
-        return o
+        return self._elmt_spec.cast(o)
 
 
-class _TypeCheckedDict(collections.OrderedDict[K, T]):
+class _TypeCheckedDict(dict[K, T]):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -239,12 +239,18 @@ class _TypeCheckedDict(collections.OrderedDict[K, T]):
     def _is_write_allowed(self, key: typing.Any, value: typing.Any) -> bool:
         return True
 
+    def _is_del_allowed(self, key: typing.Any) -> bool:
+        return True
+
     def _transform_read(self, key: typing.Any) -> K:
         return key
 
     def _transform_write(self, key: typing.Any,
                          value: typing.Any) -> tuple[K, T]:
         return value
+
+    def _transform_del(self, key: typing.Any) -> K:
+        return key
 
     @classmethod
     def fromkeys(
@@ -255,15 +261,15 @@ class _TypeCheckedDict(collections.OrderedDict[K, T]):
         keys = list(iterable)
 
         def cast(key, val) -> tuple[K, T]:
-            if not key in keys:
-                raise ValueError(f"Key \"{key}\" is not allowed.")
+            if key not in keys:
+                raise TypeError(f"Key \"{key}\" is not allowed.")
 
             if val is None:
                 val = copy.deepcopy(value)
 
             val = _to_ctype(val, value.__class__)
             if not isinstance(val, value.__class__):
-                raise ValueError(f"Value \"{value}\" is not allowed.")
+                raise TypeError(f"Value \"{value}\" is not allowed.")
 
             return key, val
 
@@ -276,7 +282,7 @@ class _TypeCheckedDict(collections.OrderedDict[K, T]):
     @typing.override
     def setdefault(self, key: K, default: None | T = None) -> T:
         if not self._is_write_allowed(key, default):
-            raise ValueError(
+            raise TypeError(
                 f"Write to key \"{key}\" of"
                 + f" value \"{default}\" is not allowed.")
 
@@ -285,10 +291,10 @@ class _TypeCheckedDict(collections.OrderedDict[K, T]):
 
     @typing.override
     def update(self, *args: typing.Mapping[K, T], **kwargs: T):
-        d = collections.OrderedDict()
-        for key, value in collections.OrderedDict(*args, **kwargs).items():
+        d = dict()
+        for key, value in dict(*args, **kwargs).items():
             if not self._is_write_allowed(key, value):
-                raise ValueError(
+                raise TypeError(
                     f"Write to key \"{key}\" of"
                     + f" value \"{value}\" is not allowed.")
             key, value = self._transform_write(key, value)
@@ -305,9 +311,9 @@ class _TypeCheckedDict(collections.OrderedDict[K, T]):
         return super().__contains__(key)
 
     def __delitem__(self, key: K):
-        if not self._is_read_allowed(key):
+        if not self._is_del_allowed(key):
             raise KeyError(f"Key \"{key}\" cannot be read.")
-        key = self._transform_read(key)
+        key = self._transform_del(key)
         return super().__delitem__(key)
 
     def __getitem__(self, key: K) -> T:
@@ -319,7 +325,7 @@ class _TypeCheckedDict(collections.OrderedDict[K, T]):
 
     def __setitem__(self, key: K, item: int | float | str | T):
         if not self._is_write_allowed(key, item):
-            raise ValueError(
+            raise TypeError(
                 f"Write to key \"{key}\" of"
                 + f" value \"{item}\" is not allowed.")
         key, item = self._transform_write(key, item)
@@ -329,40 +335,42 @@ class _TypeCheckedDict(collections.OrderedDict[K, T]):
 class Record(_TypeCheckedDict[str, T], Object):
     # Record can contain basics and other containers
     # keys are just arbitrary aliases for convenience. values are
-    # hardcoded and # telling the difference between what is what
-    # is determined # by their order of appearance
+    # hardcoded and knowing what value is where is determined by
+    # the order of their appearance
 
     def __init__(
         self,
-        required: typing.Dict[str, ValueFactory[T]],
-        optional: None | typing.Dict[str, ValueFactory[T]] = None,
+        required: dict[str, Spec[T]],
+        optional: None | dict[str, Spec[T]] = None,
     ):
         super().__init__()
 
-        self._required: typing.Final[typing.Dict[str, ValueFactory[T]]] \
-            = collections.OrderedDict(required)
-        self._optional: typing.Final[typing.Dict[str, ValueFactory[T]]] \
-            = collections.OrderedDict(optional or {})
+        self._required: typing.Final[dict[str, Spec[T]]] \
+            = dict(required)
+        self._optional: typing.Final[dict[str, Spec[T]]] \
+            = dict(optional or {})
 
         for k, v in self._required.items():
-            self[k] = v.create()
+            self[k] = v.make()
 
     @typing.override
     def _is_read_allowed(self, key: typing.Any) -> bool:
-        return isinstance(key, str) \
-        and (key in self._required or key in self._optional)
+        if not isinstance(key, str):
+            return False
+        return key in self._required or key in self._optional
 
     @typing.override
     def _is_write_allowed(self, key: typing.Any, value: typing.Any) -> bool:
         if not isinstance(key, str):
             return False
-        if not key in self._required and not key in self._optional:
+        maker = self._required.get(key) or self._optional.get(key)
+        if not maker or not maker.is_instance(value):
             return False
-        if value is not None:
-            maker = self._required.get(key) or self._optional.get(key)
-            if maker and not isinstance(value, maker.cls_):
-                return False
         return True
+
+    @typing.override
+    def _is_del_allowed(self, key: typing.Any) -> bool:
+        return key not in self._required
 
     @typing.override
     def _transform_read(self, key: typing.Any) -> str:
@@ -375,9 +383,12 @@ class Record(_TypeCheckedDict[str, T], Object):
             maker = self._required.get(key) or self._optional.get(key)
             if not maker:
                 raise Exception(f"No default value for key \"{key}\".")
-            value = maker.create()
-            assert value is not None, 'Maker failed to create value'
+            value = maker.make()
         return key, value
+
+    @typing.override
+    def _transform_del(self, key: typing.Any) -> str:
+        return key
 
     @property
     def required(self) -> dict[str, type[T]]:
@@ -391,42 +402,43 @@ class Record(_TypeCheckedDict[str, T], Object):
     def read(self, cursor: Cursor):
         self.clear()
 
-        for schema, val_maker in self._required.items():
-            if not self._read_next(cursor, schema, val_maker):
+        for alias, spec in self._required.items():
+            val = self._read_next(cursor, spec)
+            if val is None:
                 raise FieldNotFoundError(
-                    'Expected field with schema "%s" but was not found'
-                    % schema)
+                    f'Value for field "alias" but was not found')
+            self[alias] = val
 
-        for schema, val_maker in self._optional.items():
-            if not self._read_next(cursor, schema, val_maker):
+        for alias, spec in self._optional.items():
+            val = self._read_next(cursor, spec)
+            if val is None:
                 break
+            self[alias] = val
 
-    def _read_next(
-        self,
-        cursor: Cursor,
-        schema: str,
-        val_maker: ValueFactory[T],
-    ) -> bool:
+    def _read_next(self, cursor: Cursor, spec: Spec[T]) -> None | T:
+        # objects in a Record have no OBJECT_BEGIN OBJECT_END demarcating
+        # bytes. the demarcation is implied by the ordering of the elements
+
         cursor.save()
         try:
-            self[schema] = val_maker.create(cursor)
+            val = spec.read(cursor)
             cursor.unsave()
-            return True
+            return val
         except UnexpectedBytesError:
             cursor.restore()
-            return False
+            return None
 
     @typing.override
     def write(self, cursor: Cursor):
-        for schema, val_maker in self._required.items():
-            assert isinstance(self[schema], val_maker.cls_)
-            self[schema].write(cursor)
+        for alias, spec in self._required.items():
+            assert isinstance(self[alias], spec.cls_), 'Invalid state'
+            self[alias].write(cursor)
 
-        for schema, val_maker in self._optional.items():
-            value = self.get(schema)
+        for alias, spec in self._optional.items():
+            value = self.get(alias)
             if value is None:
                 break
-            assert isinstance(value, val_maker.cls_)
+            assert isinstance(value, spec.cls_), 'Invalid state'
             value.write(cursor)
 
     def __eq__(self, other: typing.Any) -> bool:
@@ -434,8 +446,8 @@ class Record(_TypeCheckedDict[str, T], Object):
             return (
                 self._required == other._required
                 and self._optional == other._optional
-                and collections.OrderedDict(self) \
-                == collections.OrderedDict(other)
+                and dict(self) \
+                == dict(other)
             )
         return super().__eq__(other)
 
@@ -446,57 +458,68 @@ class Record(_TypeCheckedDict[str, T], Object):
 
 class IntMap(_TypeCheckedDict[int, Bool | Char | Byte | Short | Int | Long
                               | Float | Double | Utf8Str | Object], Object):
-    # named object data structure (schema utf8str + data)
-    _OBJECT_BEGIN: typing.Final[int] = 0xfe
-    # end of data for object
-    _OBJECT_END: typing.Final[int] = 0xff
-
-    def __init__(
-        self,
-        idx_to_schema: None | dict[int | str, str],
-        idx_to_type: None | dict[int | str, type[Basic | Object]],
-        idx_to_alias: None | dict[int | str, str],
-    ):
+    def __init__(self, idx_alias_name_spec: list[tuple[int, str, str, Spec]]):
         super().__init__()
 
-        self._idx_to_schema: dict[int|str, str] = \
-        copy.deepcopy(idx_to_schema or {})
-        self._idx_to_type: dict[int|str, type[Basic|Object]] = \
-        copy.deepcopy(idx_to_type or {})
-        self._idx_to_alias: dict[int|str, str] = \
-        copy.deepcopy(idx_to_alias or {})
+        self._idx_to_spec: dict[int, Spec] = {}
+        self._idx_to_name: dict[int, str] = {}
+        self._idx_to_alias: dict[int, str] = {}
+
+        for idx, alias, name, spec in idx_alias_name_spec:
+            self._idx_to_alias[idx] = alias
+            self._idx_to_name[idx] = name
+            self._idx_to_spec[idx] = spec
+
+        for idx, _, _, spec in idx_alias_name_spec:
+            self[idx] = spec.make()
 
     @typing.override
     def _is_read_allowed(self, key: typing.Any) -> bool:
-        return key in self._idx_to_schema \
-        or key in self._idx_to_type \
+        return key in self._idx_to_spec \
+        or key in self._idx_to_name \
         or key in self._idx_to_alias \
         or key in self._idx_to_alias.values()
 
     @typing.override
+    def _is_del_allowed(self, key: typing.Any) -> bool:
+        return False
+
+    @typing.override
     def _is_write_allowed(self, key: typing.Any, value: typing.Any) -> bool:
-        if not key in self._idx_to_schema \
-        and not key in self._idx_to_type \
-        and not key in self._idx_to_alias \
-        and not key in self._idx_to_alias.values():
+        if key not in self._idx_to_spec \
+        and key not in self._idx_to_name \
+        and key not in self._idx_to_alias \
+        and key not in self._idx_to_alias.values():
             return False
 
-        if not isinstance(value, self._idx_to_type[key]):
+        idx = self._alias_to_idx(key) if isinstance(key, str) else key
+        assert idx >= 0, 'failed to find index'
+        if not self._idx_to_spec[idx].is_instance(value):
             return False
 
         return True
 
     @typing.override
     def _transform_read(self, key: typing.Any) -> int | str:
-        return next((k for k, v in self._idx_to_alias.items() if v == key), key)
+        return self._alias_to_idx(key, key)
 
     @typing.override
     def _transform_write(
         self, key: typing.Any, value: typing.Any
     ) -> tuple[int | str, Bool | Char | Byte | Short | Int | Long | Float
                | Double | Utf8Str | Object]:
-        key = next((k for k, v in self._idx_to_alias.items() if v == key), key)
+        key = self._alias_to_idx(key, key)
         return key, value
+
+    @typing.override
+    def _transform_del(self, key: typing.Any) -> int | str:
+        return self._alias_to_idx(key, key)
+
+    def _alias_to_idx(self, alias: str, default: None | int = None) -> int:
+        if default is None:
+            default = -1
+        return next((k for k, v in self._idx_to_alias.items() if v == alias),
+                    default)
 
     @typing.override
     def read(self, cursor: Cursor):
@@ -505,32 +528,25 @@ class IntMap(_TypeCheckedDict[int, Bool | Char | Byte | Short | Int | Long
         for _ in range(size):
             idxnum = cursor.read_int()
 
-            if not idxnum in self._idx_to_schema \
-            and not idxnum in self._idx_to_type \
-            and not idxnum in self._idx_to_alias:
+            if idxnum not in self._idx_to_spec \
+            and idxnum not in self._idx_to_alias:
                 raise UnexpectedNameError(
                     f"Object index number {idxnum} not recognized")
-
-            value, schema = _read_object(cursor)
-            assert schema == self._idx_to_schema[idxnum], 'Schema mismatch'
-            self[idxnum] = value
+            name = self._idx_to_name[idxnum]
+            self[idxnum] = self._idx_to_spec[idxnum].read(cursor, name)
 
     @typing.override
     def write(self, cursor: Cursor):
         cursor.write_int(len(self))
 
         for idx, value in self.items():
+            name = self._idx_to_name[idx]
             cursor.write_int(idx)
-            cursor.write_byte(self._OBJECT_BEGIN)
-
-            schema = self._idx_to_schema[idx]
-            cursor.write_utf8str(schema, False)
-            value.write(cursor)
-            cursor.write_byte(self._OBJECT_END, False)
+            self._idx_to_spec[idx].write(cursor, value, name)
 
 
 class DynamicMap(_TypeCheckedDict[str, Bool | Char | Byte | Short | Int | Long
-                                  | Float | Double | Utf8Str | Object], Object):
+                                  | Float | Double | Utf8Str], Object):
     def __init__(self):
         super().__init__()
 
@@ -540,7 +556,11 @@ class DynamicMap(_TypeCheckedDict[str, Bool | Char | Byte | Short | Int | Long
 
     @typing.override
     def _is_write_allowed(self, key: typing.Any, value: typing.Any) -> bool:
-        return isinstance(key, str) and isinstance(value, (Basic, Object))
+        return isinstance(key, str) and isinstance(value, Basic)
+
+    @typing.override
+    def _is_del_allowed(self, key: typing.Any) -> bool:
+        return True
 
     @typing.override
     def _transform_read(self, key: typing.Any) -> str:
@@ -552,6 +572,10 @@ class DynamicMap(_TypeCheckedDict[str, Bool | Char | Byte | Short | Int | Long
     ) -> tuple[str, Bool | Char | Byte | Short | Int | Long | Float | Double
                | Utf8Str | Object]:
         return key, value
+
+    @typing.override
+    def _transform_del(self, key: typing.Any) -> str:
+        return key
 
     @typing.override
     def read(self, cursor: Cursor):
@@ -566,9 +590,9 @@ class DynamicMap(_TypeCheckedDict[str, Bool | Char | Byte | Short | Int | Long
     @typing.override
     def write(self, cursor: Cursor):
         cursor.write_int(len(self))
-        for idx, value in self.items():
-            assert isinstance(idx, str)
-            cursor.write_utf8str(idx)
+        for key, value in self.items():
+            assert isinstance(key, str)
+            cursor.write_utf8str(key)
             value.write(cursor)
 
 
@@ -892,3 +916,17 @@ class DataStore(_TypeCheckedDict[str, Bool | Char | Byte | Short | Int | Long
 
     def __str__(self) -> str:
         return f"{self.__class__.__name__}{{{dict(self)}}}"
+
+
+ALL_OBJECT_TYPES: typing.Final[tuple[type[Object], ...]] = (
+    Array,
+    Record,
+    IntMap,
+    DynamicMap,
+    DateTime,
+    Json,
+    LastPageRead,
+    Position,
+    TimeZoneOffset,
+    DataStore,
+)

@@ -1,6 +1,6 @@
 from . import schemas
 from .containers import DataStore
-from .containers import Vector
+from .containers import Array
 from .containers import DateTime
 from .containers import DynamicMap
 from .containers import Record
@@ -29,7 +29,7 @@ from .types import Object
 
 __all__ = [
     "Cursor",
-    "Vector",
+    "Array",
     "DateTime",
     "DynamicMap",
     "Record",
@@ -37,7 +37,7 @@ __all__ = [
     "LastPageRead",
     "Position",
     "IntMap",
-    "NameMap",
+    "DataStore",
     "TimeZoneOffset",
     "DataStore",
     "UnexpectedFieldError",

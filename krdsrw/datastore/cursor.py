@@ -346,7 +346,7 @@ class Cursor:
 
         if not magic_byte or self._eat_raw_byte(_OBJECT_BEGIN_INDICATOR):
             schema = self.read_utf8str(False)
-            fct = schemas.get_maker_by_name(schema)
+            fct = schemas.get_spec_by_name(schema)
             assert fct, f'Unsupported schema \"{schema}\".'
             cls_ = fct.cls_
 
@@ -362,7 +362,7 @@ class Cursor:
                 self._peek_raw_byte())
 
         schema = self.read_utf8str(False)
-        fct = schemas.get_maker_by_name(schema)
+        fct = schemas.get_spec_by_name(schema)
         assert fct, f'Unsupported schema \"{schema}\".'
         o = fct.create(self)
         if magic_byte and not self._eat_raw_byte(_OBJECT_END_INDICATOR):

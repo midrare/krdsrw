@@ -1,10 +1,12 @@
 from __future__ import annotations
-import collections
+import inspect
+import json
 import struct
 import typing
 
 from .cursor import Cursor
 from .error import UnexpectedBytesError
+from .error import UnexpectedNameError
 
 
 class Value:
@@ -1214,7 +1216,12 @@ T = typing.TypeVar("T", bound=Byte | Char | Bool | Short | Int | Long \
     | Float | Double | Utf8Str | Object)
 
 
-class ValueFactory(typing.Generic[T]):
+class Spec(typing.Generic[T]):
+    # named object data structure (schema utf8str + data)
+    _OBJECT_BEGIN: typing.Final[int] = 0xfe
+    # end of data for object
+    _OBJECT_END: typing.Final[int] = 0xff
+
     def __init__(self, cls_: type[T], *args, **kwargs):
         super().__init__()
 
@@ -1224,24 +1231,59 @@ class ValueFactory(typing.Generic[T]):
 
         self._cls: typing.Final[type[T]] = cls_
         self._args: typing.Final[list] = list(args)
-        self._kwargs: typing.Final[dict] = collections.OrderedDict(kwargs)
+        self._kwargs: typing.Final[dict] = dict(kwargs)
 
     @property
     def cls_(self) -> type[T]:
         return self._cls
 
-    def create(self, cursor: None | Cursor = None) -> T:
-        if issubclass(self._cls, Basic) and cursor:
-            return self._cls.create(cursor, *self._args, **self._kwargs)
-        if issubclass(self._cls, Object) and cursor:
+    def read(self, cursor: Cursor, name: None | str = None) -> T:
+        o = None
+
+        if name:
+            if not cursor.eat(self._OBJECT_BEGIN):
+                raise UnexpectedBytesError(
+                    cursor.tell(), self._OBJECT_BEGIN, cursor.peek())
+
+            name_ = cursor.read_utf8str(False)
+            if not name_:
+                raise UnexpectedNameError('Object has blank name.')
+            if name_ != name:
+                raise UnexpectedNameError(
+                    f"Expected object name"
+                    + f" \"{name}\" but got \"{name_}\".")
+
+        if issubclass(self._cls, Basic):
+            o = self._cls.create(cursor, *self._args, **self._kwargs)
+        elif issubclass(self._cls, Object):
             o = self._cls(*self._args, **self._kwargs)
-            assert isinstance(o, Object)
             o.read(cursor)
-            return o
+
+        assert isinstance(o, (Basic, Object)), 'Value is of unsupported type'
+
+        if name and not cursor.eat(self._OBJECT_END):
+            raise UnexpectedBytesError(
+                cursor.tell(), self._OBJECT_END, cursor.peek())
+
+        assert o is not None, 'Failed to create object'
+        return o
+
+    def make(self) -> T:
         return self._cls(*self._args, **self._kwargs)
+
+    def write(self, cursor: Cursor, o: T, name: None | str = None):
+        if name:
+            cursor.write_byte(self._OBJECT_BEGIN, False)
+            cursor.write_utf8str(name, False)
+        o.write(cursor)
+        if name:
+            cursor.write_byte(self._OBJECT_END, False)
 
     def is_basic(self) -> bool:
         return issubclass(self._cls, Basic)
+
+    def is_container(self) -> bool:
+        return issubclass(self._cls, (tuple, list, dict))
 
     def is_object(self) -> bool:
         return issubclass(self._cls, Object)
@@ -1253,163 +1295,29 @@ class ValueFactory(typing.Generic[T]):
             and self._kwargs == o._kwargs
         return super().__eq__(o)
 
+    def is_instance(self, o: typing.Any) -> bool:
+        return isinstance(o, self._cls)
 
-# Redesign notes:
-# - container reads cursor creating new basic
-# - container reads cursor creating new object
-# - container reads cursor into existing basic element (NO)
-# - container reads cursor into existing object element (NO)
-# - container sets default indexes to default basic
-# - container sets default indexes to default object
-# - container sets new index (expected or dynamic) to basic
-# - container sets new index (expected or dynamic) to object
-# - container sets existing index to basic
-# - container sets existing index to object
-# - container writes basic to cursor
-# - container writes object to cursor
-#
-# reading basic/object: one common interface?
-#   - magic_byte
-#   - object schema
-# writing basic/object: one common interface?
-#
-# should object schema be stored in the object or its enclosing container?
-#   - every object is always stored in a container of some sort, except DataStore, which is the top-level container.
-#
-# ValMaker is only for new instances of Objects
-#
-# NamedValue is only used in SwitchMap and NameMap; maybe merge SwitchMap and NameMap? Different schema?
-#
-# Each basic must support:
-#   - new instance from cursor
-#   - cannot read cursor into itself
-#   - itself write to cursor
-#
-# Each container must support:
-#   - new instance from cursor? (what about schema?)
-#
-#   - read cursor into itself
-#      - create new basic
-#      - create new object
-#
-# Array
-#   - factory<T>
-#   read(self, cursor: Cursor):
-#       if self.schema:
-#           self._read_header(cursor)
-#
-#       self.clear()
-#       size = cursor.read_int()
-#       for _ in range(size):
-#           self.append(self._maker.create(cursor))
-#
-#       if self.schema:
-#           self._read_footer(cursor)
-#
-#   write(self, cursor: Cursor):
-#       if self.schema:
-#           self._write_header(cursor)
-#
-#       cursor.write_int(len(self))
-#       for e in self:
-#           e.write(cursor)
-#
-#       if self.schema:
-#           self._write_footer(cursor)
-# DynamicMap
-#   - map of factories
-#   read(self, cursor):
-#       self.clear()
-#       size = cursor.read_int()
-#       for i in range(size):
-#           schema = cursor.read_utf8str()
-#           value = cursor.read_any()
-#           self[schema] = value
-#   write(self, cursor):
-#       cursor.write_int(len(self))
-#       for k, v in self.items():
-#           cursor.write_utf8str(k)
-#           v.write(cursor)
-# NameMap
-#   read(self, cursor):
-#       if self.schema:
-#           self._read_header(cursor)
-#
-#       self.clear()
-#       size = cursor.read_int()
-#       for _ in range(size):
-#           schema = cursor.peek_object_name()
-#           assert schema, 'object must have non-blank schema'
-#           self[schema] = cursor.read_object()
-#
-#       if self.schema:
-#           self._read_footer(cursor)
-#   write(self, cursor):
-#       if self.schema:
-#           self._write_header(cursor)
-#
-#       cursor.write_int(len(self))
-#       for schema, value in self.items():
-#           assert schema == value.schema, "object schema mismatch"
-#           value.write(cursor)
-#
-#       if self.schema:
-#           self._write_footer(cursor)
-# FixedMap
-#   read(self, cursor):
-#       self.clear()
-#
-#       for schema, val_maker in self._required.items():
-#           if not self._read_next(cursor, schema, val_maker):
-#               raise FieldNotFoundError(
-#                   'Expected field with schema "%s" but was not found' % schema)
-#
-#       for schema, val_maker in self._optional.items():
-#           if not self._read_next(cursor, schema, val_maker):
-#               break
-#   write(self, cursor):
-#       for schema, val_maker in self._required.items():
-#           assert isinstance(self[schema], val_maker.cls_)
-#           self[schema].write(cursor)
-#
-#       for schema, val_maker in self._optional.items():
-#           value = self.get(schema)
-#           if value is None:
-#               break
-#           assert isinstance(value, val_maker.cls_)
-#           value.write(cursor)
-# SwitchMap
-#   read(self, cursor):
-#       self.clear()
-#
-#       size = cursor.read_int()
-#       for _ in range(size):
-#           id_ = cursor.read_int()
-#           if id_ not in self._id_to_name:
-#               raise UnexpectedFieldError('Unrecognized field ID "%d"' % id_)
-#
-#           if not (schema := cursor.peek_object_name()) \
-#           or self._id_to_name[id_] != schema:
-#               raise UnexpectedFieldError(
-#                   f'Expected schema "{self._id_to_name[id_]}" '
-#                   + f'but got "{schema}"')
-#
-#           assert id_ in self._id_to_maker, f'no factory for id "{id_}"'
-#           self[id_] = self._id_to_maker[id_].create(cursor)
-#
-#   write(self, cursor):
-#       id_to_non_null_value = {
-#           k: v
-#           for k, v in self.items()
-#           if v is not None
-#       }
-#       cursor.write_int(len(id_to_non_null_value))
-#       for id_, val in id_to_non_null_value.items():
-#           cursor.write_int(id_)
-#           val.write(cursor)
-#
-# DateTime
-# Json
-# LastPageRead
-# Position
-# TimeZoneOffset
+    def is_subclass(self, cls_: type) -> bool:
+        return issubclass(cls_, self._cls)
+
+    def is_castable(self, o: typing.Any) -> bool:
+        return isinstance(o, self._cls) \
+        or (issubclass(self._cls, Basic) \
+            and (builtin := getattr(self._cls, 'builtin'))
+            and isinstance(o, builtin))
+
+    def is_compatible(self, o: typing.Any) -> bool:
+        if inspect.isclass(o):
+            return issubclass(o, self._cls) \
+            or ((builtin := getattr(self._cls, 'builtin')) \
+            and inspect.isclass(builtin) and issubclass(o, builtin))
+        return isinstance(o, self._cls) \
+        or ((builtin := getattr(self._cls, 'builtin')) \
+        and inspect.isclass(builtin) and isinstance(o, builtin))
+
+    def cast(self, o: typing.Any) -> T:
+        return self._cls(o)
+
+    def default(self) -> T:
+        return self._cls()
