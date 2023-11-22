@@ -1,4 +1,3 @@
-from __future__ import annotations
 import inspect
 import json
 import struct
@@ -1317,7 +1316,17 @@ class Spec(typing.Generic[T]):
         and inspect.isclass(builtin) and isinstance(o, builtin))
 
     def cast(self, o: typing.Any) -> T:
-        return self._cls(o)
+        if issubclass(self._cls, list):
+            o2 = self._cls(*self._args, *self._kwargs)
+            o2.extend(o)
+            return o2
+
+        if issubclass(self._cls, dict):
+            o2 = self._cls(*self._args, *self._kwargs)
+            o2.update(o)
+            return o2
+
+        return self._cls(o, *self._args, **self._kwargs)
 
     def default(self) -> T:
         return self._cls()
