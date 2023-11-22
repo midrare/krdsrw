@@ -1225,9 +1225,9 @@ class Spec(typing.Generic[T]):
     def __init__(self, cls_: type[T], *args, **kwargs):
         super().__init__()
 
-        if not any(issubclass(cls_, c) for c in ALL_BASIC_TYPES) \
-        and issubclass(cls_, Object):
-            raise TypeError(f"Unsupported type \"{type(cls_).__name__}\".")
+        if not issubclass(cls_, ALL_BASIC_TYPES) \
+        and not issubclass(cls_, Object):
+            raise TypeError(f"Unsupported type \"{cls_.__name__}\".")
 
         self._cls: typing.Final[type[T]] = cls_
         self._args: typing.Final[list] = list(args)
