@@ -23,53 +23,53 @@ class TestFactory:
 
 
 class TestArray:
-    def test_array_init(self):
+    def test_init(self):
         fact = Spec(Int)
         o = Array(fact)
         assert o.elmt_cls == Int
 
-    def test_array_append_type_check_allow(self):
+    def test_append_type_check_allow(self):
         o = Array(Spec(Int))
         o.append(1337)
         assert o[0] == 1337
 
-    def test_array_append_type_check_disallow(self):
+    def test_append_type_check_disallow(self):
         o = Array(Spec(Int))
         with pytest.raises(TypeError):
             o.append("foo")
 
-    def test_array_insert_type_check_allow(self):
+    def test_insert_type_check_allow(self):
         o = Array(Spec(Int))
         o.insert(0, 1337)
         assert o[0] == 1337
 
-    def test_array_insert_type_check_disallow(self):
+    def test_insert_type_check_disallow(self):
         o = Array(Spec(Int))
         with pytest.raises(TypeError):
             o.insert(0, "foo")
 
-    def test_array_extend_type_check_allow(self):
+    def test_extend_type_check_allow(self):
         o = Array(Spec(Int))
         o.extend([ 0, 1, 2, 3, 4 ])
         assert o == [ 0, 1, 2, 3, 4 ]
 
-    def test_array_extend_type_check_disallow(self):
+    def test_extend_type_check_disallow(self):
         o = Array(Spec(Int))
         with pytest.raises(TypeError):
             o.extend([ "a", "b", "c", "d", "e"])
 
-    def test_array_copy_contents(self):
+    def test_copy_contents(self):
         o = Array(Spec(Int))
         o.extend([ 0, 1, 2, 3, 4 ])
         o2 = o.copy()
         assert isinstance(o2, Array) and o2 == o
 
-    def test_array_count(self):
+    def test_count(self):
         o = Array(Spec(Int))
         o.extend([ 0, 1, 2, 3, 4 ])
         assert o.count(2) == 1
 
-    def test_array_read(self):
+    def test_read(self):
         o = Array(Spec(Int))
         csr = Cursor(
             b'\x01\x00\x00\x00\x03' + b'\x01\x00\x00\x00\x0a'
@@ -77,7 +77,7 @@ class TestArray:
         o.read(csr)
         assert o == [ 0x0a, 0x0b, 0x0c ]
 
-    def test_array_write(self):
+    def test_write(self):
         o = Array(Spec(Int))
         o.extend([ 0x0a, 0x0b, 0x0c ])
         csr = Cursor()
