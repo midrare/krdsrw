@@ -1,13 +1,13 @@
 import pytest
 
-from .cursor import Cursor
-from .types import Int
-from .types import Spec
-from .containers import Array
-from .containers import DynamicMap
+from krdsrw.datastore.cursor import Cursor
+from krdsrw.datastore.types import Int
+from krdsrw.datastore.types import Spec
+from krdsrw.datastore.containers import Array
+from krdsrw.datastore.containers import DynamicMap
 
 
-class TestFactory:
+class TestSpec:
     def test_create(self):
         o = Spec(Int, 1337)
         assert o.make() == 1337

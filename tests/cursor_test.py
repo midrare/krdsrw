@@ -1,4 +1,4 @@
-from . import cursor
+from krdsrw.datastore import cursor
 
 
 def test_cursor_init():
