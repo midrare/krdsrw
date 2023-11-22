@@ -19,5 +19,16 @@
                 ".pdm-build",
 			],
 		}
-	]
+	],
+    "settings":
+    {
+        "LSP":
+        {
+            "LSP-pyright": {
+                "settings": {
+                    "python.pythonPath": "./.venv/Scripts/python"
+                }
+           }
+        }
+    }
 }
