@@ -216,7 +216,7 @@ class _TypeCheckedDict(dict[K, T]):
 
     def _transform_write(self, key: typing.Any,
                          value: typing.Any) -> tuple[K, T]:
-        return value
+        return key, value
 
     def _transform_del(self, key: typing.Any) -> K:
         return key
