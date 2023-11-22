@@ -835,7 +835,7 @@ class DataStore(_TypeCheckedDict[str, Bool | Char | Byte | Short | Int | Long
         1  # present after the signature; unknown what this number means
     )
 
-    # named object data structure (schema utf8str + data)
+    # named object data structure (name utf8str + data)
     _OBJECT_BEGIN: typing.Final[int] = 0xfe
     # end of data for object
     _OBJECT_END: typing.Final[int] = 0xff
@@ -872,9 +872,9 @@ class DataStore(_TypeCheckedDict[str, Bool | Char | Byte | Short | Int | Long
 
         size = cursor.read_int()
         for _ in range(size):
-            value, schema = self._read_object(cursor)
-            assert schema, 'Object has blank schema.'
-            self[schema] = value
+            value, name = self._read_object(cursor)
+            assert name, 'Object has blank name.'
+            self[name] = value
 
     def write(self, cursor: Cursor):
         cursor.write(self.MAGIC_STR)
@@ -894,16 +894,11 @@ class DataStore(_TypeCheckedDict[str, Bool | Char | Byte | Short | Int | Long
 
         name = cursor.read_utf8str(False)
         if not name:
-            raise UnexpectedNameError('Failed to read schema for object.')
+            raise UnexpectedNameError('Failed to read name for object.')
 
         maker = schemas.get_spec_by_name(name)
-        assert maker, f"Unsupported schema {name}"
+        assert maker, f"Unsupported spec name \"{name}\"."
         value = maker.read(cursor)
-
-        assert isinstance(
-            value, (
-                Bool, Char, Byte, Short, Int, Long, Float, Double, Utf8Str,
-                Object)), 'Value is of unsupported type'
 
         if not cursor.eat(cls._OBJECT_END):
             raise UnexpectedBytesError(
