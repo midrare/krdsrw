@@ -785,6 +785,14 @@ class Position(Object):
         d = { k: v for k, v in d.items() if v >= 0 }
         return f"{self.__class__.__name__}{str(d)}"
 
+    def __repr__(self) -> str:
+        d = {
+            "chunk_eid": self._chunk_eid,
+            "chunk_pos": self._chunk_pos,
+            "char_pos": self._value,
+        }
+        return f"{self.__class__.__name__}{str(d)}"
+
 
 class TimeZoneOffset(Object):
     def __init__(self):
