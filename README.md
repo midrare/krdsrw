@@ -8,12 +8,15 @@ cd "$REPO_DIR"
 git submodule init
 git submodule update --recursive
 
-# pipx install pre-commit
+python -m venv .venv
+source .venv/scripts/activate.sh
+
+pip install pre-commit
 pre-commit install --install-hooks
 
 python -m build --wheel ./krdsrw/
 
-# pipx install pytest --pip-args pytest-cov
+pip install pytest --pip-args pytest-cov
 pytest
 pytest --cov=krdsrw
 ```
