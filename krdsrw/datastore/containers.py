@@ -57,18 +57,6 @@ def _to_ctype(o: typing.Any, cls_: type) -> typing.Any:
     raise TypeError(f"Unexpected type \"{type(o).__name__}\".")
 
 
-def _is_val_compatible(o: typing.Any, cls_: type) -> bool:
-    if issubclass(cls_, Basic) and isinstance(o, cls_.builtin):
-        return True
-    return isinstance(o, cls_)
-
-
-def _is_type_compatible(t: type, cls_: type) -> bool:
-    if issubclass(cls_, Basic) and issubclass(t, cls_.builtin):
-        return True
-    return issubclass(t, cls_)
-
-
 def _read_basic(cursor: Cursor) \
 -> None|Bool|Char|Byte|Short|Int|Long|Float|Double|Utf8Str:
     for t in [ Bool, Byte, Char, Short, Int, Long, Float, Double, Utf8Str ]:
