@@ -78,37 +78,6 @@ def _read_basic(cursor: Cursor) \
     return None
 
 
-def _read_object(
-    cursor: Cursor
-) -> tuple[Bool | Char | Byte | Short | Int | Long | Float | Double | Utf8Str
-           | Object, None | str]:
-    # named object data structure (schema utf8str + data)
-    OBJECT_BEGIN: typing.Final[int] = 0xfe
-    # end of data for object
-    OBJECT_END: typing.Final[int] = 0xff
-
-    if not cursor.eat(OBJECT_BEGIN):
-        raise UnexpectedBytesError(cursor.tell(), OBJECT_BEGIN, cursor.peek())
-
-    schema = cursor.read_utf8str(False)
-    if not schema:
-        raise UnexpectedNameError('Failed to read schema for object.')
-
-    maker = schemas.get_spec_by_name(schema)
-    assert maker, f"Unsupported schema {schema}"
-    value = maker.read(cursor)
-
-    assert isinstance(
-        value,
-        (Bool, Char, Byte, Short, Int, Long, Float, Double, Utf8Str,
-         Object)), 'Value is of unsupported type'
-
-    if not cursor.eat(OBJECT_END):
-        raise UnexpectedBytesError(cursor.tell(), OBJECT_END, cursor.peek())
-
-    return value, schema
-
-
 class _TypeCheckedList(list[T]):
     def __init__(self):
         super().__init__()
@@ -903,7 +872,7 @@ class DataStore(_TypeCheckedDict[str, Bool | Char | Byte | Short | Int | Long
 
         size = cursor.read_int()
         for _ in range(size):
-            value, schema = _read_object(cursor)
+            value, schema = self._read_object(cursor)
             assert schema, 'Object has blank schema.'
             self[schema] = value
 
@@ -913,6 +882,34 @@ class DataStore(_TypeCheckedDict[str, Bool | Char | Byte | Short | Int | Long
         cursor.write_int(len(self))
         for _, value in self.items():
             value.write(cursor)
+
+    @classmethod
+    def _read_object(
+        cls, cursor: Cursor
+    ) -> tuple[Bool | Char | Byte | Short | Int | Long | Float
+               | Double | Utf8Str | Object, None | str]:
+        if not cursor.eat(cls._OBJECT_BEGIN):
+            raise UnexpectedBytesError(
+                cursor.tell(), cls._OBJECT_BEGIN, cursor.peek())
+
+        name = cursor.read_utf8str(False)
+        if not name:
+            raise UnexpectedNameError('Failed to read schema for object.')
+
+        maker = schemas.get_spec_by_name(name)
+        assert maker, f"Unsupported schema {name}"
+        value = maker.read(cursor)
+
+        assert isinstance(
+            value, (
+                Bool, Char, Byte, Short, Int, Long, Float, Double, Utf8Str,
+                Object)), 'Value is of unsupported type'
+
+        if not cursor.eat(cls._OBJECT_END):
+            raise UnexpectedBytesError(
+                cursor.tell(), cls._OBJECT_END, cursor.peek())
+
+        return value, name
 
     def __str__(self) -> str:
         return f"{self.__class__.__name__}{{{dict(self)}}}"
