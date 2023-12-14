@@ -5,6 +5,8 @@ Read and write in Amazon Kindle sidecar file format. These are the the files in 
 ```bash
 cd "$REPO_DIR"
 
+git lfs install
+
 git submodule init
 git submodule update --recursive
 
