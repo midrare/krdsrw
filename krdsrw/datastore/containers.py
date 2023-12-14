@@ -1123,10 +1123,6 @@ Root = typing.TypedDict(
         "reader.state.preferences": ReaderStatePreferences,
         "font.prefs": FontPrefs,
         "annotation.cache.object": AnnotationCacheObject,
-        "annotation.personal.bookmark": AnnotationPersonalElement,
-        "annotation.personal.highlight": AnnotationPersonalElement,
-        "annotation.personal.note": AnnotationPersonalElement,
-        "annotation.personal.clip_article": AnnotationPersonalElement,
     },
     total=False)
 
