@@ -46,26 +46,28 @@ def _timer_model() -> Spec:
                 _long,
                 "total_percent":
                 _double,
-                "average_calculator": (
-                    "timer.average.calculator",
-                    Spec(
-                        Record, {
-                            "samples1":
-                            Spec(Array, _double),
-                            "samples2":
-                            Spec(Array, _double),
-                            "normal_distributions":
+                "average_calculator":
+                Spec(
+                    Record, {
+                        "samples1":
+                        Spec(Array, _double),
+                        "samples2":
+                        Spec(Array, _double),
+                        "normal_distributions":
+                        Spec(
+                            Array,
                             Spec(
-                                Array,
-                                Spec(
-                                    Record, {
-                                        "count": _long,
-                                        "sum": _double,
-                                        "sum_of_squares": _double,
-                                    })),
-                            "outliers":
-                            Spec(Array, Spec(Array, _double)),
-                        })),
+                                Record, {
+                                    "count": _long,
+                                    "sum": _double,
+                                    "sum_of_squares": _double,
+                                }),
+                            "timer.average.calculator.distribution.normal"),
+                        "outliers":
+                        Spec(
+                            Array, Spec(Array, _double),
+                            "timer.average.calculator.outliers"),
+                    }, "timer.average.calculator"),
             })
 
     return _timer_model_factory
