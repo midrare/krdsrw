@@ -2,7 +2,6 @@ import typing
 import pathlib
 
 from krdsrw.containers import DataStore
-from krdsrw.containers import Root
 from krdsrw.cursor import Cursor
 
 TEMPEST_EPUB: typing.Final[
@@ -21,14 +20,14 @@ class TestDataStore:
 
     def test_read(self):
         csr = Cursor(TEMPEST_YJR.read_bytes())
-        root: Root = DataStore()
+        root = DataStore()
         root.read(csr)
 
     def test_read_write(self):
         orig_data = TEMPEST_YJR.read_bytes()
 
         csr = Cursor(orig_data)
-        root: Root = DataStore()
+        root = DataStore()
         root.read(csr)
 
         csr = Cursor()
@@ -38,20 +37,20 @@ class TestDataStore:
 
     def test_annotation_cache_object(self):
         csr = Cursor(TEMPEST_YJR.read_bytes())
-        root: Root = DataStore()
+        root = DataStore()
         root.read(csr)
         assert len(root["annotation.cache.object"]) == 3
 
     def test_bookmarks_len(self):
         csr = Cursor(TEMPEST_YJR.read_bytes())
-        root: Root = DataStore()
+        root = DataStore()
         root.read(csr)
 
         assert len(root["annotation.cache.object"]["bookmarks"]) == 5
 
     def test_bookmark_start_pos(self):
         csr = Cursor(TEMPEST_YJR.read_bytes())
-        root: Root = DataStore()
+        root = DataStore()
         root.read(csr)
 
         o = root["annotation.cache.object"]["bookmarks"][0]
@@ -61,7 +60,7 @@ class TestDataStore:
 
     def test_bookmark_end_pos(self):
         csr = Cursor(TEMPEST_YJR.read_bytes())
-        root: Root = DataStore()
+        root = DataStore()
         root.read(csr)
 
         o = root["annotation.cache.object"]["bookmarks"][0]
@@ -71,7 +70,7 @@ class TestDataStore:
 
     def test_bookmark_creation_time(self):
         csr = Cursor(TEMPEST_YJR.read_bytes())
-        root: Root = DataStore()
+        root = DataStore()
         root.read(csr)
 
         o = root["annotation.cache.object"]["bookmarks"][0]
@@ -79,7 +78,7 @@ class TestDataStore:
 
     def test_bookmark_last_modification_time(self):
         csr = Cursor(TEMPEST_YJR.read_bytes())
-        root: Root = DataStore()
+        root = DataStore()
         root.read(csr)
 
         o = root["annotation.cache.object"]["bookmarks"][0]
