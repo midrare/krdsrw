@@ -92,7 +92,7 @@ def test_cursor_unsave():
 
 def test_cursor_read_bool():
     csr = cursor.Cursor(b'\x00\x01')
-    assert csr.read_bool() == True
+    assert csr.read_bool() is True
 
 
 def test_cursor_read_int():
@@ -192,7 +192,7 @@ def test_cursor_write_char():
 def test_bool_read():
     csr = cursor.Cursor(b'\x00\x01')
     o = csr.read_bool()
-    assert o == True
+    assert o is True
 
 
 def test_int_read():

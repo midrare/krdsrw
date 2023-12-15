@@ -3,7 +3,7 @@ from krdsrw import types
 
 def test_bool_cmp():
     o = types.Bool(True)
-    assert o == True
+    assert o is True
 
 
 def test_byte_cmp():
