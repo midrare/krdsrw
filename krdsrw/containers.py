@@ -358,7 +358,7 @@ class Record(_TypeCheckedDict[str, T], Object):
             val = self._read_next(cursor, spec)
             if val is None:
                 raise UnexpectedStructureError(
-                    'Value for field "alias" but was not found')
+                    f'Value for field "{alias}" but was not found')
             self[alias] = val
 
         for alias, spec in self._optional.items():
