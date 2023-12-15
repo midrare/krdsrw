@@ -1,9 +1,14 @@
-class UnexpectedStructureError(Exception):
+class KRDSRWError(Exception):
     def __init__(self, *args: object):
         super().__init__(*args)
 
 
-class UnexpectedBytesError(Exception):
+class UnexpectedStructureError(KRDSRWError):
+    def __init__(self, *args: object):
+        super().__init__(*args)
+
+
+class UnexpectedBytesError(KRDSRWError):
     def __init__(
         self,
         pos: int,
