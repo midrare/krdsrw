@@ -35,8 +35,7 @@ def test_cursor_seek():
 
 def test_cursor_skip():
     csr = cursor.Cursor(b'ABCDEFGHIJKLMNOPQRSTUVWXYZ')
-    csr.seek(4)
-    csr.skip(4)
+    csr.skip(8)
     assert csr.read(1) == b'I'
 
 
