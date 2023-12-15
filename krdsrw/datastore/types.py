@@ -1199,6 +1199,12 @@ class Utf8Str(str, Basic):
         o = super().__rmul__(other)
         return self.__class__(o, prefer_null=self.prefer_null)
 
+    def __copy__(self) -> typing.Self:
+        return self.__class__(self, prefer_null=self.prefer_null)
+
+    def __deepcopy__(self) -> typing.Self:
+        return self.__class__(self, prefer_null=self.prefer_null)
+
 
 ALL_BASIC_TYPES: typing.Final[tuple[type, ...]] = (
     Byte,
