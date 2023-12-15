@@ -1272,11 +1272,11 @@ class Spec(typing.Generic[T]):
 
     def write(self, cursor: Cursor, o: T, name: None | str = None):
         if name:
-            cursor.write_byte(self._OBJECT_BEGIN, False)
+            cursor.write(self._OBJECT_BEGIN)
             cursor.write_utf8str(name, False)
         o.write(cursor)
         if name:
-            cursor.write_byte(self._OBJECT_END, False)
+            cursor.write(self._OBJECT_END)
 
     def is_basic(self) -> bool:
         return issubclass(self._cls, Basic)
