@@ -582,6 +582,9 @@ class DateTime(Object):
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}{{{self._value}}}"
 
+    def __json__(self) -> None | bool | int | float | str | tuple | list | dict:
+        return { "epoch_ms": self._value }
+
 
 class Json(Object):
     def __init__(self):
@@ -620,6 +623,9 @@ class Json(Object):
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}{{{str(self._value)}}}"
+
+    def __json__(self) -> None | bool | int | float | str | tuple | list | dict:
+        return self._value
 
 
 class LastPageRead(Object):  # aka LPR. this is kindle reading pos info
@@ -713,6 +719,13 @@ class LastPageRead(Object):  # aka LPR. this is kindle reading pos info
         }
         return f"{self.__class__.__name__}{{{str(d)}}}"
 
+    def __json__(self) -> None | bool | int | float | str | tuple | list | dict:
+        return {
+            "lpr_version": max(1, self._lpr_version),
+            "timestamp": self._timestamp,
+            "pos": self._pos,
+        }
+
 
 class Position(Object):
     PREFIX_VERSION1: typing.Final[int] = 0x01
@@ -784,6 +797,13 @@ class Position(Object):
             self._value if self._value is not None and self._value >= 0 else -1)
         cursor.write_utf8str(s)
 
+    def __json__(self) -> None | bool | int | float | str | tuple | list | dict:
+        return {
+            "chunk_eid": self._chunk_eid,
+            "chunk_pos": self._chunk_pos,
+            "char_pos": self._value,
+        }
+
     def __eq__(self, other: typing.Any) -> bool:
         if isinstance(other, self.__class__):
             return self._value == other._value \
@@ -844,6 +864,9 @@ class TimeZoneOffset(Object):
     def __repr__(self) -> str:
         d = { "offset": self._value }
         return f"{self.__class__.__name__}{{{str(d)}}}"
+
+    def __json__(self) -> None | bool | int | float | str | tuple | list | dict:
+        return { "offset": self._value }
 
 
 class DataStore(_TypeCheckedDict[str, Bool | Char | Byte | Short | Int | Long
