@@ -30,38 +30,34 @@ def test_cursor_tell():
 def test_cursor_seek():
     csr = cursor.Cursor(b'ABCDEFGHIJKLMNOPQRSTUVWXYZ')
     csr.seek(8)
-    assert csr.tell() == 8 and csr.read(1) == b'I'
+    assert csr.peek(1) == b'I' and csr.tell() == 8
 
 
 def test_cursor_skip():
     csr = cursor.Cursor(b'ABCDEFGHIJKLMNOPQRSTUVWXYZ')
     csr.skip(8)
-    assert csr.read(1) == b'I'
+    assert csr.peek(1) == b'I' and csr.tell() == 8
 
 
 def test_cursor_eat():
     csr = cursor.Cursor(b'ABCDEFGHIJKLMNOPQRSTUVWXYZ')
-    csr.seek(8)
-    assert csr.eat(b'IJKL') and csr.tell() == 12
+    assert csr.eat(b'ABCD') and csr.tell() == 4
 
 
 def test_cursor_peek():
     csr = cursor.Cursor(b'ABCDEFGHIJKLMNOPQRSTUVWXYZ')
-    csr.seek(8)
-    assert csr.peek() == 73 and csr.tell() == 8
+    assert csr.peek() == 65 and csr.tell() == 0
 
 
 def test_cursor_peek_matches():
     csr = cursor.Cursor(b'ABCDEFGHIJKLMNOPQRSTUVWXYZ')
-    csr.seek(8)
-    assert csr.startswith(b'IJKL') is True
+    assert csr.startswith(b'ABCD')
 
 
 def test_cursor_write():
     csr = cursor.Cursor(b'ABCDEFGHIJKLMNOPQRSTUVWXYZ')
-    csr.seek(8)
     csr.write(b'0123')
-    assert csr.dump() == b'ABCDEFGH0123MNOPQRSTUVWXYZ'
+    assert csr.dump() == b'0123EFGHIJKLMNOPQRSTUVWXYZ'
 
 
 def test_cursor_is_at_end():
