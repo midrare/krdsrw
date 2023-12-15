@@ -1136,8 +1136,10 @@ class Utf8Str(str, Basic):
     builtin: typing.Final[type[int | float | str]] = str
     magic_byte: int = 0x03
 
-    def __new__(cls, *args, **kwargs) -> typing.Self:
-        return super().__new__(cls, *args, **kwargs)
+    def __new__(cls, *args, prefer_null: bool = True, **kwargs) -> typing.Self:
+        o = super().__new__(cls, *args, *kwargs)
+        o.prefer_null: bool = prefer_null
+        return o
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}{{\"{str(self)}\"}}"
@@ -1148,21 +1150,32 @@ class Utf8Str(str, Basic):
             raise UnexpectedBytesError(
                 cursor.tell(), cls.magic_byte, cursor.peek())
 
-        if cursor.read() > 0:  # 1-byte bool, true if str is empty
-            return cls()
+        value = ''
+        prefer_null = True
 
-        # NOTE even if the is_empty byte is false, the actual str
-        #   length can still be 0
+        if cursor.read() > 0:  # 1-byte bool, true if str is empty
+            return cls(value, prefer_null=prefer_null)
+
+        # NOTE actual str length can still be 0
         string_len = struct.unpack_from(
             ">H", cursor.read(struct.calcsize(">H")))[0]
-        return cls(cursor.read(string_len).decode("utf-8"))
+        value = cursor.read(string_len).decode("utf-8")
+
+        if string_len <= 0:
+            prefer_null = False
+
+        return cls(value, prefer_null=prefer_null)
 
     def write(self, cursor: Cursor, magic_byte: bool = True):
         if magic_byte:
             cursor.write(self.magic_byte)
 
-        cursor.write(int(bool(self)))
-        if bool(self):
+        if not self and self.prefer_null:
+            cursor.write(1)
+        else:
+            cursor.write(0)
+
+        if self or not self.prefer_null:
             encoded = self.encode("utf-8")
             cursor.write(struct.pack(">H", len(encoded)))
             cursor.write(encoded)
@@ -1172,19 +1185,19 @@ class Utf8Str(str, Basic):
 
     def __add__(self, other: str) -> typing.Self:
         o = super().__add__(other)
-        return self.__class__(o)
+        return self.__class__(o, prefer_null=self.prefer_null)
 
     def __mul__(self, other: typing.SupportsIndex) -> typing.Self:
         o = super().__mul__(other)
-        return self.__class__(o)
+        return self.__class__(o, prefer_null=self.prefer_null)
 
     def __mod__(self, other: str) -> typing.Self:
         o = super().__mod__(other)
-        return self.__class__(o)
+        return self.__class__(o, prefer_null=self.prefer_null)
 
     def __rmul__(self, other: typing.SupportsIndex) -> typing.Self:
         o = super().__rmul__(other)
-        return self.__class__(o)
+        return self.__class__(o, prefer_null=self.prefer_null)
 
 
 ALL_BASIC_TYPES: typing.Final[tuple[type, ...]] = (
