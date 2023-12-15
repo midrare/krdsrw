@@ -1,10 +1,10 @@
 import pytest
 
-from krdsrw.datastore.cursor import Cursor
-from krdsrw.datastore.types import Int
-from krdsrw.datastore.types import Spec
-from krdsrw.datastore.containers import Array
-from krdsrw.datastore.containers import DynamicMap
+from krdsrw.cursor import Cursor
+from krdsrw.types import Int
+from krdsrw.types import Spec
+from krdsrw.containers import Array
+from krdsrw.containers import DynamicMap
 
 
 class TestSpec:

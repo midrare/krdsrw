@@ -1,4 +1,4 @@
-from krdsrw.datastore import types
+from krdsrw import types
 
 
 def test_bool_cmp():
