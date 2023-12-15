@@ -4,7 +4,7 @@ import typing
 
 from .cursor import Cursor
 from .error import UnexpectedBytesError
-from .error import UnexpectedNameError
+from .error import UnexpectedStructureError
 
 
 class Value:
@@ -1274,9 +1274,9 @@ class Spec(typing.Generic[T]):
 
             name_ = cursor.read_utf8str(False)
             if not name_:
-                raise UnexpectedNameError('Object has blank name.')
+                raise UnexpectedStructureError('Object has blank name.')
             if name_ != name:
-                raise UnexpectedNameError(
+                raise UnexpectedStructureError(
                     f"Expected object name"
                     + f" \"{name}\" but got \"{name_}\".")
 

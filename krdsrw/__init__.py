@@ -10,9 +10,8 @@ from .containers import Position
 from .containers import IntMap
 from .containers import TimeZoneOffset
 from .cursor import Cursor
-from .error import FieldNotFoundError
-from .error import UnexpectedNameError
 from .error import UnexpectedBytesError
+from .error import UnexpectedStructureError
 from .types import Byte
 from .types import Bool
 from .types import Char
@@ -37,9 +36,8 @@ __all__ = [
     "DataStore",
     "TimeZoneOffset",
     "DataStore",
-    "FieldNotFoundError",
-    "UnexpectedNameError",
     "UnexpectedBytesError",
+    "UnexpectedStructureError",
     "Byte",
     "Bool",
     "Char",

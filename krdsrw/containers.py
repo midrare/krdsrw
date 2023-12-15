@@ -8,9 +8,8 @@ import typing
 
 from . import schemas
 from .cursor import Cursor
-from .error import FieldNotFoundError
 from .error import UnexpectedBytesError
-from .error import UnexpectedNameError
+from .error import UnexpectedStructureError
 from .types import Object
 from .types import Spec
 from .types import Basic
@@ -358,8 +357,8 @@ class Record(_TypeCheckedDict[str, T], Object):
         for alias, spec in self._required.items():
             val = self._read_next(cursor, spec)
             if val is None:
-                raise FieldNotFoundError(
-                    f'Value for field "alias" but was not found')
+                raise UnexpectedStructureError(
+                    'Value for field "alias" but was not found')
             self[alias] = val
 
         for alias, spec in self._optional.items():
@@ -483,7 +482,7 @@ class IntMap(_TypeCheckedDict[int, Bool | Char | Byte | Short | Int | Long
 
             if idxnum not in self._idx_to_spec \
             and idxnum not in self._idx_to_alias:
-                raise UnexpectedNameError(
+                raise UnexpectedStructureError(
                     f"Object index number {idxnum} not recognized")
             name = self._idx_to_name[idxnum]
             self[idxnum] = self._idx_to_spec[idxnum].read(cursor, name)
@@ -913,7 +912,7 @@ class DataStore(_TypeCheckedDict[str, Bool | Char | Byte | Short | Int | Long
 
         name = cursor.read_utf8str(False)
         if not name:
-            raise UnexpectedNameError('Failed to read name for object.')
+            raise UnexpectedStructureError('Failed to read name for object.')
 
         maker = schemas.get_spec_by_name(name)
         assert maker, f"Unsupported spec name \"{name}\"."
