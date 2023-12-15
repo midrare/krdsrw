@@ -4,8 +4,10 @@ class KRDSRWError(Exception):
 
 
 class UnexpectedStructureError(KRDSRWError):
-    def __init__(self, *args: object):
-        super().__init__(*args)
+    def __init__(self, *args: str, pos: int = -1):
+        if pos >= 0:
+            args = [f"@{pos}"] + list(args)
+        super().__init__(" ".join(args))
 
 
 class UnexpectedBytesError(KRDSRWError):

@@ -292,37 +292,51 @@ class Record(_TypeCheckedDict[str, T], Object):
 
     def __init__(
         self,
-        required: dict[str, Spec[T]],
-        optional: None | dict[str, Spec[T]] = None,
+        required: dict[str, Spec[T] | tuple[str, Spec[T]]],
+        optional: None | dict[str, Spec[T] | tuple[str, Spec[T]]] = None,
     ):
         super().__init__()
 
-        self._required: typing.Final[dict[str, Spec[T]]] \
-            = dict(required)
-        self._optional: typing.Final[dict[str, Spec[T]]] \
-            = dict(optional or {})
+        def get_spec(v):
+            if isinstance(v, (tuple, list)):
+                return v[1]
+            return v
 
-        for k, v in self._required.items():
+        def get_name(v):
+            if isinstance(v, (tuple, list)):
+                return v[0]
+            return ''
+
+        self._required_spec: typing.Final[dict[str, Spec[T]]] \
+            = {k: get_spec(v) for k, v in required.items()}
+        self._optional_spec: typing.Final[dict[str, Spec[T]]] \
+            = {k: get_spec(v) for k, v in (optional or {}).items()}
+        self._required_name: typing.Final[dict[str, str]] \
+            = {k: get_name(v) for k, v in required.items()}
+        self._optional_name: typing.Final[dict[str, str]] \
+            = {k: get_name(v) for k, v in (optional or {}).items()}
+
+        for k, v in self._required_spec.items():
             self[k] = v.make()
 
     @typing.override
     def _is_read_allowed(self, key: typing.Any) -> bool:
         if not isinstance(key, str):
             return False
-        return key in self._required or key in self._optional
+        return key in self._required_spec or key in self._optional_spec
 
     @typing.override
     def _is_write_allowed(self, key: typing.Any, value: typing.Any) -> bool:
         if not isinstance(key, str):
             return False
-        maker = self._required.get(key) or self._optional.get(key)
+        maker = self._required_spec.get(key) or self._optional_spec.get(key)
         if not maker or not maker.is_instance(value):
             return False
         return True
 
     @typing.override
     def _is_del_allowed(self, key: typing.Any) -> bool:
-        return key not in self._required
+        return key not in self._required_spec
 
     @typing.override
     def _transform_read(self, key: typing.Any) -> str:
@@ -332,7 +346,7 @@ class Record(_TypeCheckedDict[str, T], Object):
     def _transform_write(self, key: typing.Any,
                          value: typing.Any) -> tuple[str, T]:
         if value is None:
-            maker = self._required.get(key) or self._optional.get(key)
+            maker = self._required_spec.get(key) or self._optional_spec.get(key)
             if not maker:
                 raise Exception(f"No default value for key \"{key}\".")
             value = maker.make()
@@ -344,36 +358,43 @@ class Record(_TypeCheckedDict[str, T], Object):
 
     @property
     def required(self) -> dict[str, type[T]]:
-        return { k: v.cls_ for k, v in self._required.items() }
+        return { k: v.cls_ for k, v in self._required_spec.items() }
 
     @property
     def optional(self) -> dict[str, type[T]]:
-        return { k: v.cls_ for k, v in self._optional.items() }
+        return { k: v.cls_ for k, v in self._optional_spec.items() }
 
     @typing.override
     def read(self, cursor: Cursor):
         self.clear()
 
-        for alias, spec in self._required.items():
-            val = self._read_next(cursor, spec)
+        for alias, spec in self._required_spec.items():
+            name = self._required_name.get(alias)
+            val = self._read_next(cursor, spec, name)
             if val is None:
                 raise UnexpectedStructureError(
-                    f'Value for field "{alias}" but was not found')
+                    f'Value for field "{alias}" but was not found',
+                    pos=cursor.tell())
             self[alias] = val
 
-        for alias, spec in self._optional.items():
-            val = self._read_next(cursor, spec)
+        for alias, spec in self._optional_spec.items():
+            name = self._optional_name.get(alias)
+            val = self._read_next(cursor, spec, name)
             if val is None:
                 break
             self[alias] = val
 
-    def _read_next(self, cursor: Cursor, spec: Spec[T]) -> None | T:
+    def _read_next(
+            self,
+            cursor: Cursor,
+            spec: Spec[T],
+            name: None | str = None) -> None | T:
         # objects in a Record have no OBJECT_BEGIN OBJECT_END demarcating
         # bytes. the demarcation is implied by the ordering of the elements
 
         cursor.save()
         try:
-            val = spec.read(cursor)
+            val = spec.read(cursor, name)
             cursor.unsave()
             return val
         except UnexpectedBytesError:
@@ -382,22 +403,24 @@ class Record(_TypeCheckedDict[str, T], Object):
 
     @typing.override
     def write(self, cursor: Cursor):
-        for alias, spec in self._required.items():
+        for alias, spec in self._required_spec.items():
             assert isinstance(self[alias], spec.cls_), 'Invalid state'
-            self[alias].write(cursor)
+            name = self._required_name.get(alias)
+            self[alias].write(cursor, name)
 
-        for alias, spec in self._optional.items():
+        for alias, spec in self._optional_spec.items():
             value = self.get(alias)
             if value is None:
                 break
             assert isinstance(value, spec.cls_), 'Invalid state'
-            value.write(cursor)
+            self._optional_name.get(alias)
+            spec.write(cursor, name)
 
     def __eq__(self, other: typing.Any) -> bool:
         if isinstance(other, self.__class__):
             return (
-                self._required == other._required
-                and self._optional == other._optional
+                self._required_spec == other._required
+                and self._optional_spec == other._optional
                 and dict(self) \
                 == dict(other)
             )
@@ -913,7 +936,7 @@ class DataStore(_TypeCheckedDict[str, Bool | Char | Byte | Short | Int | Long
 
         size = cursor.read_int()
         for _ in range(size):
-            value, name = self._read_object(cursor)
+            value, name = cursor.read_object()
             assert name, 'Object has blank name.'
             self[name] = value
 
@@ -922,43 +945,7 @@ class DataStore(_TypeCheckedDict[str, Bool | Char | Byte | Short | Int | Long
         cursor.write_long(self.FIXED_MYSTERY_NUM)
         cursor.write_int(len(self))
         for name, value in self.items():
-            self._write_object(cursor, name, value)
-
-    @classmethod
-    def _read_object(
-        cls, cursor: Cursor
-    ) -> tuple[Bool | Char | Byte | Short | Int | Long | Float
-               | Double | Utf8Str | Object, None | str]:
-        if not cursor.eat(cls._OBJECT_BEGIN):
-            raise UnexpectedBytesError(
-                cursor.tell(), cls._OBJECT_BEGIN, cursor.peek())
-
-        name = cursor.read_utf8str(False)
-        if not name:
-            raise UnexpectedStructureError('Failed to read name for object.')
-
-        maker = schemas.get_spec_by_name(name)
-        assert maker, f"Unsupported spec name \"{name}\"."
-        value = maker.read(cursor)
-
-        if not cursor.eat(cls._OBJECT_END):
-            raise UnexpectedBytesError(
-                cursor.tell(), cls._OBJECT_END, cursor.peek())
-
-        return value, name
-
-    @classmethod
-    def _write_object(
-        cls,
-        cursor: Cursor,
-        name: str,
-        value: Object,
-    ) -> tuple[Bool | Char | Byte | Short | Int | Long | Float
-               | Double | Utf8Str | Object, None | str]:
-        cursor.write(cls._OBJECT_BEGIN)
-        cursor.write_utf8str(name, False)
-        value.write(cursor)
-        cursor.write(cls._OBJECT_END)
+            cursor.write_object(value, name)
 
     def __str__(self) -> str:
         return f"{self.__class__.__name__}{{{dict(self)}}}"

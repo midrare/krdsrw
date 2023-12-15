@@ -46,25 +46,26 @@ def _timer_model() -> Spec:
                 _long,
                 "total_percent":
                 _double,
-                "average_calculator":
-                Spec(
-                    Record, {
-                        "samples1":
-                        Spec(Array, _double),
-                        "samples2":
-                        Spec(Array, _double),
-                        "normal_distributions":
-                        Spec(
-                            Array,
+                "average_calculator": (
+                    "timer.average.calculator",
+                    Spec(
+                        Record, {
+                            "samples1":
+                            Spec(Array, _double),
+                            "samples2":
+                            Spec(Array, _double),
+                            "normal_distributions":
                             Spec(
-                                Record, {
-                                    "count": _long,
-                                    "sum": _double,
-                                    "sum_of_squares": _double,
-                                })),
-                        "outliers":
-                        Spec(Array, Spec(Array, _double)),
-                    }),
+                                Array,
+                                Spec(
+                                    Record, {
+                                        "count": _long,
+                                        "sum": _double,
+                                        "sum_of_squares": _double,
+                                    })),
+                            "outliers":
+                            Spec(Array, Spec(Array, _double)),
+                        })),
             })
 
     return _timer_model_factory
@@ -287,6 +288,8 @@ def _name_to_factory() -> dict[str, None | Spec]:
                 "state": _int,
                 "time": Spec(DateTime),
             }),
+            "timer.model":
+            _timer_model(),
             "timer.data.store":
             Spec(
                 Record, {

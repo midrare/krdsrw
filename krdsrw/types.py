@@ -1277,8 +1277,8 @@ class Spec(typing.Generic[T]):
                 raise UnexpectedStructureError('Object has blank name.')
             if name_ != name:
                 raise UnexpectedStructureError(
-                    f"Expected object name"
-                    + f" \"{name}\" but got \"{name_}\".")
+                    f"Expected object name \"{name}\""
+                    + f" but got \"{name_}\".")
 
         if issubclass(self._cls, Basic):
             o = self._cls.create(cursor, *self._args, **self._kwargs)

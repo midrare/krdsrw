@@ -4,6 +4,7 @@ import struct
 import typing
 
 from .error import UnexpectedBytesError
+from .error import UnexpectedStructureError
 
 _BYTE_SIZE: typing.Final[int] = 1
 _BOOL_SIZE: typing.Final[int] = 1
@@ -351,32 +352,30 @@ class Cursor:
         self.restore()
         return cls_
 
-    def read_object(self, magic_byte: bool = True) -> typing.Any:
+    def read_object(self, name: None | str = None) -> tuple[typing.Any, str]:
+        assert name is None or name, 'expected either null or non-empty name'
         from . import schemas
 
-        if magic_byte and not self._eat_raw_byte(_OBJECT_BEGIN_INDICATOR):
-            raise UnexpectedBytesError(
-                self._data.tell(), _OBJECT_BEGIN_INDICATOR,
-                self._peek_raw_byte())
+        name_ = self.peek_object_schema()
+        if not name_:
+            raise UnexpectedStructureError('Failed to read name for object.')
+        if name is not None and name_ != name:
+            raise UnexpectedStructureError(
+                f'Object name "{name_}" does not match expected name "{name}"')
+        maker = schemas.get_spec_by_name(name_)
+        if not maker:
+            raise UnexpectedStructureError(f'Unsupported schema \"{name_}\".')
+        o = maker.read(self, name_)
+        return o, name_
 
-        schema = self.read_utf8str(False)
-        fct = schemas.get_spec_by_name(schema)
-        assert fct, f'Unsupported schema \"{schema}\".'
-        o = fct.create(self)
-        if magic_byte and not self._eat_raw_byte(_OBJECT_END_INDICATOR):
-            raise UnexpectedBytesError(
-                self._data.tell(), _OBJECT_END_INDICATOR, self._peek_raw_byte())
-        return o
+    def write_object(self, o: typing.Any, name: str):
+        assert name, 'expected non-empty name'
 
-    def write_object(self, o: typing.Any, magic_byte: bool = True):
         from .types import Object
         if not isinstance(o, Object):
             raise TypeError("must be of type Object")
 
-        if magic_byte:
-            self._write_raw_byte(_OBJECT_BEGIN_INDICATOR)
-
+        self._write_raw_byte(_OBJECT_BEGIN_INDICATOR)
+        self.write_utf8str(name, False)
         o.write(self)
-
-        if magic_byte:
-            self._write_raw_byte(_OBJECT_END_INDICATOR)
+        self._write_raw_byte(_OBJECT_END_INDICATOR)
