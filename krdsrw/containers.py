@@ -11,7 +11,6 @@ from .cursor import Cursor
 from .error import FieldNotFoundError
 from .error import UnexpectedBytesError
 from .error import UnexpectedNameError
-from .error import UnexpectedFieldError
 from .types import Object
 from .types import Spec
 from .types import Basic
@@ -675,8 +674,8 @@ class LastPageRead(Object):  # aka LPR. this is kindle reading pos info
             self._pos.read(cursor)
             self._timestamp = int(cursor.read_long())
         else:
-            raise UnexpectedFieldError(
-                f"Expected Utf8Str or byte but got {type_byte}")
+            raise UnexpectedBytesError([Utf8Str.magic_byte, Byte.magic_byte],
+                                       type_byte)
 
     @typing.override
     def write(self, cursor: Cursor):

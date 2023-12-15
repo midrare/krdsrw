@@ -1,14 +1,4 @@
-class NameNotSupportedError(Exception):
-    def __init__(self, *args: object) -> None:
-        super().__init__(*args)
-
-
 class UnexpectedNameError(Exception):
-    def __init__(self, *args: object) -> None:
-        super().__init__(*args)
-
-
-class DemarcationError(Exception):
     def __init__(self, *args: object) -> None:
         super().__init__(*args)
 
@@ -18,25 +8,23 @@ class FieldNotFoundError(Exception):
         super().__init__(*args)
 
 
-class UnexpectedFieldError(Exception):
-    def __init__(self, *args: object):
-        super().__init__(*args)
-
-
 class UnexpectedBytesError(Exception):
     def __init__(
-            self, pos: int, expected: int | bytes, actual: None | int | bytes):
+            self, pos: int,
+            expected: int | bytes | tuple[int | bytes, ...] | list[int | bytes],
+            actual: None | int | bytes):
         s = f"@{pos} expected "
-        s += f"0x{expected:02x} " if isinstance(
-            expected, int) else f"{self._to_hex(expected)} "
+        if isinstance(expected, tuple) or isinstance(expected, list):
+            s += "[ "
+            s += ", ".join([self._to_hex(e) for e in expected])
+            s += "] "
+        else:
+            s += f"{self._to_hex(expected)} "
 
         if actual is None:
             s += "but not found."
         else:
-            s += f"but got "
-            s += f"0x{actual:02x}" if isinstance(
-                actual, int) else f"{self._to_hex(actual)}"
-            s += "."
+            s += f"but got {self._to_hex(actual)}."
 
         super().__init__(s)
 
@@ -44,8 +32,18 @@ class UnexpectedBytesError(Exception):
         self._expected: int | bytes = expected
         self._actual: None | int | bytes = actual
 
+    @classmethod
+    def _to_hex(cls, data: int | bytes, prefix: bool = True) -> str:
+        if isinstance(data, int):
+            return cls._int_to_hex(data, prefix)
+        return cls._bytes_to_hex(data, prefix)
+
     @staticmethod
-    def _to_hex(data: bytes, prefix: bool = True) -> str:
+    def _int_to_hex(data: int, prefix: bool = True) -> str:
+        return ("0x" if prefix else "") + f"{data:02x}"
+
+    @staticmethod
+    def _bytes_to_hex(data: bytes, prefix: bool = True) -> str:
         s = ''
         if prefix:
             s += '0x'
