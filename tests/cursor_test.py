@@ -49,6 +49,11 @@ def test_cursor_peek():
     assert csr.peek() == 65 and csr.tell() == 0
 
 
+def test_cursor_peek_len():
+    csr = cursor.Cursor(b'ABCDEFGHIJKLMNOPQRSTUVWXYZ')
+    assert csr.peek(4) == b'ABCD'
+
+
 def test_cursor_peek_matches():
     csr = cursor.Cursor(b'ABCDEFGHIJKLMNOPQRSTUVWXYZ')
     assert csr.startswith(b'ABCD')
