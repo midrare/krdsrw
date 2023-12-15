@@ -3,7 +3,6 @@ import base64
 import collections
 import collections.abc
 import copy
-import inspect
 import json
 import typing
 
@@ -13,9 +12,7 @@ from .error import FieldNotFoundError
 from .error import UnexpectedBytesError
 from .error import UnexpectedNameError
 from .error import UnexpectedFieldError
-from .types import ALL_BASIC_TYPES
 from .types import Object
-from .types import Value
 from .types import Spec
 from .types import Basic
 from .types import Byte

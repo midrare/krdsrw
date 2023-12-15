@@ -1,11 +1,9 @@
 from __future__ import annotations
-import contextlib
 import io
 import struct
 import typing
 
 from .error import UnexpectedBytesError
-from .error import DemarcationError
 
 _BYTE_SIZE: typing.Final[int] = 1
 _BOOL_SIZE: typing.Final[int] = 1
