@@ -5,9 +5,11 @@ class UnexpectedStructureError(Exception):
 
 class UnexpectedBytesError(Exception):
     def __init__(
-            self, pos: int,
-            expected: int | bytes | tuple[int | bytes, ...] | list[int | bytes],
-            actual: None | int | bytes):
+        self,
+        pos: int,
+        expected: int | bytes | tuple[int | bytes, ...] | list[int | bytes],
+        actual: None | int | bytes,
+    ):
         s = f"@{pos} expected "
         if isinstance(expected, tuple) or isinstance(expected, list):
             s += "[ "
