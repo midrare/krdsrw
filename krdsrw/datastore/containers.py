@@ -903,8 +903,8 @@ class DataStore(_TypeCheckedDict[str, Bool | Char | Byte | Short | Int | Long
         cursor.write(self.MAGIC_STR)
         cursor.write_long(self.FIXED_MYSTERY_NUM)
         cursor.write_int(len(self))
-        for _, value in self.items():
-            value.write(cursor)
+        for name, value in self.items():
+            self._write_object(cursor, name, value)
 
     @classmethod
     def _read_object(
@@ -928,6 +928,19 @@ class DataStore(_TypeCheckedDict[str, Bool | Char | Byte | Short | Int | Long
                 cursor.tell(), cls._OBJECT_END, cursor.peek())
 
         return value, name
+
+    @classmethod
+    def _write_object(
+        cls,
+        cursor: Cursor,
+        name: str,
+        value: Object,
+    ) -> tuple[Bool | Char | Byte | Short | Int | Long | Float
+               | Double | Utf8Str | Object, None | str]:
+        cursor.write(cls._OBJECT_BEGIN)
+        cursor.write_utf8str(name, False)
+        value.write(cursor)
+        cursor.write(cls._OBJECT_END)
 
     def __str__(self) -> str:
         return f"{self.__class__.__name__}{{{dict(self)}}}"
