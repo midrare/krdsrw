@@ -1136,9 +1136,19 @@ class Utf8Str(str, Basic):
     builtin: typing.Final[type[int | float | str]] = str
     magic_byte: int = 0x03
 
-    def __new__(cls, *args, prefer_null: bool = True, **kwargs) -> typing.Self:
+    def __new__(
+        cls,
+        *args,
+        prefer_null: typing.Optional[bool] = None,
+        **kwargs,
+    ) -> typing.Self:
         o = super().__new__(cls, *args, *kwargs)
-        o.prefer_null: bool = prefer_null
+        if prefer_null is None:
+            for e in args:
+                if isinstance(e, cls):
+                    prefer_null = e.prefer_null
+                    break
+        o.prefer_null: bool = prefer_null if prefer_null is not None else True
         return o
 
     def __repr__(self) -> str:
