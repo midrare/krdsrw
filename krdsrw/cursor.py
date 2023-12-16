@@ -370,11 +370,6 @@ class Cursor:
 
     def write_object(self, o: typing.Any, name: str):
         assert name, 'expected non-empty name'
-
-        from .types import Object
-        if not isinstance(o, Object):
-            raise TypeError("must be of type Object")
-
         self._write_raw_byte(_OBJECT_BEGIN_INDICATOR)
         self.write_utf8str(name, False)
         o.write(self)

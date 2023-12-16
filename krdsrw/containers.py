@@ -410,15 +410,15 @@ class Record(_TypeCheckedDict[str, T], Object):
         for alias, spec in self._required_spec.items():
             assert isinstance(self[alias], spec.cls_), 'Invalid state'
             name = self._required_name.get(alias)
-            self[alias].write(cursor, name)
+            spec.write(cursor, self[alias], name)
 
         for alias, spec in self._optional_spec.items():
             value = self.get(alias)
             if value is None:
                 break
             assert isinstance(value, spec.cls_), 'Invalid state'
-            self._optional_name.get(alias)
-            spec.write(cursor, name)
+            name = self._optional_name.get(alias)
+            spec.write(cursor, value, name)
 
     def __eq__(self, other: typing.Any) -> bool:
         if isinstance(other, self.__class__):
