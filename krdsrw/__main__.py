@@ -19,7 +19,8 @@ def main(argv: None | list[str] = None) -> int:
         '--in-file',
         metavar='FILE',
         type=argparse.FileType('rb'),
-        help='file path to read')
+        help='file path to read',
+        required=True)
 
     parser.add_argument(
         '-o',
