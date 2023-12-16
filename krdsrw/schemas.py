@@ -335,6 +335,11 @@ def _name_to_factory() -> dict[str, None | Spec]:
             _annotation_personal_element(),
             "annotation.personal.clip_article":
             _annotation_personal_element(),
+            "whisperstore.migration.status":
+            Spec(Record, {
+                "unknown1": _bool,
+                "unknown2": _bool,
+            }),
         }
     return _name_to_factory_map
 
