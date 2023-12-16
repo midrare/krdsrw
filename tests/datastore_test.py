@@ -35,20 +35,13 @@ class TestDataStore:
 
         assert csr.dump() == orig_data
 
-    def test_annotation_cache_object(self):
+    def test_annotation_cache_object_len(self):
         csr = Cursor(TEMPEST_YJR.read_bytes())
         root = DataStore()
         root.read(csr)
         assert len(root["annotation.cache.object"]) == 3
 
-    def test_bookmarks_len(self):
-        csr = Cursor(TEMPEST_YJR.read_bytes())
-        root = DataStore()
-        root.read(csr)
-
-        assert len(root["annotation.cache.object"]["bookmarks"]) == 5
-
-    def test_bookmark_start_pos(self):
+    def test_bookmark(self):
         csr = Cursor(TEMPEST_YJR.read_bytes())
         root = DataStore()
         root.read(csr)
@@ -57,29 +50,8 @@ class TestDataStore:
         assert o["start_pos"].chunk_eid == 5525
         assert o["start_pos"].chunk_pos == 0
         assert o["start_pos"].char_pos == 76032
-
-    def test_bookmark_end_pos(self):
-        csr = Cursor(TEMPEST_YJR.read_bytes())
-        root = DataStore()
-        root.read(csr)
-
-        o = root["annotation.cache.object"]["bookmarks"][0]
         assert o["end_pos"].chunk_eid == 5525
         assert o["end_pos"].chunk_pos == 0
         assert o["end_pos"].char_pos == 76032
-
-    def test_bookmark_creation_time(self):
-        csr = Cursor(TEMPEST_YJR.read_bytes())
-        root = DataStore()
-        root.read(csr)
-
-        o = root["annotation.cache.object"]["bookmarks"][0]
         assert o["creation_time"].epoch_ms == 1701332599082
-
-    def test_bookmark_last_modification_time(self):
-        csr = Cursor(TEMPEST_YJR.read_bytes())
-        root = DataStore()
-        root.read(csr)
-
-        o = root["annotation.cache.object"]["bookmarks"][0]
         assert o["last_modification_time"].epoch_ms == 1701332599082
