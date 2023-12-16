@@ -292,19 +292,23 @@ class Record(_TypeCheckedDict[str, T], Object):
 
     def __init__(
         self,
-        required: dict[str, Spec[T] | tuple[str, Spec[T]]],
-        optional: None | dict[str, Spec[T] | tuple[str, Spec[T]]] = None,
+        required: dict[str, Spec[T] | tuple[Spec[T], str]],
+        optional: None | dict[str, Spec[T] | tuple[Spec[T], str]] = None,
     ):
         super().__init__()
 
         def get_spec(v):
             if isinstance(v, (tuple, list)):
-                return v[1]
+                return next(e for e in v if isinstance(e, Spec))
+            if isinstance(v, Spec):
+                return v
             return v
 
         def get_name(v):
             if isinstance(v, (tuple, list)):
-                return v[0]
+                return next(e for e in v if isinstance(e, str))
+            if isinstance(v, str):
+                return v
             return ''
 
         self._required_spec: typing.Final[dict[str, Spec[T]]] \

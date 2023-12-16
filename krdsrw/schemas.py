@@ -100,7 +100,7 @@ def _timer_model() -> Spec:
                 "total_percent":
                 _double,
                 "average_calculator":
-                ("timer.average.calculator", _timer_average_calculator()),
+                (_timer_average_calculator(), "timer.average.calculator"),
             })
 
     return _timer_model_factory
