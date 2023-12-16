@@ -26,13 +26,66 @@ _font_prefs_factory: None | Spec = None
 _reader_state_preferences_factory: None | Spec = None
 _annotation_object_cache_factory: None | Spec = None
 _annotation_personal_element_factory: None | Spec = None
+_timer_average_calculator_factory: None | Spec = None
+_timer_average_calculator_distribution_normal_factory: None | Spec = None
+_timer_average_calculator_calculator_outliers_factory: None | Spec = None
+
 _name_to_factory_map: dict[str, None | Spec] = {}
+
+
+def _timer_average_calculator_outliers() -> Spec:
+    global _timer_average_calculator_calculator_outliers_factory
+    if not _timer_average_calculator_calculator_outliers_factory:
+        from .containers import Array
+        _timer_average_calculator_calculator_outliers_factory = Spec(
+            Array, _double)
+
+    return _timer_average_calculator_calculator_outliers_factory
+
+
+def _timer_average_calculator_distribution_normal() -> Spec:
+    global _timer_average_calculator_distribution_normal_factory
+    if not _timer_average_calculator_distribution_normal_factory:
+        from .containers import Record
+        from .containers import Spec
+        _timer_average_calculator_distribution_normal_factory = Spec(
+            Record, {
+                "count": _long,
+                "sum": _double,
+                "sum_of_squares": _double,
+            })
+
+    return _timer_average_calculator_distribution_normal_factory
+
+
+def _timer_average_calculator() -> Spec:
+    global _timer_average_calculator_factory
+    if not _timer_average_calculator_factory:
+        from .containers import Array
+        from .containers import Record
+        from .containers import Spec
+        _timer_average_calculator_factory = Spec(
+            Record, {
+                "samples1":
+                Spec(Array, _double),
+                "samples2":
+                Spec(Array, _double),
+                "normal_distributions":
+                Spec(
+                    Array, _timer_average_calculator_distribution_normal(),
+                    "timer.average.calculator.distribution.normal"),
+                "outliers":
+                Spec(
+                    Array, _timer_average_calculator_outliers(),
+                    "timer.average.calculator.outliers"),
+            })
+
+    return _timer_average_calculator_factory
 
 
 def _timer_model() -> Spec:
     global _timer_model_factory
     if not _timer_model_factory:
-        from .containers import Array
         from .containers import Record
         from .containers import Spec
 
@@ -46,29 +99,8 @@ def _timer_model() -> Spec:
                 _long,
                 "total_percent":
                 _double,
-                "average_calculator": (
-                    "timer.average.calculator",
-                    Spec(
-                        Record, {
-                            "samples1":
-                            Spec(Array, _double),
-                            "samples2":
-                            Spec(Array, _double),
-                            "normal_distributions":
-                            Spec(
-                                Array,
-                                Spec(
-                                    Record, {
-                                        "count": _long,
-                                        "sum": _double,
-                                        "sum_of_squares": _double,
-                                    }),
-                                "timer.average.calculator.distribution.normal"),
-                            "outliers":
-                            Spec(
-                                Array, Spec(Array, _double),
-                                "timer.average.calculator.outliers"),
-                        })),
+                "average_calculator":
+                ("timer.average.calculator", _timer_average_calculator()),
             })
 
     return _timer_model_factory
@@ -340,6 +372,10 @@ def _name_to_factory() -> dict[str, None | Spec]:
                 "unknown1": _bool,
                 "unknown2": _bool,
             }),
+            "timer.average.calculator.distribution.normal":
+            _timer_average_calculator_distribution_normal(),
+            "timer.average.calculator.outliers":
+            _timer_average_calculator_outliers(),
         }
     return _name_to_factory_map
 
