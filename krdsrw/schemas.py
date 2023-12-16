@@ -320,7 +320,7 @@ def _name_to_factory() -> dict[str, None | Spec]:
                     Record, {
                         "pos": Spec(Position),
                         "time": Spec(DateTime),
-                    })),
+                    }), "page.history.record"),
             "reader.state.preferences":
             _reader_state_preferences(),
             "font.prefs":
