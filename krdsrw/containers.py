@@ -454,10 +454,10 @@ class IntMap(_TypeCheckedDict[int, Bool | Char | Byte | Short | Int | Long
 
     @typing.override
     def _is_read_allowed(self, key: typing.Any) -> bool:
-        return key in self._idx_to_spec \
-        or key in self._idx_to_name \
-        or key in self._idx_to_alias \
-        or key in self._idx_to_alias.values()
+        return key in list(self._idx_to_spec.keys()) \
+            + list(self._idx_to_name.keys()) \
+            + list(self._idx_to_alias.keys()) \
+            + list(self._idx_to_alias.values())
 
     @typing.override
     def _is_del_allowed(self, key: typing.Any) -> bool:
@@ -465,14 +465,14 @@ class IntMap(_TypeCheckedDict[int, Bool | Char | Byte | Short | Int | Long
 
     @typing.override
     def _is_write_allowed(self, key: typing.Any, value: typing.Any) -> bool:
-        if key not in self._idx_to_spec \
-        and key not in self._idx_to_name \
-        and key not in self._idx_to_alias \
-        and key not in self._idx_to_alias.values():
+        if key not in list(self._idx_to_spec.keys()) \
+                + list(self._idx_to_name.keys()) \
+                + list(self._idx_to_alias.keys()) \
+                + list(self._idx_to_alias.values()):
             return False
 
-        idx = self._alias_to_idx(key) if isinstance(key, str) else key
-        assert idx >= 0, 'failed to find index'
+        idx = self._to_idx(key) if isinstance(key, str) else key
+        assert idx >= 0, 'failed to determine key'
         if not self._idx_to_spec[idx].is_instance(value):
             return False
 
@@ -480,25 +480,34 @@ class IntMap(_TypeCheckedDict[int, Bool | Char | Byte | Short | Int | Long
 
     @typing.override
     def _transform_read(self, key: typing.Any) -> int | str:
-        return self._alias_to_idx(key, key)
+        return self._to_alias(key, key)
 
     @typing.override
     def _transform_write(
         self, key: typing.Any, value: typing.Any
     ) -> tuple[int | str, Bool | Char | Byte | Short | Int | Long | Float
                | Double | Utf8Str | Object]:
-        key = self._alias_to_idx(key, key)
-        return key, value
+        return self._to_alias(key, key), value
 
     @typing.override
     def _transform_del(self, key: typing.Any) -> int | str:
-        return self._alias_to_idx(key, key)
+        return self._to_alias(key, key)
 
-    def _alias_to_idx(self, alias: str, default: None | int = None) -> int:
+    def _to_idx(self, alias: str, default: None | int = None) -> int:
         if default is None:
             default = -1
-        return next((k for k, v in self._idx_to_alias.items() if v == alias),
-                    default)
+        for k, v in self._idx_to_alias.items():
+            if v == alias:
+                return k
+        return default
+
+    def _to_alias(self, idx: int, default: None | str = None) -> str:
+        if default is None:
+            default = ''
+        for k, v in self._idx_to_alias.items():
+            if idx == k:
+                return v
+        return default
 
     @typing.override
     def read(self, cursor: Cursor):
@@ -507,8 +516,8 @@ class IntMap(_TypeCheckedDict[int, Bool | Char | Byte | Short | Int | Long
         for _ in range(size):
             idxnum = cursor.read_int()
 
-            if idxnum not in self._idx_to_spec \
-            and idxnum not in self._idx_to_alias:
+            if idxnum not in list(self._idx_to_spec.keys()) \
+                    + list(self._idx_to_alias.keys()):
                 raise UnexpectedStructureError(
                     f"Object index number {idxnum} not recognized")
             name = self._idx_to_name[idxnum]
