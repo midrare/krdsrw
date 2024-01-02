@@ -23,7 +23,5 @@ pytest
 pytest --cov=krdsrw
 ```
 
-## Credits
-By midrare.
-
-Extra thanks to [jhowell](https://www.mobileread.com/forums/showthread.php?t=322172) for his initial work on reverse-engineering the KRDS file format.
+## Acknowledgements
+Thanks to [jhowell](https://www.mobileread.com/forums/showthread.php?t=322172) for his initial work on reverse-engineering the KRDS file format.
