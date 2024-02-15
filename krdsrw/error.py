@@ -15,7 +15,7 @@ class UnexpectedBytesError(KRDSRWError):
         self,
         pos: int,
         expected: int | bytes | tuple[int | bytes, ...] | list[int | bytes],
-        actual: None | int | bytes,
+        actual: None | int | bytes = None,
     ):
         s = f"@{pos} expected "
         if isinstance(expected, tuple) or isinstance(expected, list):
