@@ -71,7 +71,7 @@ class Byte(int, Basic):
         magic_byte_ = self.magic_byte if magic_byte else None
         self._write_pack(cursor, self, '>b', magic_byte_)
 
-    def to_bytes(self) -> bytes:
+    def to_bytes(self, *_unused, **_unused2) -> bytes:
         return struct.pack('>b', self)
 
     def __add__(self, other: int) -> typing.Self:
@@ -99,10 +99,11 @@ class Byte(int, Basic):
         return self.__class__(o)
 
     def __divmod__(self, other: int) -> tuple[typing.Self, typing.Self]:
-        a, b = super().__divmod__(other)
-        return (self.__class__(a), self.__class__(b))
+        q, r = super().__divmod__(other)
+        return self.__class__(q), self.__class__(r)
 
-    def __pow__(self, other: int, modulo: None | int = None) -> typing.Self:
+    def __pow__(  # type: ignore
+        self, other: int, modulo: None | int = None) -> typing.Self:
         o = super().__pow__(other, modulo)
         return self.__class__(o)
 
@@ -151,8 +152,8 @@ class Byte(int, Basic):
         return self.__class__(o)
 
     def __rdivmod__(self, other: int) -> tuple[typing.Self, typing.Self]:
-        a, b = super().__rdivmod__(other)
-        return (self.__class__(a), self.__class__(b))
+        q, r = super().__rdivmod__(other)
+        return self.__class__(q), self.__class__(r)
 
     def __rpow__(self, other: int, modulo: None | int = None) -> typing.Self:
         o = super().__rpow__(other, modulo)
@@ -219,7 +220,7 @@ class Char(int, Basic):
         magic_byte_ = self.magic_byte if magic_byte else None
         self._write_pack(cursor, self, '>B', magic_byte_)
 
-    def to_bytes(self) -> bytes:
+    def to_bytes(self, *_unused, **_unused2) -> bytes:
         return struct.pack('>B', self)
 
     def __add__(self, other: int) -> typing.Self:
@@ -247,10 +248,11 @@ class Char(int, Basic):
         return self.__class__(o)
 
     def __divmod__(self, other: int) -> tuple[typing.Self, typing.Self]:
-        a, b = super().__divmod__(other)
-        return (self.__class__(a), self.__class__(b))
+        q, r = super().__divmod__(other)
+        return self.__class__(q), self.__class__(r)
 
-    def __pow__(self, other: int, modulo: None | int = None) -> typing.Self:
+    def __pow__(  # type: ignore
+        self, other: int, modulo: None | int = None) -> typing.Self:
         o = super().__pow__(other, modulo)
         return self.__class__(o)
 
@@ -299,8 +301,8 @@ class Char(int, Basic):
         return self.__class__(o)
 
     def __rdivmod__(self, other: int) -> tuple[typing.Self, typing.Self]:
-        a, b = super().__rdivmod__(other)
-        return (self.__class__(a), self.__class__(b))
+        q, r = super().__rdivmod__(other)
+        return self.__class__(q), self.__class__(r)
 
     def __rpow__(self, other: int, modulo: None | int = None) -> typing.Self:
         o = super().__rpow__(other, modulo)
@@ -367,7 +369,7 @@ class Bool(int, Basic):
         magic_byte_ = self.magic_byte if magic_byte else None
         self._write_pack(cursor, int(self), '>?', magic_byte_)
 
-    def to_bytes(self) -> bytes:
+    def to_bytes(self, *_unused, **_unused2) -> bytes:
         return struct.pack('>?', self)
 
     def __add__(self, other: int) -> typing.Self:
@@ -395,10 +397,11 @@ class Bool(int, Basic):
         return self.__class__(o)
 
     def __divmod__(self, other: int) -> tuple[typing.Self, typing.Self]:
-        a, b = super().__divmod__(other)
-        return (self.__class__(a), self.__class__(b))
+        q, r = super().__divmod__(other)
+        return self.__class__(q), self.__class__(r)
 
-    def __pow__(self, other: int, modulo: None | int = None) -> typing.Self:
+    def __pow__(  # type: ignore
+        self, other: int, modulo: None | int = None) -> typing.Self:
         o = super().__pow__(other, modulo)
         return self.__class__(o)
 
@@ -447,8 +450,8 @@ class Bool(int, Basic):
         return self.__class__(o)
 
     def __rdivmod__(self, other: int) -> tuple[typing.Self, typing.Self]:
-        a, b = super().__rdivmod__(other)
-        return (self.__class__(a), self.__class__(b))
+        q, r = super().__rdivmod__(other)
+        return self.__class__(q), self.__class__(r)
 
     def __rpow__(self, other: int, modulo: None | int = None) -> typing.Self:
         o = super().__rpow__(other, modulo)
@@ -512,7 +515,7 @@ class Short(int, Basic):
         magic_byte_ = self.magic_byte if magic_byte else None
         self._write_pack(cursor, self, '>h', magic_byte_)
 
-    def to_bytes(self) -> bytes:
+    def to_bytes(self, *_unused, **_unused2) -> bytes:
         return struct.pack('>h', self)
 
     def __add__(self, other: int) -> typing.Self:
@@ -540,10 +543,11 @@ class Short(int, Basic):
         return self.__class__(o)
 
     def __divmod__(self, other: int) -> tuple[typing.Self, typing.Self]:
-        a, b = super().__divmod__(other)
-        return (self.__class__(a), self.__class__(b))
+        q, r = super().__divmod__(other)
+        return self.__class__(q), self.__class__(r)
 
-    def __pow__(self, other: int, modulo: None | int = None) -> typing.Self:
+    def __pow__(  # type: ignore
+        self, other: int, modulo: None | int = None) -> typing.Self:
         o = super().__pow__(other, modulo)
         return self.__class__(o)
 
@@ -592,8 +596,8 @@ class Short(int, Basic):
         return self.__class__(o)
 
     def __rdivmod__(self, other: int) -> tuple[typing.Self, typing.Self]:
-        a, b = super().__rdivmod__(other)
-        return (self.__class__(a), self.__class__(b))
+        q, r = super().__rdivmod__(other)
+        return self.__class__(q), self.__class__(r)
 
     def __rpow__(self, other: int, modulo: None | int = None) -> typing.Self:
         o = super().__rpow__(other, modulo)
@@ -657,7 +661,7 @@ class Int(int, Basic):
         magic_byte_ = self.magic_byte if magic_byte else None
         self._write_pack(cursor, self, '>l', magic_byte_)
 
-    def to_bytes(self) -> bytes:
+    def to_bytes(self, *_unused, **_unused2) -> bytes:
         return struct.pack('>l', self)
 
     def __add__(self, other: int) -> typing.Self:
@@ -685,10 +689,11 @@ class Int(int, Basic):
         return self.__class__(o)
 
     def __divmod__(self, other: int) -> tuple[typing.Self, typing.Self]:
-        a, b = super().__divmod__(other)
-        return (self.__class__(a), self.__class__(b))
+        q, r = super().__divmod__(other)
+        return self.__class__(q), self.__class__(r)
 
-    def __pow__(self, other: int, modulo: None | int = None) -> typing.Self:
+    def __pow__(  # type: ignore
+        self, other: int, modulo: None | int = None) -> typing.Self:
         o = super().__pow__(other, modulo)
         return self.__class__(o)
 
@@ -737,8 +742,8 @@ class Int(int, Basic):
         return self.__class__(o)
 
     def __rdivmod__(self, other: int) -> tuple[typing.Self, typing.Self]:
-        a, b = super().__rdivmod__(other)
-        return (self.__class__(a), self.__class__(b))
+        q, r = super().__rdivmod__(other)
+        return self.__class__(q), self.__class__(r)
 
     def __rpow__(self, other: int, modulo: None | int = None) -> typing.Self:
         o = super().__rpow__(other, modulo)
@@ -802,7 +807,7 @@ class Long(int, Basic):
         magic_byte_ = self.magic_byte if magic_byte else None
         self._write_pack(cursor, self, '>q', magic_byte_)
 
-    def to_bytes(self) -> bytes:
+    def to_bytes(self, *_unused, **_unused2) -> bytes:
         return struct.pack('>q', self)
 
     def __add__(self, other: int) -> typing.Self:
@@ -830,10 +835,11 @@ class Long(int, Basic):
         return self.__class__(o)
 
     def __divmod__(self, other: int) -> tuple[typing.Self, typing.Self]:
-        a, b = super().__divmod__(other)
-        return (self.__class__(a), self.__class__(b))
+        q, r = super().__divmod__(other)
+        return self.__class__(q), self.__class__(r)
 
-    def __pow__(self, other: int, modulo: None | int = None) -> typing.Self:
+    def __pow__(  # type: ignore
+        self, other: int, modulo: None | int = None) -> typing.Self:
         o = super().__pow__(other, modulo)
         return self.__class__(o)
 
@@ -882,8 +888,8 @@ class Long(int, Basic):
         return self.__class__(o)
 
     def __rdivmod__(self, other: int) -> tuple[typing.Self, typing.Self]:
-        a, b = super().__rdivmod__(other)
-        return (self.__class__(a), self.__class__(b))
+        q, r = super().__rdivmod__(other)
+        return self.__class__(q), self.__class__(r)
 
     def __rpow__(self, other: int, modulo: None | int = None) -> typing.Self:
         o = super().__rpow__(other, modulo)
@@ -975,8 +981,8 @@ class Float(float, Basic):
         return self.__class__(o)
 
     def __divmod__(self, other: float) -> tuple[typing.Self, typing.Self]:
-        a, b = super().__divmod__(other)
-        return (self.__class__(a), self.__class__(b))
+        q, r = super().__divmod__(other)
+        return self.__class__(q), self.__class__(r)
 
     def __pow__(self, other: float, modulo: None = None) -> typing.Self:
         o = super().__pow__(other, modulo)
@@ -1007,8 +1013,8 @@ class Float(float, Basic):
         return self.__class__(o)
 
     def __rdivmod__(self, other: float) -> tuple[typing.Self, typing.Self]:
-        a, b = super().__rdivmod__(other)
-        return (self.__class__(a), self.__class__(b))
+        q, r = super().__rdivmod__(other)
+        return self.__class__(q), self.__class__(r)
 
     def __rpow__(self, other: float, modulo: None = None) -> typing.Self:
         o = super().__rpow__(other, modulo)
@@ -1076,8 +1082,8 @@ class Double(float, Basic):
         return self.__class__(o)
 
     def __divmod__(self, other: float) -> tuple[typing.Self, typing.Self]:
-        a, b = super().__divmod__(other)
-        return (self.__class__(a), self.__class__(b))
+        q, r = super().__divmod__(other)
+        return self.__class__(q), self.__class__(r)
 
     def __pow__(self, other: float, modulo: None = None) -> typing.Self:
         o = super().__pow__(other, modulo)
@@ -1108,8 +1114,8 @@ class Double(float, Basic):
         return self.__class__(o)
 
     def __rdivmod__(self, other: float) -> tuple[typing.Self, typing.Self]:
-        a, b = super().__rdivmod__(other)
-        return (self.__class__(a), self.__class__(b))
+        q, r = super().__rdivmod__(other)
+        return self.__class__(q), self.__class__(r)
 
     def __rpow__(self, other: float, modulo: None = None) -> typing.Self:
         o = super().__rpow__(other, modulo)
@@ -1152,7 +1158,7 @@ class Utf8Str(str, Basic):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.prefer_null: bool = True
+        self.prefer_null: bool
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}{{\"{str(self)}\"}}"
