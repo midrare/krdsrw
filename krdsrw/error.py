@@ -5,9 +5,10 @@ class KRDSRWError(Exception):
 
 class UnexpectedStructureError(KRDSRWError):
     def __init__(self, *args: str, pos: int = -1):
+        args_ = list(args)
         if pos >= 0:
-            args = [f"@{pos}"] + list(args)
-        super().__init__(" ".join(args))
+            args_ = [f"@{pos}"] + list(args)
+        super().__init__(" ".join(args_))
 
 
 class UnexpectedBytesError(KRDSRWError):
@@ -33,7 +34,8 @@ class UnexpectedBytesError(KRDSRWError):
         super().__init__(s)
 
         self._pos: int = pos
-        self._expected: int | bytes = expected
+        self._expected: list[int | bytes] = list(expected) \
+                if isinstance(expected, (list, tuple)) else [expected]
         self._actual: None | int | bytes = actual
 
     @classmethod
@@ -60,7 +62,7 @@ class UnexpectedBytesError(KRDSRWError):
         return self._pos
 
     @property
-    def expected(self) -> int | bytes:
+    def expected(self) -> list[int | bytes]:
         return self._expected
 
     @property
