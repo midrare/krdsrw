@@ -6,7 +6,6 @@ import copy
 import json
 import typing
 
-from . import schemas
 from .cursor import Cursor
 from .error import UnexpectedBytesError
 from .error import UnexpectedStructureError
