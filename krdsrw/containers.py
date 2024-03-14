@@ -715,8 +715,8 @@ class LastPageRead(Object):  # aka LPR. this is kindle reading pos info
             self._pos.read(cursor)
             self._timestamp = int(cursor.read_long())
         else:
-            raise UnexpectedBytesError([Utf8Str.magic_byte, Byte.magic_byte],
-                                       type_byte)
+            raise UnexpectedBytesError(
+                cursor.tell(), [Utf8Str.magic_byte, Byte.magic_byte], type_byte)
 
     @typing.override
     def write(self, cursor: Cursor):
