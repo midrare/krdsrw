@@ -197,7 +197,7 @@ class Byte(int, Basic):
 
 class Char(int, Basic):
     # unsigned (?) char
-    builtin: typing.Final[type[int | float | str]] = int
+    builtin: type[int | float | str] = int
     size: int = struct.calcsize('>B')
     magic_byte: int = 0x09
 
@@ -345,7 +345,7 @@ class Char(int, Basic):
 
 class Bool(int, Basic):
     # 1-byte bool 0=false, 1=true
-    builtin: typing.Final[type[int | float | str]] = int
+    builtin: type[int | float | str] = int
     size: int = struct.calcsize('>?')
     magic_byte: int = 0x00
 
@@ -493,7 +493,7 @@ class Bool(int, Basic):
 
 class Short(int, Basic):
     # 2 byte signed integer
-    builtin: typing.Final[type[int | float | str]] = int
+    builtin: type[int | float | str] = int
     size: int = struct.calcsize('>h')
     magic_byte: int = 0x05
 
@@ -638,7 +638,7 @@ class Short(int, Basic):
 
 class Int(int, Basic):
     # 4-byte signed integer
-    builtin: typing.Final[type[int | float | str]] = int
+    builtin: type[int | float | str] = int
     size: int = struct.calcsize('>l')
     magic_byte: int = 0x01
 
@@ -783,7 +783,7 @@ class Int(int, Basic):
 
 class Long(int, Basic):
     # 8-byte signed integer
-    builtin: typing.Final[type[int | float | str]] = int
+    builtin: type[int | float | str] = int
     size: int = struct.calcsize('>q')
     magic_byte: int = 0x02
 
@@ -928,7 +928,7 @@ class Long(int, Basic):
 
 class Float(float, Basic):
     # 4-byte float
-    builtin: typing.Final[type[int | float | str]] = float
+    builtin: type[int | float | str] = float
     size: int = struct.calcsize('>f')
     magic_byte: int = 0x06
 
@@ -1029,7 +1029,7 @@ class Float(float, Basic):
 
 class Double(float, Basic):
     # 8-byte float
-    builtin: typing.Final[type[int | float | str]] = float
+    builtin: type[int | float | str] = float
     size: int = struct.calcsize('>d')
     magic_byte: int = 0x04
 
@@ -1132,7 +1132,7 @@ class Utf8Str(str, Basic):
     # 1-byte bool true if str is empty
     # then 2-byte str length (may be 0)
     # then UTF-8 str bytes of aforementioned length (empty if bool is True)
-    builtin: typing.Final[type[int | float | str]] = str
+    builtin: type[int | float | str] = str
     magic_byte: int = 0x03
 
     def __new__(
@@ -1147,8 +1147,12 @@ class Utf8Str(str, Basic):
                 if isinstance(e, cls):
                     prefer_null = e.prefer_null
                     break
-        o.prefer_null: bool = prefer_null if prefer_null is not None else True
+        o.prefer_null = prefer_null if prefer_null is not None else True
         return o
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.prefer_null: bool = True
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}{{\"{str(self)}\"}}"
@@ -1235,7 +1239,7 @@ class Object(Value):
     def write(self, cursor: Cursor):
         raise NotImplementedError("Must be implemented by the subclass.")
 
-    def __eq__(self, other: typing.Self) -> bool:
+    def __eq__(self, other: object) -> bool:
         raise NotImplementedError("Must be implemented by the subclass.")
 
 
