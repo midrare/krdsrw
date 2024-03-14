@@ -194,14 +194,19 @@ class _TypeCheckedDict(dict[K, T]):
     def _is_del_allowed(self, key: typing.Any) -> bool:
         return True
 
-    def _transform_read(self, key: typing.Any) -> K:
+    def _transform_read(self, key: typing.Any) -> bool | int | float | str | K:
         return key
 
-    def _transform_write(self, key: typing.Any,
-                         value: typing.Any) -> tuple[K, T]:
+    def _transform_write(
+        self,
+        key: typing.Any,
+        value: typing.Any,
+    ) -> tuple[bool | int | float | str | K, Bool | Char | Byte | Short | Int
+               | Long | Float | Double
+               | Utf8Str | Object | T]:
         return key, value
 
-    def _transform_del(self, key: typing.Any) -> K:
+    def _transform_del(self, key: typing.Any) -> bool | int | float | str | K:
         return key
 
     @classmethod
@@ -242,7 +247,11 @@ class _TypeCheckedDict(dict[K, T]):
         return super().setdefault(key_, default_)  # type: ignore
 
     @typing.override
-    def update(self, *args: typing.Mapping[K, T], **kwargs: T):
+    def update( # type: ignore
+        self,
+        *args: typing.Mapping[K, T],
+        **kwargs: T,
+    ):
         d = dict()
         for key, value in dict(*args, **kwargs).items():
             if not self._is_write_allowed(key, value):
@@ -423,8 +432,8 @@ class Record(_TypeCheckedDict[str, T], Object):
     def __eq__(self, other: typing.Any) -> bool:
         if isinstance(other, self.__class__):
             return (
-                self._required_spec == other._required
-                and self._optional_spec == other._optional
+                self._required_spec == other._required  # type: ignore
+                and self._optional_spec == other._optional  # type: ignore
                 and dict(self) \
                 == dict(other)
             )
