@@ -100,8 +100,8 @@ class _TypeCheckedList(list[T]):
             o = [self._transform_write(e) for e in o]
             super().__setitem__(i, o)
 
-    def __add__(
-            self, other: typing.Iterable[int | float | str | T]) -> typing.Self:
+    def __add__(  # type: ignore
+            self, other: list[int | float | str | T]) -> typing.Self:
         other = list(other)
         for e in other:
             if not self._is_write_allowed(e):
@@ -124,7 +124,7 @@ class _TypeCheckedList(list[T]):
             raise TypeError(f"Value \"{o}\" is not allowed.")
         super().append(self._transform_write(o))
 
-    def insert(self, i: int, o: int | float | str | T):
+    def insert(self, i: typing.SupportsIndex, o: int | float | str | T):
         if not self._is_write_allowed(o):
             raise TypeError(f"Value \"{o}\" is not allowed.")
         super().insert(i, self._transform_write(o))
@@ -205,7 +205,7 @@ class _TypeCheckedDict(dict[K, T]):
         return key
 
     @classmethod
-    def fromkeys(
+    def fromkeys(  # type: ignore
         cls,
         iterable: typing.Iterable[bool | int | float | str],
         value: T,
@@ -238,8 +238,8 @@ class _TypeCheckedDict(dict[K, T]):
                 f"Write to key \"{key}\" of"
                 + f" value \"{default}\" is not allowed.")
 
-        key, default = self._transform_write(key, default)
-        return super().setdefault(key, default)
+        key_, default_ = self._transform_write(key, default)
+        return super().setdefault(key_, default_)  # type: ignore
 
     @typing.override
     def update(self, *args: typing.Mapping[K, T], **kwargs: T):
@@ -265,23 +265,23 @@ class _TypeCheckedDict(dict[K, T]):
     def __delitem__(self, key: K):
         if not self._is_del_allowed(key):
             raise KeyError(f"Key \"{key}\" cannot be read.")
-        key = self._transform_del(key)
-        return super().__delitem__(key)
+        key_ = self._transform_del(key)
+        return super().__delitem__(key_)  # type: ignore
 
     def __getitem__(self, key: K) -> T:
         if not self._is_read_allowed(key):
             raise KeyError(f"Key \"{key}\" cannot be read.")
 
-        key = self._transform_read(key)
-        return super().__getitem__(key)
+        key_ = self._transform_read(key)
+        return super().__getitem__(key_)  # type: ignore
 
     def __setitem__(self, key: K, item: int | float | str | T):
         if not self._is_write_allowed(key, item):
             raise TypeError(
                 f"Write to key \"{key}\" of"
                 + f" value \"{item}\" is not allowed.")
-        key, item = self._transform_write(key, item)
-        super().__setitem__(key, item)
+        key_, item_ = self._transform_write(key, item)
+        super().__setitem__(key_, item_)  # type: ignore
 
 
 class Record(_TypeCheckedDict[str, T], Object):
