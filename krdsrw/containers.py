@@ -444,8 +444,8 @@ class Record(_TypeCheckedDict[str, T], Object):
         return f"{self.__class__.__name__}{str(d)}"
 
 
-class IntMap(_TypeCheckedDict[int, Bool | Char | Byte | Short | Int | Long
-                              | Float | Double | Utf8Str | Object], Object):
+# can contain Bool, Char, Byte, Short, Int, Long, Float, Double, Utf8Str, Object
+class IntMap(_TypeCheckedDict[int, typing.Any], Object):
     def __init__(self, idx_alias_name_spec: list[tuple[int, str, str, Spec]]):
         super().__init__()
 
@@ -542,8 +542,8 @@ class IntMap(_TypeCheckedDict[int, Bool | Char | Byte | Short | Int | Long
             self._idx_to_spec[idx].write(cursor, value, name)
 
 
-class DynamicMap(_TypeCheckedDict[str, Bool | Char | Byte | Short | Int | Long
-                                  | Float | Double | Utf8Str], Object):
+# can contain Bool, Char, Byte, Short, Int, Long, Float, Double, Utf8Str
+class DynamicMap(_TypeCheckedDict[str, typing.Any], Object):
     def __init__(self):
         super().__init__()
 
@@ -914,8 +914,8 @@ class TimeZoneOffset(Object):
         return { "offset": self._value }
 
 
-class DataStore(_TypeCheckedDict[str, Bool | Char | Byte | Short | Int | Long
-                                 | Float | Double | Utf8Str | Object], Object):
+# can contain Bool, Char, Byte, Short, Int, Long, Float, Double, Utf8Str, Object
+class DataStore(_TypeCheckedDict[str, typing.Any], Object):
     MAGIC_STR: typing.Final[bytes] = b"\x00\x00\x00\x00\x00\x1A\xB1\x26"
     FIXED_MYSTERY_NUM: typing.Final[int] = (
         1  # present after the signature; unknown what this number means
