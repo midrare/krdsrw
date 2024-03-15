@@ -1419,7 +1419,7 @@ class Utf8Str(str, Basic):
 
     @typing.override
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+        super().__init__()
         self.prefer_null: bool
 
     @typing.override
