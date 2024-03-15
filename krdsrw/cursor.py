@@ -1,4 +1,5 @@
 from __future__ import annotations
+import collections.abc
 import io
 import struct
 import typing
@@ -28,10 +29,14 @@ _OBJECT_END_INDICATOR: typing.Final[int] = 255
 
 
 class Cursor:
-    def __init__(self, data: None | typing.ByteString = None):
+    def __init__(self, data: None | typing.ByteString | typing.BinaryIO = None):
         self._saved_positions: typing.List[int] = []
-        self._data: io.BytesIO = (
-            io.BytesIO(bytes(data)) if data else io.BytesIO())
+        self._data: io.BytesIO = io.BytesIO()
+
+        if isinstance(data, io.BytesIO):
+            self._data = data
+        elif isinstance(data, collections.abc.ByteString):
+            self._data = io.BytesIO(data)
 
     def load(self, data: typing.ByteString):
         self._data = io.BytesIO(bytes(data))
