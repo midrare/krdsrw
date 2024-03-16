@@ -551,6 +551,8 @@ class IntMap(_TypeCheckedDict[int, typing.Any], Object):
     def _to_alias(self, idx: int, default: None | str = None) -> str:
         if default is None:
             default = ''
+        # we want to use string alias instead of raw int so that casting
+        # to plain dict retains human-readable key names
         for k, v in self._idx_to_alias.items():
             if idx == k:
                 return v
