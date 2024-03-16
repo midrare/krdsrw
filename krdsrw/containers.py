@@ -954,8 +954,195 @@ class TimeZoneOffset(Object):
         return { "offset": self._value }
 
 
+# fpr, updated_lpr
+PageReadPos = typing.TypedDict(
+    'PageReadPos', {
+        'pos': Position,
+        'timestamp': typing.NotRequired[DateTime],
+        'timezone_offset': typing.NotRequired[TimeZoneOffset],
+        'country': typing.NotRequired[Utf8Str],
+        'device': typing.NotRequired[Utf8Str],
+    })
+
+# apnx.key
+APNXKey = typing.TypedDict(
+    'APNXKey', {
+        'asin': Utf8Str,
+        'cde_type': Utf8Str,
+        'sidecar_available': Bool,
+        'opn_to_pos': Array[Int],
+        'first': Int,
+        'unknown1': Int,
+        'unknown2': Int,
+        'page_map': Utf8Str,
+    })
+
+# fixed.layout.data
+FixedLayoutData = typing.TypedDict(
+    'FixedLayoutData', {
+        'unknown1': Bool,
+        'unknonw2': Bool,
+        'unknown3': Bool,
+    })
+
+# sharing.limits
+SharingLimits = typing.TypedDict(
+    'SharingLimits',
+    {
+        'accumulated': NotImplemented,  # TODO structure for sharing.limits
+    })
+
+# language.store
+LanguageStore = typing.TypedDict(
+    'LanguageStore', {
+        'language': Utf8Str,
+        'unknown1': Int,
+    })
+
+# periodicals.view.state
+PeriodicalsViewState = typing.TypedDict(
+    'PeriodicalsViewState', {
+        'unknown1': Utf8Str,
+        'unknown2': Int,
+    })
+
+# purchase.state.data
+PurchaseStateData = typing.TypedDict(
+    'PurchaseStateData', {
+        'state': Int,
+        'time': DateTime,
+    })
+
+# timer.average.calculator.distribution.normal
+TimerAverageCalculatorDistributionNormal = typing.TypedDict(
+    'TimerAverageCalculatorDistributionNormal', {
+        'count': Long,
+        'sum': Double,
+        'sum_of_squares': Double,
+    })
+
+# timer.average.calculator.outliers
+TimerAverageCalculatorOutliers = Array[Double]
+
+# timer.model[average_calculator]
+TimerAverageCalculator = typing.TypedDict(
+    'TimerAverageCalculator',
+    {
+        'samples1': Array[Double],
+        'samples2': Array[Double],
+        'normal_distributions':
+        Array[TimerAverageCalculatorDistributionNormal],  # type: ignore
+        'outliers': Array[TimerAverageCalculatorOutliers],
+    })
+
+# timer.model
+TimerModel = typing.TypedDict(
+    'TimerModel', {
+        'version': Long,
+        'total_time': Long,
+        'total_words': Long,
+        'total_percent': Double,
+        'average_calculator': TimerAverageCalculator,
+    })
+
+# timer.data.store
+TimerDataStore = typing.TypedDict(
+    'TimerDataStore', {
+        'on': Bool,
+        'reading_timer_model': TimerModel,
+        'version': Int,
+    })
+
+# timer.data.store.v2
+TimerDataStoreV2 = typing.TypedDict(
+    'TimerDataStoreV2', {
+        'on': Bool,
+        'reading_timer_model': TimerModel,
+        'version': Int,
+        'last_option': Int,
+    })
+
+# book.info.store
+BookInfoStore = typing.TypedDict(
+    'BookInfoStore', {
+        'num_words': Long,
+        'percent_of_book': Double,
+    })
+
+# page.history.store (array element)
+PageHistoryStoreElement = typing.TypedDict(
+    'PageHistoryStoreElement', {
+        'pos': Position,
+        'time': DateTime,
+    })
+
+# font.prefs
+FontPrefs = typing.TypedDict(
+    'FontPrefs', {
+        'typeface': Utf8Str,
+        'line_sp': Int,
+        'size': Int,
+        'align': Int,
+        'inset_top': Int,
+        'inset_left': Int,
+        'inset_bottom': Int,
+        'inset_right': Int,
+        'unknown1': Int,
+        'bold': typing.NotRequired[Int],
+        'user_sideloadable_font': typing.NotRequired[Utf8Str],
+        'custom_font_index': typing.NotRequired[Int],
+        'mobi7_system_font': typing.NotRequired[Utf8Str],
+        'mobi7_restore_font': typing.NotRequired[Utf8Str],
+        'reading_preset_selected': typing.NotRequired[Utf8Str],
+    })
+
+# reader.state.preferences
+ReaderStatePreferences = typing.TypedDict(
+    'ReaderStatePreferences', {
+        'font_preferences': FontPrefs,
+        'left_margin': Int,
+        'right_margin': Int,
+        'top_margin': Int,
+        'bottom_margin': Int,
+        'unknown1': Bool,
+    })
+
+# annotation.personal.bookmark
+# annotation.personal.highlight
+# annotation.personal.note
+# annotation.personal.clip_article
+AnnotationPersonalElement = typing.TypedDict(
+    'AnnotationPersonalElement', {
+        'start_pos': Position,
+        'end_pos': Position,
+        'creation_time': DateTime,
+        'last_modification_time': DateTime,
+        'template': Utf8Str,
+        'note': typing.NotRequired[Utf8Str],
+    })
+
+# annotation.cache.object
+AnnotationCacheObject = typing.TypedDict(
+    'AnnotationCacheObject',
+    {
+        'bookmarks': Array[AnnotationPersonalElement],  # type: ignore
+        'highlights': Array[AnnotationPersonalElement],  # type: ignore
+        'notes': Array[AnnotationPersonalElement],  # type: ignore
+        'clip_articles': Array[AnnotationPersonalElement],  # type: ignore
+    })
+
+# whisperstore.migration.status
+WhisperstoreMigrationStatus = typing.TypedDict(
+    'WhisperstoreMigrationStatus', {
+        'unknown1': Bool,
+        'unknown2': Bool,
+    })
+
 # can contain Bool, Char, Byte, Short, Int, Long, Float, Double, Utf8Str, Object
-class DataStore(_TypeCheckedDict[str, typing.Any], Object):
+from .typehints import _SchemaDict
+
+
+class DataStore(_SchemaDict, Object):
     MAGIC_STR: typing.Final[bytes] = b"\x00\x00\x00\x00\x00\x1A\xB1\x26"
     FIXED_MYSTERY_NUM: typing.Final[int] = (
         1  # present after the signature; unknown what this number means
