@@ -314,6 +314,22 @@ class _TypeCheckedDict(dict[K, T]):
         key_, item_ = self._transform_write(key, item)
         super().__setitem__(key_, item_)  # type: ignore
 
+    @typing.override
+    def get(self, key: K, default: None | T = None) -> T:  # type: ignore
+        if not self._is_read_allowed(key):
+            raise KeyError(f"Key \"{key}\" cannot be read.")
+
+        key_ = self._transform_read(key)
+        return super().get(key_, default)  # type: ignore
+
+    @typing.override
+    def pop(self, key: K, default: None | T = None) -> T:  # type: ignore
+        if not self._is_read_allowed(key):
+            raise KeyError(f"Key \"{key}\" cannot be read.")
+
+        key_ = self._transform_read(key)
+        return super().pop(key_, default)  # type: ignore
+
 
 class Record(_TypeCheckedDict[str, T], Object):
     # Record can contain basics and other containers
