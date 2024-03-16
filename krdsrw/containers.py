@@ -171,6 +171,23 @@ class Array(_TypeCheckedList[T], Object):
     def elmt_name(self) -> str:
         return self._elmt_name
 
+    def make(self, *args, **kwargs) -> T:
+        if self._elmt_spec.is_basic() and (args or kwargs):
+            return self._elmt_spec.cast(*args, **kwargs)
+
+        result = self._elmt_spec.make()
+        if isinstance(result, dict) and (args or kwargs):
+            result.update(*args, **kwargs)
+        elif isinstance(result, list) and (args or kwargs):
+            result.extend(*args, **kwargs)
+
+        return result
+
+    def make_and_append(self, *args, **kwargs) -> T:
+        result = self.make(*args, **kwargs)
+        self.append(result)
+        return result
+
     @typing.override
     def _is_write_allowed(self, o: typing.Any) -> bool:
         return self._elmt_spec.is_castable(o)
