@@ -1,10 +1,15 @@
+import os
+import sys
+
 import pytest
 
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from krdsrw.cursor import Cursor
 from krdsrw.types import Int
 from krdsrw.types import Spec
 from krdsrw.containers import Array
 from krdsrw.containers import DynamicMap
+sys.path.pop(0)
 
 
 class TestSpec:
