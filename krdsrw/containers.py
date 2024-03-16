@@ -225,6 +225,7 @@ class _TypeCheckedDict(dict[K, T]):
     def _transform_del(self, key: typing.Any) -> bool | int | float | str | K:
         return key
 
+    @typing.override
     @classmethod
     def fromkeys(  # type: ignore
         cls,
@@ -278,21 +279,25 @@ class _TypeCheckedDict(dict[K, T]):
             d[key] = value
         super().update(d)
 
+    @typing.override
     def __eq__(self, o: typing.Any) -> bool:
         if isinstance(o, self.__class__):
             return dict(o) == dict(self)
         return super().__eq__(o)
 
+    @typing.override
     def __contains__(self, key: typing.Any) -> bool:
         key = self._transform_read(key)
         return super().__contains__(key)
 
+    @typing.override
     def __delitem__(self, key: K):
         if not self._is_del_allowed(key):
             raise KeyError(f"Key \"{key}\" cannot be read.")
         key_ = self._transform_del(key)
         return super().__delitem__(key_)  # type: ignore
 
+    @typing.override
     def __getitem__(self, key: K) -> T:
         if not self._is_read_allowed(key):
             raise KeyError(f"Key \"{key}\" cannot be read.")
@@ -300,6 +305,7 @@ class _TypeCheckedDict(dict[K, T]):
         key_ = self._transform_read(key)
         return super().__getitem__(key_)  # type: ignore
 
+    @typing.override
     def __setitem__(self, key: K, item: int | float | str | T):
         if not self._is_write_allowed(key, item):
             raise TypeError(
