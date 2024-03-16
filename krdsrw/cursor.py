@@ -35,7 +35,11 @@ class Cursor:
 
         if isinstance(data, io.BytesIO):
             self._data = data
-        elif isinstance(data, collections.abc.ByteString):
+        elif isinstance(data, (
+                collections.abc.Buffer,
+                collections.abc.Sequence,
+                collections.abc.MutableSequence,
+        )):
             self._data = io.BytesIO(data)
 
     def load(self, data: typing.ByteString):
