@@ -63,7 +63,7 @@ def _read_basic(cursor: Cursor) \
     return None
 
 
-class _TypeCheckedList(list[T]):
+class StrictList(list[T]):
     def __init__(self):
         super().__init__()
 
@@ -198,7 +198,7 @@ class _TypeCheckedList(list[T]):
         self._on_modified()
 
 
-class Array(_TypeCheckedList[T], Object):
+class Array(StrictList[T], Object):
     # Array can contain Basic and other containers
     def __init__(self, elmt_spec: Spec[T], elmt_name: None | str = None):
         super().__init__()
