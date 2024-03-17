@@ -524,9 +524,9 @@ def _main(argv: list[str]) -> int:
         f.write('\n')
         f.write('from .types import *\n')
         f.write('from .containers import *\n')
-        f.write('from .containers import _TypeCheckedDict\n')
+        f.write('from .containers import StrictDict\n')
         f.write('\n')
-        f.write('class _SchemaDict(_TypeCheckedDict[str, typing.Any]):\n')
+        f.write('class _SchemaDict(StrictDict[str, typing.Any]):\n')
 
         # NOTE if the schema map above is updated, this block should be too
         f.write(_make_dict_methods("typing.Literal['dictionary']", "Utf8Str"))

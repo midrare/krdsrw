@@ -253,7 +253,7 @@ class Array(StrictList[T], Object):
         return self._elmt_spec.cast(value)
 
 
-class _TypeCheckedDict(dict[K, T]):
+class StrictDict(dict[K, T]):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -387,7 +387,7 @@ class _TypeCheckedDict(dict[K, T]):
         return super().pop(key_, default)  # type: ignore
 
 
-class Record(_TypeCheckedDict[str, T], Object):
+class Record(StrictDict[str, T], Object):
     # Record can contain basics and other containers
     # keys are just arbitrary aliases for convenience. values are
     # hardcoded and knowing what value is where is determined by
@@ -538,7 +538,7 @@ class Record(_TypeCheckedDict[str, T], Object):
 
 
 # can contain Bool, Char, Byte, Short, Int, Long, Float, Double, Utf8Str, Object
-class IntMap(_TypeCheckedDict[str, typing.Any], Object):
+class IntMap(StrictDict[str, typing.Any], Object):
     def __init__(self, idx_alias_name_spec: list[tuple[int, str, str, Spec]]):
         super().__init__()
 
@@ -644,7 +644,7 @@ class IntMap(_TypeCheckedDict[str, typing.Any], Object):
 
 
 # can contain Bool, Char, Byte, Short, Int, Long, Float, Double, Utf8Str
-class DynamicMap(_TypeCheckedDict[str, typing.Any], Object):
+class DynamicMap(StrictDict[str, typing.Any], Object):
     def __init__(self):
         super().__init__()
 

@@ -7,9 +7,9 @@ import typing
 
 from .types import *
 from .containers import *
-from .containers import _TypeCheckedDict
+from .containers import StrictDict
 
-class _SchemaDict(_TypeCheckedDict[str, typing.Any]):
+class _SchemaDict(StrictDict[str, typing.Any]):
 
 
 
