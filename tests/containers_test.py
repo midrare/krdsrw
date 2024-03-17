@@ -3,7 +3,8 @@ import sys
 
 import pytest
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.insert(0, os.path.abspath(\
+    os.path.join(os.path.dirname(__file__), '..')))
 from krdsrw.cursor import Cursor
 from krdsrw.types import Int
 from krdsrw.types import Spec
