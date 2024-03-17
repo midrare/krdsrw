@@ -1,10 +1,13 @@
 from __future__ import annotations
+import abc
 import base64
 import collections
 import collections.abc
 import copy
 import json
 import typing
+
+from . import schemas
 
 from .cursor import Cursor
 from .error import UnexpectedBytesError
@@ -1160,6 +1163,40 @@ class DataStore(_SchemaDict, Object):
 
     def __init__(self):
         super().__init__()
+
+    @typing.override
+    def _is_read_allowed(self, key: typing.Any) -> bool:
+        return key in self.keys() or schemas.get_spec_by_name(key) is not None
+
+    @typing.override
+    def _is_write_allowed(self, key: typing.Any, value: typing.Any) -> bool:
+        return key in self.keys() or schemas.get_spec_by_name(key) is not None
+
+    @typing.override
+    def _is_del_allowed(self, key: typing.Any) -> bool:
+        return key in self.keys() or schemas.get_spec_by_name(key) is not None
+
+    @typing.override
+    def _pre_read(self, key: typing.Any) -> bool | int | float | str:
+        spec = schemas.get_spec_by_name(key)
+        assert spec, 'spec should not be null'
+        if key not in self.keys():
+            self[key] = spec.make()
+        return key
+
+    @typing.override
+    def _pre_write(
+        self,
+        key: typing.Any,
+        value: typing.Any,
+    ) -> tuple[bool | int | float | str, Bool | Char | Byte | Short | Int
+               | Long | Float | Double
+               | Utf8Str | Object]:
+        return key, value
+
+    @typing.override
+    def _pre_del(self, key: typing.Any) -> bool | int | float | str:
+        return key
 
     @classmethod
     def _eat_signature_or_error(cls, cursor: Cursor):
