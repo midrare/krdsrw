@@ -94,26 +94,31 @@ class _TypeCheckedList(list[T]):
 
     @typing.override
     def __setitem__(
-        if not isinstance(i, slice):
-            if not self._allow_write(o):
-                raise TypeError(f"Value \"{o}\" is not allowed.")
-            o = self._pre_write(o)
-            super().__setitem__(i, o)
-            self._post_write(o)
-        else:
-            assert isinstance(o, collections.abc.Iterable)
-            o = list(o)  # type: ignore
-            for e in o:
         self,
         i: typing.SupportsIndex | slice,
         o: bool | int | float | str | bytes | T | \
         typing.Iterable[bool | int | float | str | bytes | T],
     ):
+        if isinstance(i, slice):
+            assert isinstance(o, collections.abc.Iterable), 'impossible.'
+
+            transformed = list(o)
+            for e in transformed:
                 if not self._allow_write(e):
                     raise TypeError(f"Value \"{e}\" is not allowed.")
-            o = [self._pre_write(e) for e in o]
-            super().__setitem__(i, o)
-            self._post_write(o)
+
+            transformed = [self._pre_write(e) for e in transformed]
+            super().__setitem__(i, transformed)
+
+            for e in transformed:
+                self._post_write(e)
+        else:
+            if not self._allow_write(o):
+                raise TypeError(f"Value \"{o}\" is not allowed.")
+
+            transformed = self._pre_write(o)
+            super().__setitem__(i, transformed)
+            self._post_write(transformed)
 
     @typing.override
     def __add__(  # type: ignore
@@ -137,17 +142,19 @@ class _TypeCheckedList(list[T]):
     def append(self, o: int | float | str | T):
         if not self._allow_write(o):
             raise TypeError(f"Value \"{o}\" is not allowed.")
-        o = self._pre_write(o)
-        super().append(o)
-        self._post_write(o)
+
+        transformed = self._pre_write(o)
+        super().append(transformed)
+        self._post_write(transformed)
 
     @typing.override
     def insert(self, i: typing.SupportsIndex, o: int | float | str | T):
         if not self._allow_write(o):
             raise TypeError(f"Value \"{o}\" is not allowed.")
-        o = self._pre_write(o)
-        super().insert(i, o)
-        self._post_write(o)
+
+        transformed = self._pre_write(o)
+        super().insert(i, transformed)
+        self._post_write(transformed)
 
     @typing.override
     def copy(self) -> typing.Self:
@@ -159,6 +166,7 @@ class _TypeCheckedList(list[T]):
         for e in other:
             if not self._allow_write(e):
                 raise TypeError(f"Value \"{e}\" is not allowed.")
+
         transformed = list(self._pre_write(e) for e in other)
         super().extend(transformed)
         self._post_write(transformed)
