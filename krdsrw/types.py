@@ -1,3 +1,4 @@
+import abc
 import inspect
 import struct
 import typing
@@ -16,9 +17,11 @@ class Basic(Value):
     magic_byte: int = NotImplemented
 
     @classmethod
+    @abc.abstractmethod
     def create(cls, cursor: Cursor, magic_byte: bool = True) -> typing.Self:
         raise NotImplementedError("Must be implemented by the subclass.")
 
+    @abc.abstractmethod
     def write(self, cursor: Cursor, magic_byte: bool = True):
         raise NotImplementedError("Must be implemented by the subclass.")
 
@@ -43,6 +46,7 @@ class Basic(Value):
             cursor.write(magic_byte)
         cursor.write(struct.pack(fmt, o))
 
+    @abc.abstractmethod
     def to_bytes(self) -> bytes:
         raise NotImplementedError("Must be implemented by the subclass.")
 
@@ -1509,12 +1513,15 @@ ALL_BASIC_TYPES: typing.Final[tuple[type, ...]] = (
 
 
 class Object(Value):
+    @abc.abstractmethod
     def read(self, cursor: Cursor):
         raise NotImplementedError("Must be implemented by the subclass.")
 
+    @abc.abstractmethod
     def write(self, cursor: Cursor):
         raise NotImplementedError("Must be implemented by the subclass.")
 
+    @abc.abstractmethod
     def __eq__(self, other: object) -> bool:
         raise NotImplementedError("Must be implemented by the subclass.")
 
