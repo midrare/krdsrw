@@ -74,7 +74,7 @@ class _TypeCheckedList(list[T]):
         return value
 
     def _post_write(self, value: T | typing.Iterable[T]):
-        return
+        pass
 
     @typing.overload
     def __setitem__(self, i: typing.SupportsIndex, o: int | float | str | T):
