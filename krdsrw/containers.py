@@ -174,6 +174,18 @@ class _TypeCheckedList(list[T]):
     def count(self, o: bool | int | float | str | T) -> int:
         return super().count(o)  # type: ignore
 
+    @typing.override
+    def pop(self, idx: typing.SupportsIndex = -1) -> T:
+        return super().pop(idx)
+
+    @typing.override
+    def remove(self, value: T):
+        super().remove(value)
+
+    @typing.override
+    def clear(self):
+        super().clear()
+
 
 class Array(_TypeCheckedList[T], Object):
     # Array can contain Basic and other containers
