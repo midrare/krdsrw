@@ -1521,10 +1521,6 @@ class Object(Value):
     def write(self, cursor: Cursor):
         raise NotImplementedError("Must be implemented by the subclass.")
 
-    @abc.abstractmethod
-    def __eq__(self, other: object) -> bool:
-        raise NotImplementedError("Must be implemented by the subclass.")
-
 
 T = typing.TypeVar("T", bound=Byte | Char | Bool | Short | Int | Long \
     | Float | Double | Utf8Str | Object)
