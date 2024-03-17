@@ -67,11 +67,14 @@ class _TypeCheckedList(list[T]):
     def __init__(self):
         super().__init__()
 
-    def _is_write_allowed(self, o: typing.Any) -> bool:
+    def _is_write_allowed(self, value: typing.Any) -> bool:
         return True
 
-    def _pre_write(self, o: typing.Any) -> T:
-        return o
+    def _pre_write(self, value: typing.Any) -> T:
+        return value
+
+    def _post_write(self, value: T | typing.Iterable[T]):
+        return
 
     @typing.overload
     def __setitem__(self, i: typing.SupportsIndex, o: int | float | str | T):
@@ -94,6 +97,7 @@ class _TypeCheckedList(list[T]):
                 raise TypeError(f"Value \"{o}\" is not allowed.")
             o = self._pre_write(o)
             super().__setitem__(i, o)
+            self._post_write(o)
         else:
             assert isinstance(o, collections.abc.Iterable)
             o = list(o)  # type: ignore
@@ -102,6 +106,7 @@ class _TypeCheckedList(list[T]):
                     raise TypeError(f"Value \"{e}\" is not allowed.")
             o = [self._pre_write(e) for e in o]
             super().__setitem__(i, o)
+            self._post_write(o)
 
     @typing.override
     def __add__(  # type: ignore
@@ -128,13 +133,17 @@ class _TypeCheckedList(list[T]):
     def append(self, o: int | float | str | T):
         if not self._is_write_allowed(o):
             raise TypeError(f"Value \"{o}\" is not allowed.")
-        super().append(self._pre_write(o))
+        o = self._pre_write(o)
+        super().append(o)
+        self._post_write(o)
 
     @typing.override
     def insert(self, i: typing.SupportsIndex, o: int | float | str | T):
         if not self._is_write_allowed(o):
             raise TypeError(f"Value \"{o}\" is not allowed.")
-        super().insert(i, self._pre_write(o))
+        o = self._pre_write(o)
+        super().insert(i, o)
+        self._post_write(o)
 
     @typing.override
     def copy(self) -> typing.Self:
@@ -146,7 +155,9 @@ class _TypeCheckedList(list[T]):
         for e in other:
             if not self._is_write_allowed(e):
                 raise TypeError(f"Value \"{e}\" is not allowed.")
-        super().extend(self._pre_write(e) for e in other)
+        transformed = list(self._pre_write(e) for e in other)
+        super().extend(transformed)
+        self._post_write(transformed)
 
     @typing.override
     def count(self, o: bool | int | float | str | T) -> int:
@@ -200,12 +211,12 @@ class Array(_TypeCheckedList[T], Object):
         return result
 
     @typing.override
-    def _is_write_allowed(self, o: typing.Any) -> bool:
-        return self._elmt_spec.is_castable(o)
+    def _is_write_allowed(self, value: typing.Any) -> bool:
+        return self._elmt_spec.is_castable(value)
 
     @typing.override
-    def _pre_write(self, o: typing.Any) -> T:
-        return self._elmt_spec.cast(o)
+    def _pre_write(self, value: typing.Any) -> T:
+        return self._elmt_spec.cast(value)
 
 
 class _TypeCheckedDict(dict[K, T]):
