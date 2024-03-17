@@ -122,13 +122,11 @@ class _TypeCheckedList(list[T]):
 
     @typing.override
     def __add__(  # type: ignore
-            self, other: list[int | float | str | T]) -> typing.Self:
-        other = list(other)
-        for e in other:
-            if not self._allow_write(e):
-                raise TypeError(f"Value \"{e}\" is not allowed.")
+        self,
+        other: typing.Sequence[int | float | str | T],
+    ) -> typing.Self:
         o = self.copy()
-        o.extend(other)
+        o.extend(other)  # hooks triggered in extend()
         return o
 
     @typing.override
@@ -136,6 +134,7 @@ class _TypeCheckedList(list[T]):
         self,
         other: typing.Iterable[int | float | str | T],
     ) -> typing.Self:
+        self.extend(other)  # hooks triggered in extend()
         return self
 
     @typing.override
