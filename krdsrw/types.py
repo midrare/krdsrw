@@ -12,7 +12,7 @@ class Value:
     pass
 
 
-class Basic(Value):
+class Basic(Value, metaclass=abc.ABCMeta):
     builtin: type[int | float | str] = NotImplemented  # type: ignore
     magic_byte: int = NotImplemented
 
@@ -1512,7 +1512,7 @@ ALL_BASIC_TYPES: typing.Final[tuple[type, ...]] = (
 )
 
 
-class Object(Value):
+class Object(Value, metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def read(self, cursor: Cursor):
         raise NotImplementedError("Must be implemented by the subclass.")
