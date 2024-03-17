@@ -482,7 +482,7 @@ class Record(_TypeCheckedDict[str, T], Object):
 
 
 # can contain Bool, Char, Byte, Short, Int, Long, Float, Double, Utf8Str, Object
-class IntMap(_TypeCheckedDict[int, typing.Any], Object):
+class IntMap(_TypeCheckedDict[str, typing.Any], Object):
     def __init__(self, idx_alias_name_spec: list[tuple[int, str, str, Spec]]):
         super().__init__()
 
@@ -495,8 +495,8 @@ class IntMap(_TypeCheckedDict[int, typing.Any], Object):
             self._idx_to_name[idx] = name
             self._idx_to_spec[idx] = spec
 
-        for idx, _, _, spec in idx_alias_name_spec:
-            self[idx] = spec.make()
+        for idx, alias, name, spec in idx_alias_name_spec:
+            self[alias] = spec.make()
 
     @typing.override
     def _is_read_allowed(self, key: typing.Any) -> bool:
@@ -533,29 +533,35 @@ class IntMap(_TypeCheckedDict[int, typing.Any], Object):
         self, key: typing.Any, value: typing.Any
     ) -> tuple[int | str, Bool | Char | Byte | Short | Int | Long | Float
                | Double | Utf8Str | Object]:
-        return self._to_alias(key, key), value
+        return self._to_alias(key), value
 
     @typing.override
-        return self._to_alias(key, key)
     def _pre_del(self, key: typing.Any) -> int | str:
+        return self._to_alias(key)
 
-    def _to_idx(self, alias: str, default: None | int = None) -> int:
-        if default is None:
-            default = -1
+    def _to_idx(self, alias: int | str) -> int:
+        if isinstance(alias, int):
+            return alias
+
         for k, v in self._idx_to_alias.items():
             if v == alias:
                 return k
-        return default
 
-    def _to_alias(self, idx: int, default: None | str = None) -> str:
-        if default is None:
-            default = ''
+        raise ValueError(
+            f"Human-readable alias \"{alias}\" has no associated index.")
+
+    def _to_alias(self, idx: int | str) -> str:
+        if isinstance(idx, str):
+            return idx
+
         # we want to use string alias instead of raw int so that casting
         # to plain dict retains human-readable key names
         for k, v in self._idx_to_alias.items():
             if idx == k:
                 return v
-        return default
+
+        raise ValueError(
+            f"Index \"{idx}\" has no associated human-readable alias.")
 
     @typing.override
     def read(self, cursor: Cursor):
@@ -569,14 +575,14 @@ class IntMap(_TypeCheckedDict[int, typing.Any], Object):
                 raise UnexpectedStructureError(
                     f"Object index number {idxnum} not recognized")
             name = self._idx_to_name[idxnum]
-            self[idxnum] = self._idx_to_spec[idxnum].read(cursor, name)
+            self[name] = self._idx_to_spec[idxnum].read(cursor, name)
 
     @typing.override
     def write(self, cursor: Cursor):
         cursor.write_int(len(self))
 
-        for idx, value in self.items():
-            name = self._idx_to_name[idx]
+        for name, value in self.items():
+            idx = self._to_idx(name)
             cursor.write_int(idx)
             self._idx_to_spec[idx].write(cursor, value, name)
 
