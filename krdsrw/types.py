@@ -1643,6 +1643,3 @@ class Spec(typing.Generic[T]):
             return o2
 
         return self._cls(o, *self._args, **self._kwargs)
-
-    def default(self) -> T:
-        return self._cls()
