@@ -77,7 +77,11 @@ class _TypeCheckedList(list[T]):
         pass
 
     @typing.overload
-    def __setitem__(self, i: typing.SupportsIndex, o: int | float | str | T):
+    def __setitem__(
+        self,
+        i: typing.SupportsIndex,
+        o: int | float | str | T,
+    ):
         ...
 
     @typing.overload
@@ -90,8 +94,6 @@ class _TypeCheckedList(list[T]):
 
     @typing.override
     def __setitem__(
-            self, i: typing.SupportsIndex | slice, o: int | float | str
-        | T | typing.Iterable[int | float | str | T]):
         if not isinstance(i, slice):
             if not self._allow_write(o):
                 raise TypeError(f"Value \"{o}\" is not allowed.")
@@ -102,6 +104,11 @@ class _TypeCheckedList(list[T]):
             assert isinstance(o, collections.abc.Iterable)
             o = list(o)  # type: ignore
             for e in o:
+        self,
+        i: typing.SupportsIndex | slice,
+        o: bool | int | float | str | bytes | T | \
+        typing.Iterable[bool | int | float | str | bytes | T],
+    ):
                 if not self._allow_write(e):
                     raise TypeError(f"Value \"{e}\" is not allowed.")
             o = [self._pre_write(e) for e in o]
@@ -121,12 +128,9 @@ class _TypeCheckedList(list[T]):
 
     @typing.override
     def __iadd__(
-            self, other: typing.Iterable[int | float | str | T]) -> typing.Self:
-        other = list(other)
-        for e in other:
-            if not self._allow_write(e):
-                raise TypeError(f"Value \"{e}\" is not allowed.")
-        self.extend(other)
+        self,
+        other: typing.Iterable[int | float | str | T],
+    ) -> typing.Self:
         return self
 
     @typing.override
