@@ -67,7 +67,7 @@ class _TypeCheckedList(list[T]):
     def _is_write_allowed(self, o: typing.Any) -> bool:
         return True
 
-    def _transform_write(self, o: typing.Any) -> T:
+    def _pre_write(self, o: typing.Any) -> T:
         return o
 
     @typing.overload
@@ -88,7 +88,7 @@ class _TypeCheckedList(list[T]):
         if not isinstance(i, slice):
             if not self._is_write_allowed(o):
                 raise TypeError(f"Value \"{o}\" is not allowed.")
-            o = self._transform_write(o)
+            o = self._pre_write(o)
             super().__setitem__(i, o)
         else:
             assert isinstance(o, collections.abc.Iterable)
@@ -96,7 +96,7 @@ class _TypeCheckedList(list[T]):
             for e in o:
                 if not self._is_write_allowed(e):
                     raise TypeError(f"Value \"{e}\" is not allowed.")
-            o = [self._transform_write(e) for e in o]
+            o = [self._pre_write(e) for e in o]
             super().__setitem__(i, o)
 
     def __add__(  # type: ignore
@@ -106,7 +106,7 @@ class _TypeCheckedList(list[T]):
             if not self._is_write_allowed(e):
                 raise TypeError(f"Value \"{e}\" is not allowed.")
         o = self.copy()
-        o.extend(self._transform_write(e) for e in other)
+        o.extend(self._pre_write(e) for e in other)
         return o
 
     def __iadd__(
@@ -115,18 +115,18 @@ class _TypeCheckedList(list[T]):
         for e in other:
             if not self._is_write_allowed(e):
                 raise TypeError(f"Value \"{e}\" is not allowed.")
-        self.extend(self._transform_write(e) for e in other)
+        self.extend(self._pre_write(e) for e in other)
         return self
 
     def append(self, o: int | float | str | T):
         if not self._is_write_allowed(o):
             raise TypeError(f"Value \"{o}\" is not allowed.")
-        super().append(self._transform_write(o))
+        super().append(self._pre_write(o))
 
     def insert(self, i: typing.SupportsIndex, o: int | float | str | T):
         if not self._is_write_allowed(o):
             raise TypeError(f"Value \"{o}\" is not allowed.")
-        super().insert(i, self._transform_write(o))
+        super().insert(i, self._pre_write(o))
 
     def copy(self) -> typing.Self:
         return copy.copy(self)
@@ -136,7 +136,7 @@ class _TypeCheckedList(list[T]):
         for e in other:
             if not self._is_write_allowed(e):
                 raise TypeError(f"Value \"{e}\" is not allowed.")
-        super().extend(self._transform_write(e) for e in other)
+        super().extend(self._pre_write(e) for e in other)
 
     def count(self, o: bool | int | float | str | T) -> int:
         return super().count(o)  # type: ignore
@@ -193,7 +193,7 @@ class Array(_TypeCheckedList[T], Object):
         return self._elmt_spec.is_castable(o)
 
     @typing.override
-    def _transform_write(self, o: typing.Any) -> T:
+    def _pre_write(self, o: typing.Any) -> T:
         return self._elmt_spec.cast(o)
 
 
@@ -210,10 +210,10 @@ class _TypeCheckedDict(dict[K, T]):
     def _is_del_allowed(self, key: typing.Any) -> bool:
         return True
 
-    def _transform_read(self, key: typing.Any) -> bool | int | float | str | K:
+    def _pre_read(self, key: typing.Any) -> bool | int | float | str | K:
         return key
 
-    def _transform_write(
+    def _pre_write(
         self,
         key: typing.Any,
         value: typing.Any,
@@ -222,7 +222,7 @@ class _TypeCheckedDict(dict[K, T]):
                | Utf8Str | Object | T]:
         return key, value
 
-    def _transform_del(self, key: typing.Any) -> bool | int | float | str | K:
+    def _pre_del(self, key: typing.Any) -> bool | int | float | str | K:
         return key
 
     @typing.override
@@ -260,7 +260,7 @@ class _TypeCheckedDict(dict[K, T]):
                 f"Write to key \"{key}\" of"
                 + f" value \"{default}\" is not allowed.")
 
-        key_, default_ = self._transform_write(key, default)
+        key_, default_ = self._pre_write(key, default)
         return super().setdefault(key_, default_)  # type: ignore
 
     @typing.override
@@ -275,7 +275,7 @@ class _TypeCheckedDict(dict[K, T]):
                 raise TypeError(
                     f"Write to key \"{key}\" of"
                     + f" value \"{value}\" is not allowed.")
-            key, value = self._transform_write(key, value)
+            key, value = self._pre_write(key, value)
             d[key] = value
         super().update(d)
 
@@ -287,14 +287,14 @@ class _TypeCheckedDict(dict[K, T]):
 
     @typing.override
     def __contains__(self, key: typing.Any) -> bool:
-        key = self._transform_read(key)
+        key = self._pre_read(key)
         return super().__contains__(key)
 
     @typing.override
     def __delitem__(self, key: K):
         if not self._is_del_allowed(key):
             raise KeyError(f"Key \"{key}\" cannot be read.")
-        key_ = self._transform_del(key)
+        key_ = self._pre_del(key)
         return super().__delitem__(key_)  # type: ignore
 
     @typing.override
@@ -302,7 +302,7 @@ class _TypeCheckedDict(dict[K, T]):
         if not self._is_read_allowed(key):
             raise KeyError(f"Key \"{key}\" cannot be read.")
 
-        key_ = self._transform_read(key)
+        key_ = self._pre_read(key)
         return super().__getitem__(key_)  # type: ignore
 
     @typing.override
@@ -311,7 +311,7 @@ class _TypeCheckedDict(dict[K, T]):
             raise TypeError(
                 f"Write to key \"{key}\" of"
                 + f" value \"{item}\" is not allowed.")
-        key_, item_ = self._transform_write(key, item)
+        key_, item_ = self._pre_write(key, item)
         super().__setitem__(key_, item_)  # type: ignore
 
     @typing.override
@@ -319,7 +319,7 @@ class _TypeCheckedDict(dict[K, T]):
         if not self._is_read_allowed(key):
             raise KeyError(f"Key \"{key}\" cannot be read.")
 
-        key_ = self._transform_read(key)
+        key_ = self._pre_read(key)
         return super().get(key_, default)  # type: ignore
 
     @typing.override
@@ -327,7 +327,7 @@ class _TypeCheckedDict(dict[K, T]):
         if not self._is_read_allowed(key):
             raise KeyError(f"Key \"{key}\" cannot be read.")
 
-        key_ = self._transform_read(key)
+        key_ = self._pre_read(key)
         return super().pop(key_, default)  # type: ignore
 
 
@@ -390,12 +390,11 @@ class Record(_TypeCheckedDict[str, T], Object):
         return key not in self._required_spec
 
     @typing.override
-    def _transform_read(self, key: typing.Any) -> str:
+    def _pre_read(self, key: typing.Any) -> str:
         return key
 
     @typing.override
-    def _transform_write(self, key: typing.Any,
-                         value: typing.Any) -> tuple[str, T]:
+    def _pre_write(self, key: typing.Any, value: typing.Any) -> tuple[str, T]:
         if value is None:
             maker = self._required_spec.get(key) or self._optional_spec.get(key)
             if not maker:
@@ -404,7 +403,7 @@ class Record(_TypeCheckedDict[str, T], Object):
         return key, value
 
     @typing.override
-    def _transform_del(self, key: typing.Any) -> str:
+    def _pre_del(self, key: typing.Any) -> str:
         return key
 
     @property
@@ -526,19 +525,19 @@ class IntMap(_TypeCheckedDict[int, typing.Any], Object):
         return True
 
     @typing.override
-    def _transform_read(self, key: typing.Any) -> int | str:
-        return self._to_alias(key, key)
+    def _pre_read(self, key: typing.Any) -> int | str:
+        return self._to_alias(key)
 
     @typing.override
-    def _transform_write(
+    def _pre_write(
         self, key: typing.Any, value: typing.Any
     ) -> tuple[int | str, Bool | Char | Byte | Short | Int | Long | Float
                | Double | Utf8Str | Object]:
         return self._to_alias(key, key), value
 
     @typing.override
-    def _transform_del(self, key: typing.Any) -> int | str:
         return self._to_alias(key, key)
+    def _pre_del(self, key: typing.Any) -> int | str:
 
     def _to_idx(self, alias: str, default: None | int = None) -> int:
         if default is None:
@@ -600,18 +599,18 @@ class DynamicMap(_TypeCheckedDict[str, typing.Any], Object):
         return True
 
     @typing.override
-    def _transform_read(self, key: typing.Any) -> str:
+    def _pre_read(self, key: typing.Any) -> str:
         return key
 
     @typing.override
-    def _transform_write(
+    def _pre_write(
         self, key: typing.Any, value: typing.Any
     ) -> tuple[str, Bool | Char | Byte | Short | Int | Long | Float | Double
                | Utf8Str | Object]:
         return key, value
 
     @typing.override
-    def _transform_del(self, key: typing.Any) -> str:
+    def _pre_del(self, key: typing.Any) -> str:
         return key
 
     @typing.override
