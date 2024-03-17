@@ -67,7 +67,7 @@ class _TypeCheckedList(list[T]):
     def __init__(self):
         super().__init__()
 
-    def _is_write_allowed(self, value: typing.Any) -> bool:
+    def _allow_write(self, value: typing.Any) -> bool:
         return True
 
     def _pre_write(self, value: typing.Any) -> T:
@@ -93,7 +93,7 @@ class _TypeCheckedList(list[T]):
             self, i: typing.SupportsIndex | slice, o: int | float | str
         | T | typing.Iterable[int | float | str | T]):
         if not isinstance(i, slice):
-            if not self._is_write_allowed(o):
+            if not self._allow_write(o):
                 raise TypeError(f"Value \"{o}\" is not allowed.")
             o = self._pre_write(o)
             super().__setitem__(i, o)
@@ -102,7 +102,7 @@ class _TypeCheckedList(list[T]):
             assert isinstance(o, collections.abc.Iterable)
             o = list(o)  # type: ignore
             for e in o:
-                if not self._is_write_allowed(e):
+                if not self._allow_write(e):
                     raise TypeError(f"Value \"{e}\" is not allowed.")
             o = [self._pre_write(e) for e in o]
             super().__setitem__(i, o)
@@ -113,7 +113,7 @@ class _TypeCheckedList(list[T]):
             self, other: list[int | float | str | T]) -> typing.Self:
         other = list(other)
         for e in other:
-            if not self._is_write_allowed(e):
+            if not self._allow_write(e):
                 raise TypeError(f"Value \"{e}\" is not allowed.")
         o = self.copy()
         o.extend(other)
@@ -124,14 +124,14 @@ class _TypeCheckedList(list[T]):
             self, other: typing.Iterable[int | float | str | T]) -> typing.Self:
         other = list(other)
         for e in other:
-            if not self._is_write_allowed(e):
+            if not self._allow_write(e):
                 raise TypeError(f"Value \"{e}\" is not allowed.")
         self.extend(other)
         return self
 
     @typing.override
     def append(self, o: int | float | str | T):
-        if not self._is_write_allowed(o):
+        if not self._allow_write(o):
             raise TypeError(f"Value \"{o}\" is not allowed.")
         o = self._pre_write(o)
         super().append(o)
@@ -139,7 +139,7 @@ class _TypeCheckedList(list[T]):
 
     @typing.override
     def insert(self, i: typing.SupportsIndex, o: int | float | str | T):
-        if not self._is_write_allowed(o):
+        if not self._allow_write(o):
             raise TypeError(f"Value \"{o}\" is not allowed.")
         o = self._pre_write(o)
         super().insert(i, o)
@@ -153,7 +153,7 @@ class _TypeCheckedList(list[T]):
     def extend(self, other: typing.Iterable[int | float | str | T]):
         other = list(other)
         for e in other:
-            if not self._is_write_allowed(e):
+            if not self._allow_write(e):
                 raise TypeError(f"Value \"{e}\" is not allowed.")
         transformed = list(self._pre_write(e) for e in other)
         super().extend(transformed)
@@ -211,7 +211,7 @@ class Array(_TypeCheckedList[T], Object):
         return result
 
     @typing.override
-    def _is_write_allowed(self, value: typing.Any) -> bool:
+    def _allow_write(self, value: typing.Any) -> bool:
         return self._elmt_spec.is_castable(value)
 
     @typing.override
@@ -226,7 +226,7 @@ class _TypeCheckedDict(dict[K, T]):
     def _is_read_allowed(self, key: typing.Any) -> bool:
         return True
 
-    def _is_write_allowed(self, key: typing.Any, value: typing.Any) -> bool:
+    def _allow_write(self, key: typing.Any, value: typing.Any) -> bool:
         return True
 
     def _is_del_allowed(self, key: typing.Any) -> bool:
@@ -277,7 +277,7 @@ class _TypeCheckedDict(dict[K, T]):
 
     @typing.override
     def setdefault(self, key: K, default: None | T = None) -> T:
-        if not self._is_write_allowed(key, default):
+        if not self._allow_write(key, default):
             raise TypeError(
                 f"Write to key \"{key}\" of"
                 + f" value \"{default}\" is not allowed.")
@@ -293,7 +293,7 @@ class _TypeCheckedDict(dict[K, T]):
     ):
         d = dict()
         for key, value in dict(*args, **kwargs).items():
-            if not self._is_write_allowed(key, value):
+            if not self._allow_write(key, value):
                 raise TypeError(
                     f"Write to key \"{key}\" of"
                     + f" value \"{value}\" is not allowed.")
@@ -329,7 +329,7 @@ class _TypeCheckedDict(dict[K, T]):
 
     @typing.override
     def __setitem__(self, key: K, item: int | float | str | T):
-        if not self._is_write_allowed(key, item):
+        if not self._allow_write(key, item):
             raise TypeError(
                 f"Write to key \"{key}\" of"
                 + f" value \"{item}\" is not allowed.")
@@ -399,7 +399,7 @@ class Record(_TypeCheckedDict[str, T], Object):
         return key in self._required_spec or key in self._optional_spec
 
     @typing.override
-    def _is_write_allowed(self, key: typing.Any, value: typing.Any) -> bool:
+    def _allow_write(self, key: typing.Any, value: typing.Any) -> bool:
         if not isinstance(key, str):
             return False
         maker = self._required_spec.get(key) or self._optional_spec.get(key)
@@ -532,7 +532,7 @@ class IntMap(_TypeCheckedDict[str, typing.Any], Object):
         return False
 
     @typing.override
-    def _is_write_allowed(self, key: typing.Any, value: typing.Any) -> bool:
+    def _allow_write(self, key: typing.Any, value: typing.Any) -> bool:
         if key not in list(self._idx_to_spec.keys()) \
                 + list(self._idx_to_name.keys()) \
                 + list(self._idx_to_alias.keys()) \
@@ -619,7 +619,7 @@ class DynamicMap(_TypeCheckedDict[str, typing.Any], Object):
         return isinstance(key, str)
 
     @typing.override
-    def _is_write_allowed(self, key: typing.Any, value: typing.Any) -> bool:
+    def _allow_write(self, key: typing.Any, value: typing.Any) -> bool:
         return isinstance(key, str) and isinstance(value, Basic)
 
     @typing.override
@@ -1188,7 +1188,7 @@ class DataStore(_SchemaDict, Object):
         return key in self.keys() or schemas.get_spec_by_name(key) is not None
 
     @typing.override
-    def _is_write_allowed(self, key: typing.Any, value: typing.Any) -> bool:
+    def _allow_write(self, key: typing.Any, value: typing.Any) -> bool:
         return key in self.keys() or schemas.get_spec_by_name(key) is not None
 
     @typing.override
