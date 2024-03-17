@@ -67,13 +67,13 @@ class _TypeCheckedList(list[T]):
     def __init__(self):
         super().__init__()
 
-    def _allow_write(self, value: typing.Any) -> bool:
+    def _allow(self, value: typing.Any) -> bool:
         return True
 
-    def _pre_write(self, value: typing.Any) -> T:
+    def _transform(self, value: typing.Any) -> T:
         return value
 
-    def _post_write(self, value: T | typing.Iterable[T]):
+    def _on_modified(self):
         pass
 
     @typing.overload
@@ -100,60 +100,68 @@ class _TypeCheckedList(list[T]):
         typing.Iterable[bool | int | float | str | bytes | T],
     ):
         if isinstance(i, slice):
-            assert isinstance(o, collections.abc.Iterable), 'impossible.'
+            assert isinstance(o, collections.abc.Iterable),\
+                'when index is slice the value must be iterable'
 
-            transformed = list(o)
-            for e in transformed:
-                if not self._allow_write(e):
+            o = list(o)
+            for e in o:
+                if not self._allow(e):
                     raise TypeError(f"Value \"{e}\" is not allowed.")
 
-            transformed = [self._pre_write(e) for e in transformed]
-            super().__setitem__(i, transformed)
-
-            for e in transformed:
-                self._post_write(e)
+            super().__setitem__(i, list(self._transform(e) for e in o))
         else:
-            if not self._allow_write(o):
+            if not self._allow(o):
                 raise TypeError(f"Value \"{o}\" is not allowed.")
 
-            transformed = self._pre_write(o)
-            super().__setitem__(i, transformed)
-            self._post_write(transformed)
+            super().__setitem__(i, self._transform(o))
+
+        self._on_modified()
 
     @typing.override
     def __add__(  # type: ignore
         self,
         other: typing.Sequence[int | float | str | T],
     ) -> typing.Self:
-        o = self.copy()
-        o.extend(other)  # hooks triggered in extend()
-        return o
+        other = list(other)
+        for e in other:
+            if not self._allow(e):
+                raise TypeError(f"Value \"{e}\" is not allowed.")
+
+        result = self.copy()
+        super(result.__class__, result).extend(\
+            self._transform(e) for e in other)
+        return result
 
     @typing.override
     def __iadd__(
         self,
         other: typing.Iterable[int | float | str | T],
     ) -> typing.Self:
-        self.extend(other)  # hooks triggered in extend()
-        return self
+        other = list(other)
+        for e in other:
+            if not self._allow(e):
+                raise TypeError(f"Value \"{e}\" is not allowed.")
+
+        result = super().__iadd__(self._transform(e) for e in other)
+        self._on_modified()
+
+        return result
 
     @typing.override
     def append(self, o: int | float | str | T):
-        if not self._allow_write(o):
+        if not self._allow(o):
             raise TypeError(f"Value \"{o}\" is not allowed.")
 
-        transformed = self._pre_write(o)
-        super().append(transformed)
-        self._post_write(transformed)
+        super().append(self._transform(o))
+        self._on_modified()
 
     @typing.override
     def insert(self, i: typing.SupportsIndex, o: int | float | str | T):
-        if not self._allow_write(o):
+        if not self._allow(o):
             raise TypeError(f"Value \"{o}\" is not allowed.")
 
-        transformed = self._pre_write(o)
-        super().insert(i, transformed)
-        self._post_write(transformed)
+        super().insert(i, self._transform(o))
+        self._on_modified()
 
     @typing.override
     def copy(self) -> typing.Self:
@@ -163,28 +171,31 @@ class _TypeCheckedList(list[T]):
     def extend(self, other: typing.Iterable[int | float | str | T]):
         other = list(other)
         for e in other:
-            if not self._allow_write(e):
+            if not self._allow(e):
                 raise TypeError(f"Value \"{e}\" is not allowed.")
 
-        transformed = list(self._pre_write(e) for e in other)
-        super().extend(transformed)
-        self._post_write(transformed)
+        super().extend(self._transform(e) for e in other)
+        self._on_modified()
 
     @typing.override
-    def count(self, o: bool | int | float | str | T) -> int:
+    def count(self, o: bool | int | float | str | bytes | T) -> int:
         return super().count(o)  # type: ignore
 
     @typing.override
     def pop(self, idx: typing.SupportsIndex = -1) -> T:
-        return super().pop(idx)
+        result = super().pop(idx)
+        self._on_modified()
+        return result
 
     @typing.override
     def remove(self, value: T):
         super().remove(value)
+        self._on_modified()
 
     @typing.override
     def clear(self):
         super().clear()
+        self._on_modified()
 
 
 class Array(_TypeCheckedList[T], Object):
@@ -234,11 +245,11 @@ class Array(_TypeCheckedList[T], Object):
         return result
 
     @typing.override
-    def _allow_write(self, value: typing.Any) -> bool:
+    def _allow(self, value: typing.Any) -> bool:
         return self._elmt_spec.is_castable(value)
 
     @typing.override
-    def _pre_write(self, value: typing.Any) -> T:
+    def _transform(self, value: typing.Any) -> T:
         return self._elmt_spec.cast(value)
 
 
