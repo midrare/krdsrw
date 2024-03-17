@@ -85,6 +85,7 @@ class _TypeCheckedList(list[T]):
     ):
         ...
 
+    @typing.override
     def __setitem__(
             self, i: typing.SupportsIndex | slice, o: int | float | str
         | T | typing.Iterable[int | float | str | T]):
@@ -102,6 +103,7 @@ class _TypeCheckedList(list[T]):
             o = [self._pre_write(e) for e in o]
             super().__setitem__(i, o)
 
+    @typing.override
     def __add__(  # type: ignore
             self, other: list[int | float | str | T]) -> typing.Self:
         other = list(other)
@@ -112,6 +114,7 @@ class _TypeCheckedList(list[T]):
         o.extend(self._pre_write(e) for e in other)
         return o
 
+    @typing.override
     def __iadd__(
             self, other: typing.Iterable[int | float | str | T]) -> typing.Self:
         other = list(other)
@@ -121,19 +124,23 @@ class _TypeCheckedList(list[T]):
         self.extend(self._pre_write(e) for e in other)
         return self
 
+    @typing.override
     def append(self, o: int | float | str | T):
         if not self._is_write_allowed(o):
             raise TypeError(f"Value \"{o}\" is not allowed.")
         super().append(self._pre_write(o))
 
+    @typing.override
     def insert(self, i: typing.SupportsIndex, o: int | float | str | T):
         if not self._is_write_allowed(o):
             raise TypeError(f"Value \"{o}\" is not allowed.")
         super().insert(i, self._pre_write(o))
 
+    @typing.override
     def copy(self) -> typing.Self:
         return copy.copy(self)
 
+    @typing.override
     def extend(self, other: typing.Iterable[int | float | str | T]):
         other = list(other)
         for e in other:
@@ -141,6 +148,7 @@ class _TypeCheckedList(list[T]):
                 raise TypeError(f"Value \"{e}\" is not allowed.")
         super().extend(self._pre_write(e) for e in other)
 
+    @typing.override
     def count(self, o: bool | int | float | str | T) -> int:
         return super().count(o)  # type: ignore
 
