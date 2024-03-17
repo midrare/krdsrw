@@ -111,7 +111,7 @@ class _TypeCheckedList(list[T]):
             if not self._is_write_allowed(e):
                 raise TypeError(f"Value \"{e}\" is not allowed.")
         o = self.copy()
-        o.extend(self._pre_write(e) for e in other)
+        o.extend(other)
         return o
 
     @typing.override
@@ -121,7 +121,7 @@ class _TypeCheckedList(list[T]):
         for e in other:
             if not self._is_write_allowed(e):
                 raise TypeError(f"Value \"{e}\" is not allowed.")
-        self.extend(self._pre_write(e) for e in other)
+        self.extend(other)
         return self
 
     @typing.override
