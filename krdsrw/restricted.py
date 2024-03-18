@@ -101,13 +101,13 @@ class RestrictedList(list[T]):
             o = list(o)
             for e in o:
                 if not self._pre_write_filter(e):
-                    raise InvalidValueError(e)
+                    raise ValueError(f"The value \"{e}\" is invalid for this container.")
 
             super().__setitem__(
                 i, list(self._pre_write_transform(e) for e in o))
         else:
             if not self._pre_write_filter(o):
-                raise InvalidValueError(o)
+                raise ValueError(f"The value \"{o}\" is invalid for this container.")
 
             super().__setitem__(i, self._pre_write_transform(o))
 
@@ -121,7 +121,7 @@ class RestrictedList(list[T]):
         other = list(other)
         for e in other:
             if not self._pre_write_filter(e):
-                raise InvalidValueError(e)
+                raise ValueError(f"The value \"{e}\" is invalid for this container.")
 
         result = self.copy()
         super(result.__class__, result).extend(\
@@ -136,7 +136,7 @@ class RestrictedList(list[T]):
         other = list(other)
         for e in other:
             if not self._pre_write_filter(e):
-                raise InvalidValueError(e)
+                raise ValueError(f"The value \"{e}\" is invalid for this container.")
 
         result = super().__iadd__(self._pre_write_transform(e) for e in other)
         self._post_write_hook()
@@ -146,7 +146,7 @@ class RestrictedList(list[T]):
     @typing.override
     def append(self, o: int | float | str | T):
         if not self._pre_write_filter(o):
-            raise InvalidValueError(o)
+            raise ValueError(f"The value \"{o}\" is invalid for this container.")
 
         super().append(self._pre_write_transform(o))
         self._post_write_hook()
@@ -154,7 +154,7 @@ class RestrictedList(list[T]):
     @typing.override
     def insert(self, i: typing.SupportsIndex, o: int | float | str | T):
         if not self._pre_write_filter(o):
-            raise InvalidValueError(o)
+            raise ValueError(f"The value \"{o}\" is invalid for this container.")
 
         super().insert(i, self._pre_write_transform(o))
         self._post_write_hook()
@@ -168,7 +168,7 @@ class RestrictedList(list[T]):
         other = list(other)
         for e in other:
             if not self._pre_write_filter(e):
-                raise InvalidValueError(e)
+                raise ValueError(f"The value \"{e}\" is invalid for this container.")
 
         super().extend(self._pre_write_transform(e) for e in other)
         self._post_write_hook()
@@ -242,7 +242,9 @@ class RestrictedDict(dict[K, T]):
                 return super().setdefault(key_, default)  # type: ignore
 
         if not self._pre_write_filter(key, default):
-            raise InvalidValueError(default, key)
+            raise ValueError(f"The key-value pair "\
+                + f"({key}, {default}) "\
+                + f"is invalid for this container.")
 
         key_, default_ = self._pre_write_transform(key, default)
         result = super().setdefault(key_, default_)
@@ -254,7 +256,9 @@ class RestrictedDict(dict[K, T]):
         result = {}  # deliberate plain dict
         for key, value in other.items():
             if not self._pre_write_filter(key, value):
-                raise InvalidValueError(value, key)
+                raise ValueError(f"The key-value pair "\
+                + f"({key}, {value}) "\
+                + f"is invalid for this container.")
 
             key_, value_ = self._pre_write_transform(key, value)
             result[key_] = value_
@@ -297,7 +301,7 @@ class RestrictedDict(dict[K, T]):
     @typing.override
     def __getitem__(self, key: K) -> T:
         if not self._pre_read_filter(key):
-            raise InvalidKeyError(key)
+            raise KeyError(f"Key \"{key}\" is invalid for this container.")
 
         key_ = self._pre_read_transform(key)
         return super().__getitem__(key_)  # type: ignore
@@ -305,7 +309,9 @@ class RestrictedDict(dict[K, T]):
     @typing.override
     def __setitem__(self, key: K, item: int | float | str | T):
         if not self._pre_write_filter(key, item):
-            raise InvalidValueError(item, key)
+            raise ValueError(f"The key-value pair "\
+                + f"({key}, {item}) "\
+                + f"is invalid for this container.")
 
         key_, item_ = self._pre_write_transform(key, item)
         super().__setitem__(key_, item_)  # type: ignore
@@ -314,7 +320,7 @@ class RestrictedDict(dict[K, T]):
     @typing.override
     def get(self, key: K, default: None | T = None) -> T:  # type: ignore
         if not self._pre_read_filter(key):
-            raise InvalidKeyError(key)
+            raise KeyError(f"Key \"{key}\" is invalid for this container.")
 
         key_ = self._pre_read_transform(key)
         return super().get(key_, default)  # type: ignore
