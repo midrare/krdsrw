@@ -265,6 +265,7 @@ class Record(RestrictedDict[str, T], Object):
             name = self._optional_name.get(alias)
             spec.write(cursor, value, name)
 
+    @typing.override
     def __eq__(self, other: typing.Any) -> bool:
         if isinstance(other, self.__class__):
             return (
@@ -275,6 +276,7 @@ class Record(RestrictedDict[str, T], Object):
             )
         return super().__eq__(other)
 
+    @typing.override
     def __str__(self) -> str:
         d = { k: v for k, v in self.items() if v is not None }
         return f"{self.__class__.__name__}{str(d)}"
