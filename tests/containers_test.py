@@ -43,7 +43,7 @@ class TestArray:
 
     def test_append_type_check_disallow(self):
         o = Array(Spec(Int))
-        with pytest.raises(InvalidValueError):
+        with pytest.raises(ValueError):
             o.append("foo")
 
     def test_insert_type_check_allow(self):
@@ -53,7 +53,7 @@ class TestArray:
 
     def test_insert_type_check_disallow(self):
         o = Array(Spec(Int))
-        with pytest.raises(InvalidValueError):
+        with pytest.raises(ValueError):
             o.insert(0, "foo")
 
     def test_extend_type_check_allow(self):
@@ -63,7 +63,7 @@ class TestArray:
 
     def test_extend_type_check_disallow(self):
         o = Array(Spec(Int))
-        with pytest.raises(InvalidValueError):
+        with pytest.raises(ValueError):
             o.extend([ "a", "b", "c", "d", "e"])
 
     def test_copy_contents(self):
@@ -99,5 +99,5 @@ class TestArray:
 def test_dynamic_map_put_key():
     o = DynamicMap()
     o['a'] = Int(0x0a)
-    with pytest.raises(InvalidValueError):
+    with pytest.raises(ValueError):
         o['a'] = 0x0a  # type: ignore
