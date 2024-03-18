@@ -32,44 +32,6 @@ T = typing.TypeVar("T", bound=Byte | Char | Bool | Short | Int | Long \
     | Float | Double | Utf8Str | Object)
 
 
-def _to_ctype(o: typing.Any, cls_: type) -> typing.Any:
-    if isinstance(o, dict):
-        for key in list(o.keys()):
-            o[key] = _to_ctype(o[key], cls_)
-        return o
-
-    if isinstance(o, list):
-        for i in range(len(o)):
-            o[i] = _to_ctype(o[i], cls_)
-        return o
-
-    if issubclass(cls_, Basic) and isinstance(o, cls_.builtin):
-        return cls_(o)
-
-    if issubclass(cls_, Object) and isinstance(o, Object):
-        return o
-
-    if issubclass(cls_, (bool, int, float, str)) \
-    and isinstance(o, cls_):
-        return o
-
-    raise TypeError(f"Unexpected type \"{type(o).__name__}\".")
-
-
-def _cast(key, val) -> tuple[K, T]:
-    if key not in keys:
-        raise TypeError(f"Key \"{key}\" is not allowed.")
-
-    if val is None:
-        val = copy.deepcopy(value)
-
-    val = _to_ctype(val, value.__class__)
-    if not isinstance(val, value.__class__):
-        raise TypeError(f"Value \"{value}\" is not allowed.")
-
-    return key, val
-
-
 def _read_basic(cursor: Cursor) \
 -> None|Bool|Char|Byte|Short|Int|Long|Float|Double|Utf8Str:
     for t in [ Bool, Byte, Char, Short, Int, Long, Float, Double, Utf8Str ]:
@@ -186,7 +148,7 @@ class Record(RestrictedDict[str, T], Object):
         maker = self._required_spec.get(key) or self._optional_spec.get(key)
         if not maker:
             return False
-        if value is not None and not maker.is_instance(value):
+        if value is not None and not maker.is_compatible(value):
             return False
         return True
 
@@ -200,12 +162,47 @@ class Record(RestrictedDict[str, T], Object):
         key: typing.Any,
         value: typing.Any,
     ) -> tuple[str, T]:
+        maker = self._required_spec.get(key) or self._optional_spec.get(key)
+        if not maker:
+            raise Exception(f"No template for key \"{key}\".")
         if value is None:
-            maker = self._required_spec.get(key) or self._optional_spec.get(key)
-            if not maker:
-                raise Exception(f"No template for key \"{key}\".")
             value = maker.make()
-        return key, value
+        elif isinstance(value, (bool, int, float, str, bytes)) \
+        and not isinstance(value, Basic):
+            value = maker.cast(value)
+
+        return key, value  # type: ignore
+
+    @typing.override
+    def _pre_default_filter(
+        self,
+        key: typing.Any,
+        default: typing.Any,
+    ) -> bool:
+        if not isinstance(key, str):
+            return False
+        maker = self._required_spec.get(key) or self._optional_spec.get(key)
+        if not maker:
+            return False
+        if default is not None and not maker.is_compatible(default):
+            return False
+        return True
+
+    @typing.override
+    def _pre_default_transform(
+        self: typing.Any,
+        key: typing.Any,
+        default: typing.Any,
+    ) -> T:
+        maker = self._required_spec.get(key) or self._optional_spec.get(key)
+        if not maker:
+            raise Exception(f"No template for key \"{key}\".")
+        if default is None:
+            default = maker.make()
+        elif isinstance(default, (bool, int, float, str, bytes)) \
+        and not isinstance(default, Basic):
+            default = maker.cast(default)
+        return default  # type: ignore
 
     @property
     def required(self) -> dict[str, type[T]]:
@@ -341,6 +338,12 @@ class IntMap(RestrictedDict[str, typing.Any], Object):
         key: typing.Any,
         value: typing.Any,
     ) -> tuple[str, typing.Any]:
+        maker = self._idx_to_spec[self._to_idx(key)]
+        if maker.is_basic() \
+        and isinstance(value, (bool, int, float, str, bytes)) \
+        and not isinstance(value, Basic):
+            value = maker.cast(value)
+
         return self._to_alias(key), value
 
     @typing.override
@@ -360,6 +363,13 @@ class IntMap(RestrictedDict[str, typing.Any], Object):
         if default is None:
             idx = self._to_idx(key)
             default = self._idx_to_spec[idx].make()
+
+        maker = self._idx_to_spec[self._to_idx(key)]
+        if maker.is_basic() \
+        and isinstance(default, (bool, int, float, str, bytes)) \
+        and not isinstance(default, Basic):
+            default = maker.cast(default)
+
         return default
 
     def _to_idx(self, alias: int | str) -> int:
@@ -422,6 +432,28 @@ class DynamicMap(RestrictedDict[str, typing.Any], Object):
     @typing.override
     def _pre_write_filter(self, key: typing.Any, value: typing.Any) -> bool:
         return isinstance(key, str) and isinstance(value, Basic)
+
+    @typing.override
+    def _pre_default_filter(self, key: typing.Any, default: typing.Any) -> bool:
+        return isinstance(key, str) and (default is None \
+            or isinstance(default, (bool, int, float, str, bytes)))
+
+    @typing.override
+    def _pre_write_transform(
+        self,
+        key: typing.Any,
+        value: typing.Any,
+    ) -> tuple[str, typing.Any]:
+        if not isinstance(value, Basic):
+            if isinstance(value, bool):
+                value = Bool(value)
+            elif isinstance(value, int):
+                value = Int(value)
+            elif isinstance(value, float):
+                value = Double(value)
+            elif isinstance(value, str):
+                value = Utf8Str(value)
+        return super()._pre_write_transform(key, value)
 
     @typing.override
     def read(self, cursor: Cursor):
