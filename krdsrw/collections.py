@@ -340,3 +340,18 @@ class StrictDict(dict[K, T]):
     @typing.override
     def copy(self) -> typing.Self:
         return copy.copy(self)
+
+    @typing.override
+    def __or__(
+        self,
+        other: typing.Mapping[typing.Any, typing.Any],
+    ) -> typing.Self:
+        return self.__class__({ **self, **dict(other) })
+
+    @typing.override
+    def __ior__(  # type: ignore
+        self,
+        other: typing.Mapping[typing.Any, typing.Any],
+    ) -> typing.Self:
+        self.update(dict(other))
+        return self
