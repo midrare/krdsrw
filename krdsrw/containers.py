@@ -174,13 +174,13 @@ class Record(StrictDict[str, T], Object):
             self[k] = v.make()
 
     @typing.override
-    def _allow_read(self, key: typing.Any) -> bool:
+    def _pre_read_filter(self, key: typing.Any) -> bool:
         if not isinstance(key, str):
             return False
         return key in self._required_spec or key in self._optional_spec
 
     @typing.override
-    def _allow_write(self, key: typing.Any, value: typing.Any) -> bool:
+    def _pre_write_filter(self, key: typing.Any, value: typing.Any) -> bool:
         if not isinstance(key, str):
             return False
         maker = self._required_spec.get(key) or self._optional_spec.get(key)
@@ -189,19 +189,19 @@ class Record(StrictDict[str, T], Object):
         return True
 
     @typing.override
-    def _allow_del(self, key: typing.Any) -> bool:
+    def _pre_del_filter(self, key: typing.Any) -> bool:
         return key not in self._required_spec
 
     @typing.override
-    def _key(self, key: typing.Any) -> str:
-        return key
-
-    @typing.override
-    def _key_value(self, key: typing.Any, value: typing.Any) -> tuple[str, T]:
+    def _pre_write_transform(
+        self,
+        key: typing.Any,
+        value: typing.Any,
+    ) -> tuple[str, T]:
         if value is None:
             maker = self._required_spec.get(key) or self._optional_spec.get(key)
             if not maker:
-                raise Exception(f"No default value for key \"{key}\".")
+                raise Exception(f"No template for key \"{key}\".")
             value = maker.make()
         return key, value
 
@@ -298,18 +298,18 @@ class IntMap(StrictDict[str, typing.Any], Object):
             self[alias] = spec.make()
 
     @typing.override
-    def _allow_read(self, key: typing.Any) -> bool:
+    def _pre_read_filter(self, key: typing.Any) -> bool:
         return key in list(self._idx_to_spec.keys()) \
             + list(self._idx_to_name.keys()) \
             + list(self._idx_to_alias.keys()) \
             + list(self._idx_to_alias.values())
 
     @typing.override
-    def _allow_del(self, key: typing.Any) -> bool:
+    def _pre_del_filter(self, key: typing.Any) -> bool:
         return False
 
     @typing.override
-    def _allow_write(self, key: typing.Any, value: typing.Any) -> bool:
+    def _pre_write_filter(self, key: typing.Any, value: typing.Any) -> bool:
         if key not in list(self._idx_to_spec.keys()) \
                 + list(self._idx_to_name.keys()) \
                 + list(self._idx_to_alias.keys()) \
@@ -324,15 +324,35 @@ class IntMap(StrictDict[str, typing.Any], Object):
         return True
 
     @typing.override
-    def _key(self, key: typing.Any) -> int | str:
+    def _pre_read_transform(self, key: typing.Any) -> str:
         return self._to_alias(key)
 
     @typing.override
-    def _key_value(
-        self, key: typing.Any, value: typing.Any
-    ) -> tuple[int | str, Bool | Char | Byte | Short | Int | Long | Float
-               | Double | Utf8Str | Object]:
+    def _pre_write_transform(
+        self,
+        key: typing.Any,
+        value: typing.Any,
+    ) -> tuple[str, typing.Any]:
         return self._to_alias(key), value
+
+    @typing.override
+    def _pre_default_filter(self, key: typing.Any, default: typing.Any) -> bool:
+        if default is None:
+            return True
+
+        idx = self._to_idx(key)
+        return self._idx_to_spec[idx].is_compatible(default)
+
+    @typing.override
+    def _pre_default_transform(
+        self: typing.Any,
+        key: typing.Any,
+        default: typing.Any,
+    ) -> typing.Any:
+        if default is None:
+            idx = self._to_idx(key)
+            default = self._idx_to_spec[idx].make()
+        return default
 
     def _to_idx(self, alias: int | str) -> int:
         if isinstance(alias, int):
@@ -388,27 +408,12 @@ class DynamicMap(StrictDict[str, typing.Any], Object):
         super().__init__()
 
     @typing.override
-    def _allow_read(self, key: typing.Any) -> bool:
+    def _pre_read_filter(self, key: typing.Any) -> bool:
         return isinstance(key, str)
 
     @typing.override
-    def _allow_write(self, key: typing.Any, value: typing.Any) -> bool:
+    def _pre_write_filter(self, key: typing.Any, value: typing.Any) -> bool:
         return isinstance(key, str) and isinstance(value, Basic)
-
-    @typing.override
-    def _allow_del(self, key: typing.Any) -> bool:
-        return True
-
-    @typing.override
-    def _key(self, key: typing.Any) -> str:
-        return key
-
-    @typing.override
-    def _key_value(
-        self, key: typing.Any, value: typing.Any
-    ) -> tuple[str, Bool | Char | Byte | Short | Int | Long | Float | Double
-               | Utf8Str | Object]:
-        return key, value
 
     @typing.override
     def read(self, cursor: Cursor):
@@ -953,18 +958,17 @@ class DataStore(_SchemaDict, Object):
         super().__init__()
 
     @typing.override
-    def _allow_read(self, key: typing.Any) -> bool:
+    def _pre_read_filter(self, key: typing.Any) -> bool:
         return key in self.keys() or schemas.get_spec_by_name(key) is not None
 
     @typing.override
-    def _allow_write(self, key: typing.Any, value: typing.Any) -> bool:
+    def _pre_write_filter(self, key: typing.Any, value: typing.Any) -> bool:
         return key in self.keys() or schemas.get_spec_by_name(key) is not None
 
     @typing.override
-    def _allow_del(self, key: typing.Any) -> bool:
+    def _pre_del_filter(self, key: typing.Any) -> bool:
         return key in self.keys() or schemas.get_spec_by_name(key) is not None
 
-    @typing.override
     def _key(self, key: typing.Any) -> bool | int | float | str:
         spec = schemas.get_spec_by_name(key)
         assert spec, 'spec should not be null'
@@ -972,7 +976,6 @@ class DataStore(_SchemaDict, Object):
             self[key] = spec.make()
         return key
 
-    @typing.override
     def _key_value(
         self,
         key: typing.Any,
