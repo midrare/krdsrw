@@ -10,8 +10,8 @@ from krdsrw.types import Int
 from krdsrw.types import Spec
 from krdsrw.containers import Array
 from krdsrw.containers import DynamicMap
-from krdsrw.collections import InvalidKeyError
-from krdsrw.collections import InvalidValueError
+from krdsrw.restricted import InvalidKeyError
+from krdsrw.restricted import InvalidValueError
 sys.path.pop(0)
 
 

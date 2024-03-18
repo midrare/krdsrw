@@ -6,15 +6,15 @@ import pytest
 
 sys.path.insert(0, os.path.abspath(\
     os.path.join(os.path.dirname(__file__), '..')))
-from krdsrw.collections import StrictDict
-from krdsrw.collections import StrictList
-from krdsrw.collections import RestrictionError
-from krdsrw.collections import InvalidKeyError
-from krdsrw.collections import InvalidValueError
+from krdsrw.restricted import RestrictedDict
+from krdsrw.restricted import RestrictedList
+from krdsrw.restricted import RestrictionError
+from krdsrw.restricted import InvalidKeyError
+from krdsrw.restricted import InvalidValueError
 sys.path.pop(0)
 
 
-class _List(StrictList[int]):
+class _List(RestrictedList[int]):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.is_modified: bool = False
@@ -33,7 +33,7 @@ class _List(StrictList[int]):
 
 
 
-class TestStrictList:
+class TestRestrictedList:
     def test_instantiate(self):
         o = _List()  # no error
         assert o is not None
@@ -70,7 +70,7 @@ class TestStrictList:
         assert o.is_modified
 
 
-class _Dict(StrictDict[typing.Any, typing.Any]):
+class _Dict(RestrictedDict[typing.Any, typing.Any]):
     def __init__(self, *args, **kwargs):
         self._schema: typing.Final[dict[typing.Any, type]] = {
             'bool': bool,
@@ -149,7 +149,7 @@ class _Dict(StrictDict[typing.Any, typing.Any]):
         self.is_modified = True
 
 
-class TestStrictDict:
+class TestRestrictedDict:
     def test_instantiate(self):
         o = _Dict()  # no error
         assert o is not None
