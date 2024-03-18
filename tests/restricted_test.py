@@ -64,6 +64,11 @@ class TestRestrictedList:
             o[1] = 7
 
     def test_modified(self):
+        o = _List()
+        assert not o.is_modified
+        o.append(2)
+        assert o.is_modified
+
         o = _List([ 2, 4, 6, 8 ])
         assert not o.is_modified
         o[1] = 24
