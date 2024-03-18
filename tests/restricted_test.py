@@ -8,9 +8,6 @@ sys.path.insert(0, os.path.abspath(\
     os.path.join(os.path.dirname(__file__), '..')))
 from krdsrw.restricted import RestrictedDict
 from krdsrw.restricted import RestrictedList
-from krdsrw.restricted import RestrictionError
-from krdsrw.restricted import InvalidKeyError
-from krdsrw.restricted import InvalidValueError
 
 sys.path.pop(0)
 
