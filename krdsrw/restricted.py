@@ -223,20 +223,6 @@ class RestrictedDict(dict[K, T]):
     def _pre_del_transform(self, key: typing.Any) -> T:
         return key
 
-    def _pre_default_filter(
-        self,
-        key: typing.Any,
-        default: typing.Any,
-    ) -> bool:
-        return True
-
-    def _pre_default_transform(
-        self: typing.Any,
-        key: typing.Any,
-        default: typing.Any,
-    ) -> T:
-        return default
-
     @typing.override
     @classmethod
     def fromkeys(  # type: ignore
@@ -250,19 +236,15 @@ class RestrictedDict(dict[K, T]):
 
     @typing.override
     def setdefault(self, key: K, default: None | T = None) -> T:
-        if not self._pre_default_filter(key, default):
-            raise InvalidValueError(default, key)
-
-        key_ = self._pre_read_transform(key)
-        if super().__contains__(key_):
-            default_ = self._pre_default_transform(key, default)
-            return super().setdefault(key_, default_)  # type: ignore
+        if self._pre_read_filter(key):
+            key_ = self._pre_read_transform(key)
+            if super().__contains__(key_):
+                return super().setdefault(key_, default)  # type: ignore
 
         if not self._pre_write_filter(key, default):
             raise InvalidValueError(default, key)
 
-        default_ = self._pre_default_transform(key, default)
-        key_, default_ = self._pre_write_transform(key, default_)
+        key_, default_ = self._pre_write_transform(key, default)
         result = super().setdefault(key_, default_)
         self._post_write_hook()
 
@@ -333,24 +315,23 @@ class RestrictedDict(dict[K, T]):
     def get(self, key: K, default: None | T = None) -> T:  # type: ignore
         if not self._pre_read_filter(key):
             raise InvalidKeyError(key)
-        if not self._pre_default_filter(key, default):
-            raise InvalidValueError(default, key)
 
         key_ = self._pre_read_transform(key)
-        key_, default_ = self._pre_default_transform(key_, default)
-        return super().get(key_, default_)  # type: ignore
+        return super().get(key_, default)  # type: ignore
 
     @typing.override
     def pop(self, key: K, default: None | T = None) -> None | T:  # type: ignore
         if not self._pre_del_filter(key):
             raise RequiredKeyError(key)
 
-        key_ = self._pre_del_transform(key)
-        default_ = self._pre_default_transform(key, default)
         before = len(self)
-        result = super().pop(key_, default_)  # type: ignore
+
+        key_ = self._pre_del_transform(key)
+        result = super().pop(key_, default)  # type: ignore
+
         if len(self) != before:
             self._post_write_hook()
+
         return result
 
     @typing.override
