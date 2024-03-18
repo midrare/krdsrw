@@ -184,7 +184,9 @@ class Record(RestrictedDict[str, T], Object):
         if not isinstance(key, str):
             return False
         maker = self._required_spec.get(key) or self._optional_spec.get(key)
-        if not maker or not maker.is_instance(value):
+        if not maker:
+            return False
+        if value is not None and not maker.is_instance(value):
             return False
         return True
 
