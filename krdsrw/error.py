@@ -1,6 +1,6 @@
 class KRDSRWError(Exception):
-    def __init__(self, *args: object):
-        super().__init__(*args)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
 
 class UnexpectedStructureError(KRDSRWError):
