@@ -72,33 +72,6 @@ class TestRestrictedList:
         assert o.is_modified
 
 
-class _Dict(RestrictedDict[typing.Any, typing.Any]):
-    def __init__(self, *args, **kwargs):
-        self._schema: typing.Final[dict[typing.Any, type]] = {
-            'bool': bool,
-            'int': int,
-            'float': float,
-        }
-        super().__init__(*args, **kwargs)
-        self.is_modified: bool = False
-
-    @typing.override
-    def _pre_del_filter(self, key: typing.Any) -> bool:
-        if isinstance(key, str):
-            key = key.lower()
-        return key in self._schema
-
-    @typing.override
-    def _pre_del_transform(self, key: typing.Any) -> typing.Any:
-        if isinstance(key, str):
-            key = key.lower()
-        return key
-
-    @typing.override
-    def _post_write_hook(self):
-        self.is_modified = True
-
-
 class TestRestrictedDict:
     def test_instantiate(self):
         o = RestrictedDict()  # no error
@@ -178,14 +151,14 @@ class TestRestrictedDict:
             o.setdefault('a', b'ZZZ')  # pyright: ignore  # type: ignore
 
         o = CC()
-        o.update({'a': 123, 'b': 456})
-        assert o == {'a': 123, 'b': 456}
+        o.update({ 'a': 123, 'b': 456 })
+        assert o == { 'a': 123, 'b': 456 }
 
         with pytest.raises(ValueError):
             o = CC()
             o.update({
                 'a': 12,
-                'b': 4.5,   # pyright: ignore  # type: ignore
+                'b': 4.5,  # pyright: ignore  # type: ignore
             })
 
     def test_write_transform(self):
@@ -246,15 +219,14 @@ class TestRestrictedDict:
                     key = key.lower()
                 return key
 
-
         with pytest.raises(KeyError):
-            o = CC({'a': 1, 'b': 2, 'c': 3})
+            o = CC({ 'a': 1, 'b': 2, 'c': 3 })
             o['z']
 
-        o = CC({'a': 1, 'b': 2, 'c': 3})
+        o = CC({ 'a': 1, 'b': 2, 'c': 3 })
         assert o.get('A') == 1
 
-        o = CC({'a': 1, 'b': 2, 'c': 3})
+        o = CC({ 'a': 1, 'b': 2, 'c': 3 })
         assert o.get('B', 0) == 2
 
         with pytest.raises(KeyError):
@@ -266,3 +238,116 @@ class TestRestrictedDict:
 
         o = CC()
         assert o.get('aa', 0) == 0
+
+    def test_del_filter(self):
+        class CC(RestrictedDict[typing.Any, typing.Any]):
+            @typing.override
+            def _pre_del_filter(self, key: typing.Any) -> typing.Any:
+                return not isinstance(key, str) or not key.startswith('req_')
+
+        with pytest.raises(KeyError):
+            o = CC()
+            del o['a']
+
+        with pytest.raises(KeyError):
+            o = CC()
+            del o['req_a']
+
+        with pytest.raises(KeyError):
+            o = CC({})
+            del o['a']
+
+        with pytest.raises(KeyError):
+            o = CC({})
+            del o['req_a']
+
+        o = CC({ 'a': 1 })
+        del o['a']
+
+        with pytest.raises(KeyError):
+            o = CC({ 'req_a': 1 })
+            del o['req_a']
+
+        with pytest.raises(KeyError):
+            o = CC({ 'a': 1 })
+            del o['req_a']
+
+        o = CC({ 'a': 1, 'b': 2, 'c': 3 })
+        del o['a']
+
+        with pytest.raises(KeyError):
+            o = CC({ 'a': 1, 'b': 2, 'c': 3 })
+            del o['req_a']
+
+        with pytest.raises(KeyError):
+            o = CC({ 'req_a': 1, 'req_b': 2, 'req_c': 3 })
+            del o['req_a']
+
+    def test_del_transform(self):
+        class CC(RestrictedDict[typing.Any, typing.Any]):
+            @typing.override
+            def _pre_del_transform(self, key: typing.Any) -> typing.Any:
+                if isinstance(key, str):
+                    key = key.lower()
+                return key
+
+        with pytest.raises(KeyError):
+            o = CC()
+            del o['a']
+
+        with pytest.raises(KeyError):
+            o = CC()
+            del o['A']
+
+        with pytest.raises(KeyError):
+            o = CC({})
+            del o['a']
+
+        with pytest.raises(KeyError):
+            o = CC({})
+            del o['A']
+
+        o = CC({ 'a': 1 })
+        del o['a']
+        assert o == {}
+
+        o = CC({ 'a': 1 })
+        del o['A']
+        assert o == {}
+
+        o = CC({ 'a': 1 })
+        del o['A']
+        assert o == {}
+
+        o = CC({ 'a': 1, 'b': 2, 'c': 3 })
+        del o['a']
+        assert o == { 'b': 2, 'c': 3 }
+
+        o = CC({ 'a': 1, 'b': 2, 'c': 3 })
+        del o['A']
+        assert o == { 'b': 2, 'c': 3 }
+
+    def test_modified_hook(self):
+        class CC(RestrictedDict[typing.Any, typing.Any]):
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+                self.is_modified: bool = False
+
+            @typing.override
+            def _post_write_hook(self):
+                self.is_modified = True
+
+        o = CC({ 'a': 1, 'b': 2, 'c': 3 })
+        assert not o.is_modified
+
+        o = CC()
+        o.setdefault('a', 9)
+        assert o.is_modified
+
+        o = CC({ 'a': 1, 'b': 2, 'c': 3 })
+        o.setdefault('a', 9)
+        assert not o.is_modified
+
+        o = CC()
+        o.update({ 'a': 123, 'b': 456 })
+        assert o.is_modified
