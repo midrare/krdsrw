@@ -281,6 +281,9 @@ class Record(RestrictedDict[str, T], Object):
         d = { k: v for k, v in self.items() if v is not None }
         return f"{self.__class__.__name__}{d}"
 
+    @typing.override
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}{dict(self)}"
 
 
 # can contain Bool, Char, Byte, Short, Int, Long, Float, Double, Utf8Str, Object
