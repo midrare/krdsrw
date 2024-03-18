@@ -2,14 +2,30 @@ import abc
 import inspect
 import struct
 import typing
+import weakref
 
 from .cursor import Cursor
 from .error import UnexpectedBytesError
 from .error import UnexpectedStructureError
 
 
-class Value:
-    pass
+class Value(metaclass=abc.ABCMeta):
+    def __init__(self, *args, **kwargs):
+        super().__init__()
+        self._value_base_parents: weakref.WeakSet[Value] = weakref.WeakSet()
+        self._value_base_modified: bool = False
+
+    def _propagate_contents_modified(self):
+        queue = set(self._value_base_parents)
+        seen = set()
+
+        while queue:
+            e = queue.pop()
+            if e in seen:
+                continue
+
+            e._value_base_modified = True
+            queue |= e._value_base_parents
 
 
 class Basic(Value, metaclass=abc.ABCMeta):
