@@ -10,6 +10,8 @@ from krdsrw.types import Int
 from krdsrw.types import Spec
 from krdsrw.containers import Array
 from krdsrw.containers import DynamicMap
+from krdsrw.collections import InvalidKeyError
+from krdsrw.collections import InvalidValueError
 sys.path.pop(0)
 
 
@@ -41,7 +43,7 @@ class TestArray:
 
     def test_append_type_check_disallow(self):
         o = Array(Spec(Int))
-        with pytest.raises(TypeError):
+        with pytest.raises(InvalidValueError):
             o.append("foo")
 
     def test_insert_type_check_allow(self):
@@ -51,7 +53,7 @@ class TestArray:
 
     def test_insert_type_check_disallow(self):
         o = Array(Spec(Int))
-        with pytest.raises(TypeError):
+        with pytest.raises(InvalidValueError):
             o.insert(0, "foo")
 
     def test_extend_type_check_allow(self):
@@ -61,7 +63,7 @@ class TestArray:
 
     def test_extend_type_check_disallow(self):
         o = Array(Spec(Int))
-        with pytest.raises(TypeError):
+        with pytest.raises(InvalidValueError):
             o.extend([ "a", "b", "c", "d", "e"])
 
     def test_copy_contents(self):
@@ -94,12 +96,8 @@ class TestArray:
             + b'\x01\x00\x00\x00\x0c'
 
 
-def test_dynamic_map_put_key_allow():
+def test_dynamic_map_put_key():
     o = DynamicMap()
     o['a'] = Int(0x0a)
-
-
-def test_dynamic_map_put_key_disallow():
-    o = DynamicMap()
-    with pytest.raises(TypeError):
+    with pytest.raises(InvalidValueError):
         o['a'] = 0x0a  # type: ignore

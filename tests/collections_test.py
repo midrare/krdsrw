@@ -6,9 +6,11 @@ import pytest
 
 sys.path.insert(0, os.path.abspath(\
     os.path.join(os.path.dirname(__file__), '..')))
-from krdsrw.containers import StrictDict
-from krdsrw.containers import StrictList
-
+from krdsrw.collections import StrictDict
+from krdsrw.collections import StrictList
+from krdsrw.collections import RestrictionError
+from krdsrw.collections import InvalidKeyError
+from krdsrw.collections import InvalidValueError
 sys.path.pop(0)
 
 
@@ -38,13 +40,15 @@ class TestStrictList:
 
     def test_init(self):
         _List([ 2, 4, 6, 8 ])  # no error
-        with pytest.raises(TypeError):
+        with pytest.raises(InvalidValueError):
             _List([ 1, 2, 3, 4 ])
 
     def test_append(self):
         o = _List()
         o.append(8)  # no error
-        with pytest.raises(TypeError):
+        with pytest.raises(InvalidValueError):
+            o.append('ABC')
+        with pytest.raises(InvalidValueError):
             o.append(9)
 
     def test_read_index(self):
@@ -56,7 +60,7 @@ class TestStrictList:
     def test_write_index(self):
         o = _List([ 2, 4, 6, 8 ])
         o[1] = 12  # no error
-        with pytest.raises(TypeError):
+        with pytest.raises(InvalidValueError):
             o[1] = 7
 
     def test_modified(self):
@@ -153,26 +157,26 @@ class TestStrictDict:
     def test_init(self):
         _Dict({ 'bool': True, 'int': 123, 'float': 123.456})  # no error
 
-        with pytest.raises(TypeError):
+        with pytest.raises(InvalidValueError):
             _Dict({ 'a': b'AAA', 'b': b'BBB', 'c': b'CCC'})
 
     def test_setdefault(self):
         o = _Dict()
         o.setdefault('int', 789)  # no error
-        with pytest.raises(ValueError):
+        with pytest.raises(InvalidValueError):
             o.setdefault('float', b'ZZZ')
 
     def test_update(self):
         o = _Dict()
         o.update({'int': 123, 'float': 123.456})  # no error
 
-        with pytest.raises(TypeError):
+        with pytest.raises(InvalidValueError):
             o = _Dict()
             o.update({'int': b'ZZZ'})
 
     def test_add_operator(self):
         o = _Dict({'int': 123}) | {'float': 123.456} # no error
-        with pytest.raises(TypeError):
+        with pytest.raises(InvalidValueError):
             o = _Dict({'int': 123}) | {'float': b'ZZZ'}
 
         o = {'float': 123.456} | _Dict({'int': 123})  # no error
@@ -180,7 +184,7 @@ class TestStrictDict:
 
         o = _Dict({'int': 123})
         o |= {'float': 123.456} # no error
-        with pytest.raises(TypeError):
+        with pytest.raises(InvalidValueError):
             o = _Dict({'int': 123})
             o |= {'float': b'ZZZ'}
 
