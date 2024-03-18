@@ -6,6 +6,7 @@ import pytest
 
 sys.path.insert(0, os.path.abspath(\
     os.path.join(os.path.dirname(__file__), '..')))
+from krdsrw.containers import StrictDict
 from krdsrw.containers import StrictList
 
 sys.path.pop(0)
@@ -65,3 +66,126 @@ class TestStrictList:
         assert o.is_modified
 
 
+class _Dict(StrictDict[typing.Any, typing.Any]):
+    def __init__(self, *args, **kwargs):
+        self._schema: typing.Final[dict[typing.Any, type]] = {
+            'bool': bool,
+            'int': int,
+            'float': float,
+        }
+        super().__init__(*args, **kwargs)
+        self.is_modified: bool = False
+
+    @typing.override
+    def _pre_default_filter(
+        self,
+        key: typing.Any,
+        default: typing.Any,
+    ) -> bool:
+        if isinstance(key, str):
+            key = key.lower()
+
+        return key in self._schema \
+        and (default is None or isinstance(default, self._schema[key]))
+
+    @typing.override
+    def _pre_default_transform(
+        self: typing.Any,
+        key: typing.Any,
+        default: typing.Any,
+    ) -> typing.Any:
+        return default
+
+    @typing.override
+    def _pre_read_filter(self, key: typing.Any) -> bool:
+        if isinstance(key, str):
+            key = key.lower()
+        return key in self._schema
+
+    @typing.override
+    def _pre_read_transform(self, key: typing.Any) -> typing.Any:
+        if isinstance(key, str):
+            key = key.lower()
+        return key
+
+    @typing.override
+    def _pre_write_filter(
+        self,
+        key: typing.Any,
+        value: typing.Any,
+    ) -> bool:
+        if isinstance(key, str):
+            key = key.lower()
+        return key in self._schema and isinstance(value, self._schema[key])
+
+    @typing.override
+    def _pre_write_transform(
+        self,
+        key: typing.Any,
+        value: typing.Any,
+    ) -> tuple[typing.Any, typing.Any]:
+        if isinstance(key, str):
+            key = key.lower()
+        return key, value
+
+    @typing.override
+    def _pre_del_filter(self, key: typing.Any) -> bool:
+        if isinstance(key, str):
+            key = key.lower()
+        return key in self._schema
+
+    @typing.override
+    def _pre_del_transform(self, key: typing.Any) -> typing.Any:
+        if isinstance(key, str):
+            key = key.lower()
+        return key
+
+    @typing.override
+    def _post_write_hook(self):
+        self.is_modified = True
+
+
+class TestStrictDict:
+    def test_instantiate(self):
+        o = _Dict()  # no error
+        assert o is not None
+
+    def test_init(self):
+        _Dict({ 'bool': True, 'int': 123, 'float': 123.456})  # no error
+
+        with pytest.raises(TypeError):
+            _Dict({ 'a': b'AAA', 'b': b'BBB', 'c': b'CCC'})
+
+    def test_setdefault(self):
+        o = _Dict()
+        o.setdefault('int', 789)  # no error
+        with pytest.raises(ValueError):
+            o.setdefault('float', b'ZZZ')
+
+    def test_update(self):
+        o = _Dict()
+        o.update({'int': 123, 'float': 123.456})  # no error
+
+        with pytest.raises(TypeError):
+            o = _Dict()
+            o.update({'int': b'ZZZ'})
+
+    def test_add_operator(self):
+        o = _Dict({'int': 123}) | {'float': 123.456} # no error
+        with pytest.raises(TypeError):
+            o = _Dict({'int': 123}) | {'float': b'ZZZ'}
+
+        o = {'float': 123.456} | _Dict({'int': 123})  # no error
+        o = {'float': b'ZZZ'} | _Dict({'int': 123})  # no error
+
+        o = _Dict({'int': 123})
+        o |= {'float': 123.456} # no error
+        with pytest.raises(TypeError):
+            o = _Dict({'int': 123})
+            o |= {'float': b'ZZZ'}
+
+        o = {'float': 123.456}
+        o |= _Dict({'int': 123})  # no error
+
+        o = {'float': b'ZZZ'}
+        o |= _Dict({'int': 123})  # no error
