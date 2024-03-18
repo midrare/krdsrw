@@ -145,30 +145,46 @@ class StrictList(list[T]):
 
 class StrictDict(dict[K, T]):
     def __init__(self, *args, **kwargs):
-        super().__init__()
-        self.update(dict(*args, **kwargs))
+        super().__init__(self._transform_for_write(dict(*args, **kwargs)))
 
-    def _key(self, key: typing.Any) -> K:
+    def _pre_read_filter(self, key: typing.Any) -> bool:
+        return True
+
+    def _pre_read_transform(self, key: typing.Any) -> K:
         return key
 
-    def _key_value(
+    def _pre_write_filter(self, key: typing.Any, value: typing.Any) -> bool:
+        return True
+
+    def _pre_write_transform(
         self,
         key: typing.Any,
         value: typing.Any,
     ) -> tuple[K, T]:
         return key, value
 
-    def _allow_read(self, key: typing.Any) -> bool:
-        return True
-
-    def _allow_write(self, key: typing.Any, value: typing.Any) -> bool:
-        return True
-
-    def _allow_del(self, key: typing.Any) -> bool:
-        return True
-
-    def _on_modified(self):
+    def _post_write_hook(self):
         pass
+
+    def _pre_del_filter(self, key: typing.Any) -> bool:
+        return True
+
+    def _pre_del_transform(self, key: typing.Any) -> T:
+        return key
+
+    def _pre_default_filter(
+        self,
+        key: typing.Any,
+        default: typing.Any,
+    ) -> bool:
+        return True
+
+    def _pre_default_transform(
+        self: typing.Any,
+        key: typing.Any,
+        default: typing.Any,
+    ) -> T:
+        return default
 
     @typing.override
     @classmethod
@@ -183,24 +199,37 @@ class StrictDict(dict[K, T]):
 
     @typing.override
     def setdefault(self, key: K, default: None | T = None) -> T:
-        key_ = self._key(key)
+        if not self._pre_default_filter(key, default):
+            raise ValueError(f"Reading key \"{key}\" with "\
+                + f"default value \"{default}\" is not allowed.")
+
+        key_ = self._pre_read_transform(key)
         if super().__contains__(key_):
-            if not self._allow_read(key_):
-                raise TypeError(\
-                    f"Reading key \"{key}\" is not allowed.")
+            default_ = self._pre_default_transform(key, default)
+            return super().setdefault(key_, default_)  # type: ignore
 
-            key_, value = self._key_value(key, default)
-            return super().setdefault(key_, value)  # type: ignore
-
-        key_, value = self._key_value(key, default)
-        if not self._allow_write(key_, value):
+        if not self._pre_write_filter(key, default):
             raise TypeError(
                 f"Writing key \"{key}\" "
                 + f"with value \"{default}\" is not allowed.")
 
-        result = super().setdefault(key_, value)  # type: ignore
-        self._on_modified()
+        default_ = self._pre_default_transform(key, default)
+        key_, default_ = self._pre_write_transform(key, default_)
+        result = super().setdefault(key_, default_)
+        self._post_write_hook()
 
+        return result
+
+    def _transform_for_write(self, other: dict) -> dict[K, T]:
+        result = {}  # deliberate plain dict
+        for key, value in other.items():
+            if not self._pre_write_filter(key, value):
+                raise TypeError(
+                    f"Writing to key \"{key}\" "
+                    + f"with value \"{value}\" is not allowed.")
+
+            key_, value_ = self._pre_write_transform(key, value)
+            result[key_] = value_
         return result
 
     @typing.override
@@ -209,20 +238,10 @@ class StrictDict(dict[K, T]):
         *args: typing.Mapping[K, T],
         **kwargs: T,
     ):
-        transformed = {}  # deliberate plain dict
-        for key, value in dict(*args, **kwargs).items():
-            key_, value_ = self._key_value(key, value)\
-
-            if not self._allow_write(key_, value_):
-                raise TypeError(
-                    f"Writing to key \"{key}\" "
-                    + f"with value \"{value}\" is not allowed.")
-
-            transformed[key_] = value_
-
-        super().update(transformed)
-        if transformed:
-            self._on_modified()
+        other = self._transform_for_write(dict(*args, **kwargs))
+        super().update(other)
+        if other:
+            self._post_write_hook()
 
     @typing.override
     def __eq__(self, o: typing.Any) -> bool:
@@ -232,66 +251,71 @@ class StrictDict(dict[K, T]):
 
     @typing.override
     def __contains__(self, key: typing.Any) -> bool:
-        key = self._key(key)
-        return super().__contains__(key)
+        if not self._pre_read_filter(key):
+            return False
+        return super().__contains__(self._pre_read_transform(key))
 
     @typing.override
     def __delitem__(self, key: K):
-        key_ = self._key(key)
-        if not self._allow_del(key_):
+        if not self._pre_del_filter(key):
             raise KeyError(f"Key \"{key}\" cannot be deleted.")
 
+        key_ = self._pre_del_transform(key)
         is_contained = super().__contains__(key_)
         super().__delitem__(key_)  # type: ignore
         if is_contained:
-            self._on_modified()
+            self._post_write_hook()
 
     @typing.override
     def __getitem__(self, key: K) -> T:
-        key_ = self._key(key)
+        if not self._pre_read_filter(key):
+            raise KeyError(f"Reading key \"{key}\" is not allowed.")
 
-        if not self._allow_read(key_):
-            raise KeyError(f"Reading \"{key}\" is not allowed.")
-
+        key_ = self._pre_read_transform(key)
         return super().__getitem__(key_)  # type: ignore
 
     @typing.override
     def __setitem__(self, key: K, item: int | float | str | T):
-        key_, item_ = self._key_value(key, item)
-        if not self._allow_write(key_, item_):
-            raise TypeError(
-                f"Write to key \"{key}\" of"
+        if not self._pre_write_filter(key, item):
+            raise TypeError(f"Write to key \"{key}\" of"\
                 + f" value \"{item}\" is not allowed.")
 
+        key_, item_ = self._pre_write_transform(key, item)
         super().__setitem__(key_, item_)  # type: ignore
-        self._on_modified()
+        self._post_write_hook()
 
     @typing.override
     def get(self, key: K, default: None | T = None) -> T:  # type: ignore
-        key_ = self._key(key)
-
-        if not self._allow_read(key_):
+        if not self._pre_read_filter(key):
             raise KeyError(f"Reading key \"{key}\" is not allowed.")
+        if not self._pre_default_filter(key, default):
+            raise ValueError(f"Using key \"{key}\" with "\
+                + f"default value of \"{default}\" is not allowed.")
 
-        return super().get(key_, default)  # type: ignore
+        key_ = self._pre_read_transform(key)
+        key_, default_ = self._pre_default_transform(key_, default)
+        return super().get(key_, default_)  # type: ignore
 
     @typing.override
     def pop(self, key: K, default: None | T = None) -> None | T:  # type: ignore
-        key_ = self._key(key)
-        if not self._allow_read(key_):
+        if not self._pre_del_filter(key):
             raise KeyError(f"Deleting key \"{key}\" is not allowed.")
 
-        result = super().pop(key_, default)  # type: ignore
-        self._on_modified()
-
+        key_ = self._pre_del_transform(key)
+        default_ = self._pre_default_transform(key, default)
+        before = len(self)
+        result = super().pop(key_, default_)  # type: ignore
+        if len(self) != before:
+            self._post_write_hook()
         return result
 
     @typing.override
     def popitem(self) -> tuple[K, T]:
         for k, v in reversed(tuple(self.items())):
-            if self._allow_del(k):
+            if self._pre_del_filter(k):
+                # no need for transform b/c already in dict
                 super().__delitem__(k)
-                self._on_modified()
+                self._post_write_hook()
                 return (k, v)
 
         raise IndexError("No removable items remaining.")
@@ -301,7 +325,7 @@ class StrictDict(dict[K, T]):
         is_modified = False
 
         for k, _ in reversed(list(self.items())):
-            if self._allow_del(k):
+            if self._pre_del_filter(k):
                 super().__delitem__(k)
                 is_modified = True
 
@@ -311,7 +335,7 @@ class StrictDict(dict[K, T]):
                     clr()
 
         if is_modified:
-            self._on_modified()
+            self._post_write_hook()
 
     @typing.override
     def copy(self) -> typing.Self:
