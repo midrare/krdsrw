@@ -7,9 +7,9 @@ import typing
 
 from .types import *
 from .containers import *
-from .containers import StrictDict
+from .containers import RestrictedDict
 
-class _SchemaDict(StrictDict[str, typing.Any]):
+class _SchemaDict(RestrictedDict[str, typing.Any]):
 
 
 

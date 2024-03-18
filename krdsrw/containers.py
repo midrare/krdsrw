@@ -9,8 +9,8 @@ import typing
 
 from . import schemas
 
-from .collections import StrictList
-from .collections import StrictDict
+from .restricted import RestrictedList
+from .restricted import RestrictedDict
 from .cursor import Cursor
 from .error import UnexpectedBytesError
 from .error import UnexpectedStructureError
@@ -79,7 +79,7 @@ def _read_basic(cursor: Cursor) \
     return None
 
 
-class Array(StrictList[T], Object):
+class Array(RestrictedList[T], Object):
     # Array can contain Basic and other containers
     def __init__(self, elmt_spec: Spec[T], elmt_name: None | str = None):
         super().__init__()
@@ -134,7 +134,7 @@ class Array(StrictList[T], Object):
         return self._elmt_spec.cast(value)
 
 
-class Record(StrictDict[str, T], Object):
+class Record(RestrictedDict[str, T], Object):
     # Record can contain basics and other containers
     # keys are just arbitrary aliases for convenience. values are
     # hardcoded and knowing what value is where is determined by
@@ -281,7 +281,7 @@ class Record(StrictDict[str, T], Object):
 
 
 # can contain Bool, Char, Byte, Short, Int, Long, Float, Double, Utf8Str, Object
-class IntMap(StrictDict[str, typing.Any], Object):
+class IntMap(RestrictedDict[str, typing.Any], Object):
     def __init__(self, idx_alias_name_spec: list[tuple[int, str, str, Spec]]):
         super().__init__()
 
@@ -403,7 +403,7 @@ class IntMap(StrictDict[str, typing.Any], Object):
 
 
 # can contain Bool, Char, Byte, Short, Int, Long, Float, Double, Utf8Str
-class DynamicMap(StrictDict[str, typing.Any], Object):
+class DynamicMap(RestrictedDict[str, typing.Any], Object):
     def __init__(self):
         super().__init__()
 

@@ -57,7 +57,7 @@ K = typing.TypeVar("K", bound=int | float | str)
 T = typing.TypeVar("T", bound=typing.Any)
 
 
-class StrictList(list[T]):
+class RestrictedList(list[T]):
     def __init__(self, *args, **kwargs):
         super().__init__()
         self[:] = list(*args, **kwargs)
@@ -194,7 +194,7 @@ class StrictList(list[T]):
         self._post_write_hook()
 
 
-class StrictDict(dict[K, T]):
+class RestrictedDict(dict[K, T]):
     def __init__(self, *args, **kwargs):
         super().__init__(self._transform_for_write(dict(*args, **kwargs)))
 
