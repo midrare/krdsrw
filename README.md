@@ -23,5 +23,7 @@ pytest
 pytest --cov=krdsrw
 ```
 
+https://blog.ionelmc.ro/2014/05/25/python-packaging/
+
 ## Acknowledgements
 Thanks to [jhowell](https://www.mobileread.com/forums/showthread.php?t=322172) for his initial work on reverse-engineering the KRDS file format.
