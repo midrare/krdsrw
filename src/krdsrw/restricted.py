@@ -44,7 +44,7 @@ class RestrictedList(list[T]):
         typing.Iterable[bool | int | float | str | bytes | T],
     ):
         if isinstance(i, slice):
-            assert isinstance(o, collections.abc.Iterable),\
+            assert isinstance(o, collections.abc.Iterable), \
                 'when index is slice the value must be iterable'
 
             o = list(o)
@@ -76,7 +76,7 @@ class RestrictedList(list[T]):
                     f"The value \"{e}\" is invalid for this container.")
 
         result = self.copy()
-        super(result.__class__, result).extend(\
+        super(result.__class__, result).extend( \
             self._pre_write_transform(e) for e in other)
         return result
 
