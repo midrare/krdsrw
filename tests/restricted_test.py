@@ -40,18 +40,16 @@ class TestRestrictedList:
             def _pre_write_transform(self, value: int) -> int:
                 return value**2
 
+        o = CC()
+        o.append(8)
+        assert o == [64]
+
+        o = CC([ 2, 4, 6, 8 ])
+        assert o == [ 4, 16, 36, 64 ]
+
         o = CC([ 2, 4, 6, 8 ])
         o[1] = 12  # no error
-        with pytest.raises(ValueError):
-            o[1] = 7
-
-
-        o = CC()
-        o.append(8)  # no error
-        with pytest.raises(ValueError):
-            o.append('ABC')
-        with pytest.raises(ValueError):
-            o.append(9)
+        assert o == [ 4, 144, 36, 64 ]
 
     def test_post_write_hook(self):
         class CC(RestrictedList[int]):
