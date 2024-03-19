@@ -112,11 +112,12 @@ class Record(RestrictedDict[str, T], Object):
 
     def __init__(
         self,
-        required: dict[str, Spec[T] | tuple[Spec[T], str]],
-        optional: None | dict[str, Spec[T] | tuple[Spec[T], str]] = None,
+        *args,
+        _schema_required: dict[str, Spec[T] | tuple[Spec[T], str]],
+        _schema_optional: None
+        | dict[str, Spec[T] | tuple[Spec[T], str]] = None,
+        **kwargs,
     ):
-        super().__init__()
-
         def get_spec(v):
             if isinstance(v, (tuple, list)):
                 return next(e for e in v if isinstance(e, Spec))
@@ -132,16 +133,19 @@ class Record(RestrictedDict[str, T], Object):
             return ''
 
         self._required_spec: typing.Final[dict[str, Spec[T]]] \
-            = {k: get_spec(v) for k, v in required.items()}
+            = {k: get_spec(v) for k, v in _schema_required.items()}
         self._optional_spec: typing.Final[dict[str, Spec[T]]] \
-            = {k: get_spec(v) for k, v in (optional or {}).items()}
+            = {k: get_spec(v) for k, v in (_schema_optional or {}).items()}
         self._required_name: typing.Final[dict[str, str]] \
-            = {k: get_name(v) for k, v in required.items()}
+            = {k: get_name(v) for k, v in _schema_required.items()}
         self._optional_name: typing.Final[dict[str, str]] \
-            = {k: get_name(v) for k, v in (optional or {}).items()}
+            = {k: get_name(v) for k, v in (_schema_optional or {}).items()}
 
         for k, v in self._required_spec.items():
             self[k] = v.make()
+
+        # call parent constructor last so that hooks will work
+        super().__init__(*args, **kwargs)
 
     @typing.override
     def _pre_read_filter(self, key: typing.Any) -> bool:

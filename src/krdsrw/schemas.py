@@ -54,7 +54,8 @@ def _timer_average_calculator_distribution_normal() -> Spec:
         from .containers import Record
         from .containers import Spec
         _timer_average_calculator_distribution_normal_factory = Spec(
-            Record, {
+            Record,
+            _schema_required={
                 "count": _long,
                 "sum": _double,
                 "sum_of_squares": _double,
@@ -70,7 +71,8 @@ def _timer_average_calculator() -> Spec:
         from .containers import Record
         from .containers import Spec
         _timer_average_calculator_factory = Spec(
-            Record, {
+            Record,
+            _schema_required={
                 "samples1":
                 Spec(Array, _schema_elmt_spec=_double),
                 "samples2":
@@ -101,7 +103,8 @@ def _timer_model() -> Spec:
         from .containers import Spec
 
         _timer_model_factory = Spec(
-            Record, {
+            Record,
+            _schema_required={
                 "version":
                 _long,
                 "total_time":
@@ -123,7 +126,8 @@ def _font_prefs() -> Spec:
         from .containers import Record
 
         _font_prefs_factory = Spec(
-            Record, {
+            Record,
+            _schema_required={
                 "typeface": _utf8str,
                 "line_sp": _int,
                 "size": _int,
@@ -133,7 +137,8 @@ def _font_prefs() -> Spec:
                 "inset_bottom": _int,
                 "inset_right": _int,
                 "unknown1": _int,
-            }, {
+            },
+            _schema_optional={
                 "bold": _int,
                 "user_sideloadable_font": _utf8str,
                 "custom_font_index": _int,
@@ -151,7 +156,8 @@ def _reader_state_preferences() -> Spec:
         from .containers import Record
 
         _reader_state_preferences_factory = Spec(
-            Record, {
+            Record,
+            _schema_required={
                 "font_preferences": _font_prefs(),
                 "left_margin": _int,
                 "right_margin": _int,
@@ -208,13 +214,15 @@ def _annotation_personal_element() -> Spec:
         from .containers import Position
 
         _annotation_personal_element_factory = Spec(
-            Record, {
+            Record,
+            _schema_required={
                 "start_pos": Spec(Position),
                 "end_pos": Spec(Position),
                 "creation_time": Spec(DateTime),
                 "last_modification_time": Spec(DateTime),
                 "template": _utf8str,
-            }, {
+            },
+            _schema_optional={
                 "note": _utf8str,
             })
     return _annotation_personal_element_factory
@@ -278,9 +286,11 @@ def _name_to_factory() -> dict[str, None | Spec]:
             Spec(LastPageRead),
             "fpr":
             Spec(
-                Record, {
+                Record,
+                _schema_required={
                     "pos": Spec(Position),
-                }, {
+                },
+                _schema_optional={
                     "timestamp": Spec(DateTime),
                     "timezone_offset": Spec(TimeZoneOffset),
                     "country": _utf8str,
@@ -288,9 +298,11 @@ def _name_to_factory() -> dict[str, None | Spec]:
                 }),
             "updated_lpr":
             Spec(
-                Record, {
+                Record,
+                _schema_required={
                     "pos": Spec(Position),
-                }, {
+                },
+                _schema_optional={
                     "timestamp": Spec(DateTime),
                     "timezone_offset": Spec(TimeZoneOffset),
                     "country": _utf8str,
@@ -300,7 +312,8 @@ def _name_to_factory() -> dict[str, None | Spec]:
             # amzn page num xref (i.e. page num map)
             "apnx.key":
             Spec(
-                Record, {
+                Record,
+                _schema_requried={
                     "asin": _utf8str,
                     "cde_type": _utf8str,
                     "sidecar_available": _bool,
@@ -312,7 +325,8 @@ def _name_to_factory() -> dict[str, None | Spec]:
                 }),
             "fixed.layout.data":
             Spec(
-                Record, {
+                Record,
+                _schema_requried={
                     "unknown1": _bool,
                     "unknown2": _bool,
                     "unknown3": _bool,
@@ -320,56 +334,68 @@ def _name_to_factory() -> dict[str, None | Spec]:
             "sharing.limits":
             Spec(
                 Record,
-                {
+                _schema_requried={
                     # TODO discover structure for sharing.limits
                     "accumulated": None
                 }),
             "language.store":
-            Spec(Record, {
-                "language": _utf8str,
-                "unknown1": _int,
-            }),
+            Spec(
+                Record,
+                _schema_requried={
+                    "language": _utf8str,
+                    "unknown1": _int,
+                }),
             "periodicals.view.state":
-            Spec(Record, {
-                "unknown1": _utf8str,
-                "unknown2": _int,
-            }),
+            Spec(
+                Record,
+                _schema_requried={
+                    "unknown1": _utf8str,
+                    "unknown2": _int,
+                }),
             "purchase.state.data":
-            Spec(Record, {
-                "state": _int,
-                "time": Spec(DateTime),
-            }),
+            Spec(
+                Record,
+                _schema_requried={
+                    "state": _int,
+                    "time": Spec(DateTime),
+                }),
             "timer.model":
             _timer_model(),
             "timer.data.store":
             Spec(
-                Record, {
+                Record,
+                _schema_requried={
                     "on": _bool,
                     "reading_timer_model": _timer_model(),
                     "version": _int,
                 }),
             "timer.data.store.v2":
             Spec(
-                Record, {
+                Record,
+                _schema_requried={
                     "on": _bool,
                     "reading_timer_model": _timer_model(),
                     "version": _int,
                     "last_option": _int,
                 }),
             "book.info.store":
-            Spec(Record, {
-                "num_words": _long,
-                "percent_of_book": _double,
-            }),
+            Spec(
+                Record,
+                _schema_requried={
+                    "num_words": _long,
+                    "percent_of_book": _double,
+                }),
             "page.history.store":
             Spec(
                 Array,
                 _schema_elmt_spec=Spec(
-                    Record, {
+                    Record,
+                    _schema_requried={
                         "pos": Spec(Position),
                         "time": Spec(DateTime),
                     }),
-                _schema_elmt_name="page.history.record"),
+                _schema_elmt_name="page.history.record",
+            ),
             "reader.state.preferences":
             _reader_state_preferences(),
             "font.prefs":
@@ -385,10 +411,13 @@ def _name_to_factory() -> dict[str, None | Spec]:
             "annotation.personal.clip_article":
             _annotation_personal_element(),
             "whisperstore.migration.status":
-            Spec(Record, {
-                "unknown1": _bool,
-                "unknown2": _bool,
-            }),
+            Spec(
+                Record,
+                _schema_requried={
+                    "unknown1": _bool,
+                    "unknown2": _bool,
+                },
+            ),
             "timer.average.calculator.distribution.normal":
             _timer_average_calculator_distribution_normal(),
             "timer.average.calculator.outliers":
