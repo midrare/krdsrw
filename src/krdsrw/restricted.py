@@ -2,8 +2,6 @@ import collections.abc
 import copy
 import typing
 
-from .error import KRDSRWError
-
 K = typing.TypeVar("K", bound=int | float | str)
 T = typing.TypeVar("T", bound=typing.Any)
 
