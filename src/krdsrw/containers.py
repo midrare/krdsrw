@@ -318,7 +318,7 @@ class IntMap(RestrictedDict[str, typing.Any], Object):
             self[alias] = spec.make()
 
         # parent constructor after schema setup so hooks run correctly
-        super().__init__()
+        super().__init__(*args, **kwargs)
 
     @typing.override
     def _pre_read_filter(self, key: typing.Any) -> bool:
