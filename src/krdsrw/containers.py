@@ -185,37 +185,6 @@ class Record(RestrictedDict[str, T], Object):
 
         return key, value  # type: ignore
 
-    @typing.override
-    def _pre_default_filter(
-        self,
-        key: typing.Any,
-        default: typing.Any,
-    ) -> bool:
-        if not isinstance(key, str):
-            return False
-        maker = self._required_spec.get(key) or self._optional_spec.get(key)
-        if not maker:
-            return False
-        if default is not None and not maker.is_compatible(default):
-            return False
-        return True
-
-    @typing.override
-    def _pre_default_transform(
-        self: typing.Any,
-        key: typing.Any,
-        default: typing.Any,
-    ) -> T:
-        maker = self._required_spec.get(key) or self._optional_spec.get(key)
-        if not maker:
-            raise Exception(f"No template for key \"{key}\".")
-        if default is None:
-            default = maker.make()
-        elif isinstance(default, (bool, int, float, str, bytes)) \
-        and not isinstance(default, Basic):
-            default = maker.cast(default)
-        return default  # type: ignore
-
     @property
     def required(self) -> dict[str, type[T]]:
         return { k: v.cls_ for k, v in self._required_spec.items() }
@@ -364,32 +333,6 @@ class IntMap(RestrictedDict[str, typing.Any], Object):
 
         return self._to_alias(key), value
 
-    @typing.override
-    def _pre_default_filter(self, key: typing.Any, default: typing.Any) -> bool:
-        if default is None:
-            return True
-
-        idx = self._to_idx(key)
-        return self._idx_to_spec[idx].is_compatible(default)
-
-    @typing.override
-    def _pre_default_transform(
-        self: typing.Any,
-        key: typing.Any,
-        default: typing.Any,
-    ) -> typing.Any:
-        if default is None:
-            idx = self._to_idx(key)
-            default = self._idx_to_spec[idx].make()
-
-        maker = self._idx_to_spec[self._to_idx(key)]
-        if maker.is_basic() \
-        and isinstance(default, (bool, int, float, str, bytes)) \
-        and not isinstance(default, Basic):
-            default = maker.cast(default)
-
-        return default
-
     def _to_idx(self, alias: int | str) -> int:
         if isinstance(alias, int):
             return alias
@@ -450,11 +393,6 @@ class DynamicMap(RestrictedDict[str, typing.Any], Object):
     @typing.override
     def _pre_write_filter(self, key: typing.Any, value: typing.Any) -> bool:
         return isinstance(key, str) and isinstance(value, Basic)
-
-    @typing.override
-    def _pre_default_filter(self, key: typing.Any, default: typing.Any) -> bool:
-        return isinstance(key, str) and (default is None \
-            or isinstance(default, (bool, int, float, str, bytes)))
 
     @typing.override
     def _pre_write_transform(
