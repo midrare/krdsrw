@@ -177,7 +177,8 @@ def _annotation_cache_object() -> Spec:
         from .containers import IntMap
 
         _annotation_object_cache_factory = Spec(
-            IntMap, [
+            IntMap,
+            _schema_intmap_idx_alias_name_spec=[
                 (
                     0, "bookmarks", "saved.avl.interval.tree",
                     Spec(
