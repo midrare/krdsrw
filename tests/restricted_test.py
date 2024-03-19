@@ -4,12 +4,9 @@ import typing
 
 import pytest
 
-sys.path.insert(0, os.path.abspath(\
-    os.path.join(os.path.dirname(__file__), '..')))
 from krdsrw.restricted import RestrictedDict
 from krdsrw.restricted import RestrictedList
 
-sys.path.pop(0)
 
 
 class _List(RestrictedList[int]):

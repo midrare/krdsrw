@@ -3,10 +3,8 @@ import os
 import sys
 import pathlib
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from krdsrw.containers import DataStore
 from krdsrw.cursor import Cursor
-sys.path.pop(0)
 
 TEMPEST_EPUB: typing.Final[
     pathlib.Path] = pathlib.Path(__file__).parent / "The Tempest.epub"
