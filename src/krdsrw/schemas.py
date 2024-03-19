@@ -248,25 +248,25 @@ def _name_to_factory() -> dict[str, None | Spec]:
         # NOTE if you update this schema map update the type hint maker too
         _name_to_factory_map = {
             "clock.data.store":
-            None,
+            NotImplemented,
             "dictionary":
             _utf8str,
             "lpu":
-            None,
+            NotImplemented,
             "pdf.contrast":
-            None,
+            NotImplemented,
             "sync_lpr":
             _bool,
             "tpz.line.spacing":
-            None,
+            NotImplemented,
             "XRAY_OTA_UPDATE_STATE":
-            None,
+            NotImplemented,
             "XRAY_SHOWING_SPOILERS":
-            None,
+            NotImplemented,
             "XRAY_SORTING_STATE":
-            None,
+            NotImplemented,
             "XRAY_TAB_STATE":
-            None,
+            NotImplemented,
             "dict.prefs.v2":
             Spec(DynamicMap),
             "EndActions":
@@ -341,7 +341,7 @@ def _name_to_factory() -> dict[str, None | Spec]:
                 Record,
                 _schema_record_required={
                     # TODO discover structure for sharing.limits
-                    "accumulated": None
+                    "accumulated": NotImplemented
                 }),
             "language.store":
             Spec(
