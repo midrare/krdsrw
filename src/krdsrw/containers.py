@@ -440,8 +440,8 @@ class IntMap(RestrictedDict[str, typing.Any], Object):
 
 # can contain Bool, Char, Byte, Short, Int, Long, Float, Double, Utf8Str
 class DynamicMap(RestrictedDict[str, typing.Any], Object):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
     @typing.override
     def _pre_read_filter(self, key: typing.Any) -> bool:
