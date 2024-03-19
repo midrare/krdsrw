@@ -41,7 +41,9 @@ def _timer_average_calculator_outliers() -> Spec:
     if not _timer_average_calculator_calculator_outliers_factory:
         from .containers import Array
         _timer_average_calculator_calculator_outliers_factory = Spec(
-            Array, _double)
+            Array,
+            _schema_elmt_spec=_double,
+        )
 
     return _timer_average_calculator_calculator_outliers_factory
 
@@ -70,17 +72,23 @@ def _timer_average_calculator() -> Spec:
         _timer_average_calculator_factory = Spec(
             Record, {
                 "samples1":
-                Spec(Array, _double),
+                Spec(Array, _schema_elmt_spec=_double),
                 "samples2":
-                Spec(Array, _double),
+                Spec(Array, _schema_elmt_spec=_double),
                 "normal_distributions":
                 Spec(
-                    Array, _timer_average_calculator_distribution_normal(),
-                    "timer.average.calculator.distribution.normal"),
+                    Array,
+                    _schema_elmt_spec=
+                    _timer_average_calculator_distribution_normal(),
+                    _schema_elmt_name=
+                    "timer.average.calculator.distribution.normal",
+                ),
                 "outliers":
                 Spec(
-                    Array, _timer_average_calculator_outliers(),
-                    "timer.average.calculator.outliers"),
+                    Array,
+                    _schema_elmt_spec=_timer_average_calculator_outliers(),
+                    _schema_elmt_name="timer.average.calculator.outliers",
+                ),
             })
 
     return _timer_average_calculator_factory
@@ -166,23 +174,27 @@ def _annotation_cache_object() -> Spec:
                 (
                     0, "bookmarks", "saved.avl.interval.tree",
                     Spec(
-                        Array, _annotation_personal_element(),
-                        "annotation.personal.bookmark")),
+                        Array,
+                        _schema_elmt_spec=_annotation_personal_element(),
+                        _schema_elmt_name="annotation.personal.bookmark")),
                 (
                     1, "highlights", "saved.avl.interval.tree",
                     Spec(
-                        Array, _annotation_personal_element(),
-                        "annotation.personal.highlight")),
+                        Array,
+                        _schema_elmt_spec=_annotation_personal_element(),
+                        _schema_elmt_name="annotation.personal.highlight")),
                 (
                     2, "notes", "saved.avl.interval.tree",
                     Spec(
-                        Array, _annotation_personal_element(),
-                        "annotation.personal.note")),
+                        Array,
+                        _schema_elmt_spec=_annotation_personal_element(),
+                        _schema_elmt_name="annotation.personal.note")),
                 (
                     3, "clip_articles", "saved.avl.interval.tree",
                     Spec(
-                        Array, _annotation_personal_element(),
-                        "annotation.personal.clip_article")),
+                        Array,
+                        _schema_elmt_spec=_annotation_personal_element(),
+                        _schema_elmt_name="annotation.personal.clip_article")),
             ])
 
     return _annotation_object_cache_factory
@@ -292,7 +304,7 @@ def _name_to_factory() -> dict[str, None | Spec]:
                     "asin": _utf8str,
                     "cde_type": _utf8str,
                     "sidecar_available": _bool,
-                    "opn_to_pos": Spec(Array, _int),
+                    "opn_to_pos": Spec(Array, _schema_elmt_spec=_int),
                     "first": _int,
                     "unknown1": _int,
                     "unknown2": _int,
@@ -352,11 +364,12 @@ def _name_to_factory() -> dict[str, None | Spec]:
             "page.history.store":
             Spec(
                 Array,
-                Spec(
+                _schema_elmt_spec=Spec(
                     Record, {
                         "pos": Spec(Position),
                         "time": Spec(DateTime),
-                    }), "page.history.record"),
+                    }),
+                _schema_elmt_name="page.history.record"),
             "reader.state.preferences":
             _reader_state_preferences(),
             "font.prefs":
