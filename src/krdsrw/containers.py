@@ -46,12 +46,12 @@ class Array(RestrictedList[T], Object):
     def __init__(
         self,
         *args,
-        _schema_elmt_spec: Spec[T],
-        _schema_elmt_name: None | str = None,
+        _schema_array_elmt_spec: Spec[T],
+        _schema_array_elmt_name: None | str = None,
         **kwargs,
     ):
-        self._elmt_spec: typing.Final[Spec[T]] = _schema_elmt_spec
-        self._elmt_name: typing.Final[str] = _schema_elmt_name or ''
+        self._elmt_spec: typing.Final[Spec[T]] = _schema_array_elmt_spec
+        self._elmt_name: typing.Final[str] = _schema_array_elmt_name or ''
 
         # parent constructor /after/ specs set up so that hooks run correctly
         super().__init__(*args, **kwargs)
@@ -113,8 +113,8 @@ class Record(RestrictedDict[str, T], Object):
     def __init__(
         self,
         *args,
-        _schema_required: dict[str, Spec[T] | tuple[Spec[T], str]],
-        _schema_optional: None
+        _schema_record_required: dict[str, Spec[T] | tuple[Spec[T], str]],
+        _schema_record_optional: None
         | dict[str, Spec[T] | tuple[Spec[T], str]] = None,
         **kwargs,
     ):
@@ -133,13 +133,13 @@ class Record(RestrictedDict[str, T], Object):
             return ''
 
         self._required_spec: typing.Final[dict[str, Spec[T]]] \
-            = {k: get_spec(v) for k, v in _schema_required.items()}
+            = {k: get_spec(v) for k, v in _schema_record_required.items()}
         self._optional_spec: typing.Final[dict[str, Spec[T]]] \
-            = {k: get_spec(v) for k, v in (_schema_optional or {}).items()}
+            = {k: get_spec(v) for k, v in (_schema_record_optional or {}).items()}
         self._required_name: typing.Final[dict[str, str]] \
-            = {k: get_name(v) for k, v in _schema_required.items()}
+            = {k: get_name(v) for k, v in _schema_record_required.items()}
         self._optional_name: typing.Final[dict[str, str]] \
-            = {k: get_name(v) for k, v in (_schema_optional or {}).items()}
+            = {k: get_name(v) for k, v in (_schema_record_optional or {}).items()}
 
         for k, v in self._required_spec.items():
             self[k] = v.make()

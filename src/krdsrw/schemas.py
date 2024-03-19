@@ -42,7 +42,7 @@ def _timer_average_calculator_outliers() -> Spec:
         from .containers import Array
         _timer_average_calculator_calculator_outliers_factory = Spec(
             Array,
-            _schema_elmt_spec=_double,
+            _schema_array_elmt_spec=_double,
         )
 
     return _timer_average_calculator_calculator_outliers_factory
@@ -55,7 +55,7 @@ def _timer_average_calculator_distribution_normal() -> Spec:
         from .containers import Spec
         _timer_average_calculator_distribution_normal_factory = Spec(
             Record,
-            _schema_required={
+            _schema_record_required={
                 "count": _long,
                 "sum": _double,
                 "sum_of_squares": _double,
@@ -72,24 +72,25 @@ def _timer_average_calculator() -> Spec:
         from .containers import Spec
         _timer_average_calculator_factory = Spec(
             Record,
-            _schema_required={
+            _schema_record_required={
                 "samples1":
-                Spec(Array, _schema_elmt_spec=_double),
+                Spec(Array, _schema_array_elmt_spec=_double),
                 "samples2":
-                Spec(Array, _schema_elmt_spec=_double),
+                Spec(Array, _schema_array_elmt_spec=_double),
                 "normal_distributions":
                 Spec(
                     Array,
-                    _schema_elmt_spec=
+                    _schema_array_elmt_spec=
                     _timer_average_calculator_distribution_normal(),
-                    _schema_elmt_name=
+                    _schema_array_elmt_name=
                     "timer.average.calculator.distribution.normal",
                 ),
                 "outliers":
                 Spec(
                     Array,
-                    _schema_elmt_spec=_timer_average_calculator_outliers(),
-                    _schema_elmt_name="timer.average.calculator.outliers",
+                    _schema_array_elmt_spec=_timer_average_calculator_outliers(
+                    ),
+                    _schema_array_elmt_name="timer.average.calculator.outliers",
                 ),
             })
 
@@ -104,7 +105,7 @@ def _timer_model() -> Spec:
 
         _timer_model_factory = Spec(
             Record,
-            _schema_required={
+            _schema_record_required={
                 "version":
                 _long,
                 "total_time":
@@ -127,7 +128,7 @@ def _font_prefs() -> Spec:
 
         _font_prefs_factory = Spec(
             Record,
-            _schema_required={
+            _schema_record_required={
                 "typeface": _utf8str,
                 "line_sp": _int,
                 "size": _int,
@@ -138,7 +139,7 @@ def _font_prefs() -> Spec:
                 "inset_right": _int,
                 "unknown1": _int,
             },
-            _schema_optional={
+            _schema_record_optional={
                 "bold": _int,
                 "user_sideloadable_font": _utf8str,
                 "custom_font_index": _int,
@@ -157,7 +158,7 @@ def _reader_state_preferences() -> Spec:
 
         _reader_state_preferences_factory = Spec(
             Record,
-            _schema_required={
+            _schema_record_required={
                 "font_preferences": _font_prefs(),
                 "left_margin": _int,
                 "right_margin": _int,
@@ -181,26 +182,29 @@ def _annotation_cache_object() -> Spec:
                     0, "bookmarks", "saved.avl.interval.tree",
                     Spec(
                         Array,
-                        _schema_elmt_spec=_annotation_personal_element(),
-                        _schema_elmt_name="annotation.personal.bookmark")),
+                        _schema_array_elmt_spec=_annotation_personal_element(),
+                        _schema_array_elmt_name="annotation.personal.bookmark")
+                ),
                 (
                     1, "highlights", "saved.avl.interval.tree",
                     Spec(
                         Array,
-                        _schema_elmt_spec=_annotation_personal_element(),
-                        _schema_elmt_name="annotation.personal.highlight")),
+                        _schema_array_elmt_spec=_annotation_personal_element(),
+                        _schema_array_elmt_name="annotation.personal.highlight")
+                ),
                 (
                     2, "notes", "saved.avl.interval.tree",
                     Spec(
                         Array,
-                        _schema_elmt_spec=_annotation_personal_element(),
-                        _schema_elmt_name="annotation.personal.note")),
+                        _schema_array_elmt_spec=_annotation_personal_element(),
+                        _schema_array_elmt_name="annotation.personal.note")),
                 (
                     3, "clip_articles", "saved.avl.interval.tree",
                     Spec(
                         Array,
-                        _schema_elmt_spec=_annotation_personal_element(),
-                        _schema_elmt_name="annotation.personal.clip_article")),
+                        _schema_array_elmt_spec=_annotation_personal_element(),
+                        _schema_array_elmt_name=
+                        "annotation.personal.clip_article")),
             ])
 
     return _annotation_object_cache_factory
@@ -215,14 +219,14 @@ def _annotation_personal_element() -> Spec:
 
         _annotation_personal_element_factory = Spec(
             Record,
-            _schema_required={
+            _schema_record_required={
                 "start_pos": Spec(Position),
                 "end_pos": Spec(Position),
                 "creation_time": Spec(DateTime),
                 "last_modification_time": Spec(DateTime),
                 "template": _utf8str,
             },
-            _schema_optional={
+            _schema_record_optional={
                 "note": _utf8str,
             })
     return _annotation_personal_element_factory
@@ -287,10 +291,10 @@ def _name_to_factory() -> dict[str, None | Spec]:
             "fpr":
             Spec(
                 Record,
-                _schema_required={
+                _schema_record_required={
                     "pos": Spec(Position),
                 },
-                _schema_optional={
+                _schema_record_optional={
                     "timestamp": Spec(DateTime),
                     "timezone_offset": Spec(TimeZoneOffset),
                     "country": _utf8str,
@@ -299,10 +303,10 @@ def _name_to_factory() -> dict[str, None | Spec]:
             "updated_lpr":
             Spec(
                 Record,
-                _schema_required={
+                _schema_record_required={
                     "pos": Spec(Position),
                 },
-                _schema_optional={
+                _schema_record_optional={
                     "timestamp": Spec(DateTime),
                     "timezone_offset": Spec(TimeZoneOffset),
                     "country": _utf8str,
@@ -313,11 +317,11 @@ def _name_to_factory() -> dict[str, None | Spec]:
             "apnx.key":
             Spec(
                 Record,
-                _schema_requried={
+                _schema_record_required={
                     "asin": _utf8str,
                     "cde_type": _utf8str,
                     "sidecar_available": _bool,
-                    "opn_to_pos": Spec(Array, _schema_elmt_spec=_int),
+                    "opn_to_pos": Spec(Array, _schema_array_elmt_spec=_int),
                     "first": _int,
                     "unknown1": _int,
                     "unknown2": _int,
@@ -326,7 +330,7 @@ def _name_to_factory() -> dict[str, None | Spec]:
             "fixed.layout.data":
             Spec(
                 Record,
-                _schema_requried={
+                _schema_record_required={
                     "unknown1": _bool,
                     "unknown2": _bool,
                     "unknown3": _bool,
@@ -334,28 +338,28 @@ def _name_to_factory() -> dict[str, None | Spec]:
             "sharing.limits":
             Spec(
                 Record,
-                _schema_requried={
+                _schema_record_required={
                     # TODO discover structure for sharing.limits
                     "accumulated": None
                 }),
             "language.store":
             Spec(
                 Record,
-                _schema_requried={
+                _schema_record_required={
                     "language": _utf8str,
                     "unknown1": _int,
                 }),
             "periodicals.view.state":
             Spec(
                 Record,
-                _schema_requried={
+                _schema_record_required={
                     "unknown1": _utf8str,
                     "unknown2": _int,
                 }),
             "purchase.state.data":
             Spec(
                 Record,
-                _schema_requried={
+                _schema_record_required={
                     "state": _int,
                     "time": Spec(DateTime),
                 }),
@@ -364,7 +368,7 @@ def _name_to_factory() -> dict[str, None | Spec]:
             "timer.data.store":
             Spec(
                 Record,
-                _schema_requried={
+                _schema_record_required={
                     "on": _bool,
                     "reading_timer_model": _timer_model(),
                     "version": _int,
@@ -372,7 +376,7 @@ def _name_to_factory() -> dict[str, None | Spec]:
             "timer.data.store.v2":
             Spec(
                 Record,
-                _schema_requried={
+                _schema_record_required={
                     "on": _bool,
                     "reading_timer_model": _timer_model(),
                     "version": _int,
@@ -381,20 +385,20 @@ def _name_to_factory() -> dict[str, None | Spec]:
             "book.info.store":
             Spec(
                 Record,
-                _schema_requried={
+                _schema_record_required={
                     "num_words": _long,
                     "percent_of_book": _double,
                 }),
             "page.history.store":
             Spec(
                 Array,
-                _schema_elmt_spec=Spec(
+                _schema_array_elmt_spec=Spec(
                     Record,
-                    _schema_requried={
+                    _schema_record_required={
                         "pos": Spec(Position),
                         "time": Spec(DateTime),
                     }),
-                _schema_elmt_name="page.history.record",
+                _schema_array_elmt_name="page.history.record",
             ),
             "reader.state.preferences":
             _reader_state_preferences(),
@@ -413,7 +417,7 @@ def _name_to_factory() -> dict[str, None | Spec]:
             "whisperstore.migration.status":
             Spec(
                 Record,
-                _schema_requried={
+                _schema_record_required={
                     "unknown1": _bool,
                     "unknown2": _bool,
                 },
