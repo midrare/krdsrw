@@ -34,7 +34,7 @@ class TestArray:
         assert o[0] == 1337
 
     def test_append_type_check_disallow(self):
-        o = Array(Spec(Int))
+        o = Array(_schema_array_elmt_spec=Spec(Int))
         with pytest.raises(ValueError):
             o.append("foo")
 
