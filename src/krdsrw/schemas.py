@@ -1,6 +1,10 @@
 import argparse
+import dataclasses
+import inspect
+import json
 import os
 import sys
+import types
 import typing
 
 from .types import Bool
@@ -475,75 +479,141 @@ def _path_arg(
     return check
 
 
-def _make_dict_methods(
-    key: str,
-    value: None | str = None,
-    overload_: bool = True,
+@dataclasses.dataclass
+class Field:
+    name: int | str
+    values: None | typing.TypeVar | str | list[typing.TypeVar | str]
+    is_readable: bool = True
+    is_writable: bool = True
+    is_deletable: bool = True
+
+
+def _add_method(
+    name: str,
+    args: dict[str, None | str | typing.TypeVar
+               | list[None | str | typing.TypeVar]],
+    ret: None | str | typing.TypeVar | list[str | typing.TypeVar],
+    overload: bool = True,
 ) -> str:
-    decorator = ''
-    if overload_:
-        decorator = '@typing.overload'
+    result = []
 
-    if key is None:
-        key = "typing.Any"
+    if overload:
+        result.append("@typing.override")
 
-    if value is None:
-        value = "typing.Any"
+    result.extend([
+        f"def {name}(",
+        "    self,",
+    ])
 
-    return f"""\n\n
-    {decorator}
-    def __getitem__(
-        self,
-        key: {key},  # type: ignore
-    ) -> {value}:  # type: ignore
-        {'return super().__getitem__(key)' if not overload_ else '...'}
+    for name, types_ in args.items():
+        if not isinstance(types_, (tuple, list)):
+            types_ = [types_]
+        types_ = [o.__name__ if inspect.isclass(o) else str(o) for o in types_]
+        types_ = types_ or ["typing.Any"]
+        result.append(f"    {name}: {" | ".join(types_)},")
 
-    {decorator}
-    def __contains__(
-        self,
-        key: {key},  # type: ignore
-    ) -> bool:
-        {'return super().__contains__(key)' if not overload_ else '...'}
+    if not isinstance(ret, (tuple, list)):
+        ret = [ret]
 
-    {decorator}
-    def __delitem__(
-        self,
-        key: {key},  # type: ignore
-    ):
-        {'super().__delitem__(key)' if not overload_ else '...'}
+    if ret:
+        result.append(f") -> {" | ".join(ret)}:")
+    else:
+        result.append("):")
 
-    {decorator}
-    def __setitem__(
-        self,
-        key: {key},  # type: ignore
-        item: {value},  # type: ignore
-    ):
-        {'super().__setitem__(key, item)' if not overload_ else '...'}
+    if overload:
+        result.append("    ...")
+    else:
+        result.append(f"    super().{name}({', '.join(args.keys())})")
 
-    {decorator}
-    def get(
-        self,
-        key: {key},  # type: ignore
-        default: None | {value} = None,  # type: ignore
-    ) -> None | {value}:  # type: ignore
-        {'return super().get(key, default)' if not overload_ else '...'}
+    return '\n'.join(result)
 
-    {decorator}
-    def pop(
-        self,
-        key: {key},  # type: ignore
-        default: None | {value} = None,  # type: ignore
-    ) -> None | {value}:  # type: ignore
-        {'return super().pop(key, default)' if not overload_ else '...'}
 
-    {decorator}
-    def setdefault(
-        self,
-        key: {key},  # type: ignore
-        default: None | {value} = None,  # type: ignore
-    ):
-        {'return super().setdefault(key, default)' if not overload_ else '...'}
-    \n\n"""
+def _add_field(field: Field):
+    name = field.name
+    if isinstance(name, str):
+        name = f'"{name}"'
+
+    values = []
+    if isinstance(field.values, (tuple, list)):
+        values.extend(field.values)
+    else:
+        values.append(field.values)
+
+    result = []
+
+    if field.is_readable:
+        result.extend([
+            _add_method(
+                '__getitem__',
+                { 'key': f"typing.Literal[{name}]"},
+                values,
+                True,
+            ),
+            _add_method(
+                '__contains__',
+                { 'key': f"typing.Literal[{name}]"},
+                bool,
+                True,
+            ),
+            _add_method(
+                'get',
+                {
+                    'key': f"typing.Literal[{name}]",
+                    'default': [ None, 'typing.Any']
+                },
+                values,
+                True,
+            ),
+        ])
+
+    if field.is_writable:
+        result.extend([
+            _add_method(
+                '__setitem__',
+                { 'key': f"typing.Literal[{name}]"},
+                values,
+                True,
+            ),
+            _add_method(
+                'setdefault',
+                {
+                    'key': f"typing.Literal[{name}]",
+                    'default': [None] + values,
+                },
+                [None] + values,
+                True,
+            ),
+            _add_method(
+                'get',
+                {
+                    'key': f"typing.Literal[{name}]",
+                    'default': [ None, 'typing.Any']
+                },
+                values,
+                True,
+            ),
+        ])
+
+    if field.is_deletable:
+        result.extend([
+            _add_method(
+                '__delitem__',
+                { 'key': f"typing.Literal[{name}]"},
+                None,
+                True,
+            ),
+            _add_method(
+                'pop',
+                {
+                    'key': f"typing.Literal[{name}]",
+                    'default': [None] + field.values,
+                },
+                [None] + field.values,
+                True,
+            ),
+        ])
+
+    return '\n'.join(result)
 
 
 def _main(argv: list[str]) -> int:
@@ -563,7 +633,7 @@ def _main(argv: list[str]) -> int:
     args = parser.parse_args(argv)
     with open(args.output, 'w') as f:
         f.write('# THIS FILE IS AUTOMATICALLY GENERATED. DO NOT\n')
-        f.write('# MODIFY. ALL CHANGES WILL BE UNDONE.\n')
+        f.write('# MODIFY THIS FILE. ALL CHANGES WILL BE UNDONE.\n')
         f.write('\n')
         f.write("# NOLINTBEGIN\n")
         f.write("# @formatter:off\n")
