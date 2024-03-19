@@ -283,9 +283,6 @@ class IntMap(RestrictedDict[str, typing.Any], Object):
             self._idx_to_name[idx] = name
             self._idx_to_spec[idx] = spec
 
-        for idx, alias, name, spec in _schema_intmap_idx_alias_name_spec:
-            self[alias] = spec.make()
-
         # parent constructor after schema setup so hooks run correctly
         super().__init__(*args, **kwargs)
 
