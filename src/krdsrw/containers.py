@@ -1084,7 +1084,7 @@ class DataStore(_SchemaDict, Object):
             cursor.write_object(value, name)
 
     def __str__(self) -> str:
-        return f"{self.__class__.__name__}{{{dict(self)}}}"
+        return f"{self.__class__.__name__}{dict(self)}"
 
 
 ALL_OBJECT_TYPES: typing.Final[tuple[type[Object], ...]] = (
