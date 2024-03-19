@@ -369,14 +369,16 @@ class IntMap(RestrictedDict[str, typing.Any], Object):
                 raise UnexpectedStructureError(
                     f"Object index number {idxnum} not recognized")
             name = self._idx_to_name[idxnum]
-            self[name] = self._idx_to_spec[idxnum].read(cursor, name)
+            alias = self._idx_to_alias[idxnum]
+            self[alias] = self._idx_to_spec[idxnum].read(cursor, name)
 
     @typing.override
     def write(self, cursor: Cursor):
         cursor.write_int(len(self))
 
-        for name, value in self.items():
-            idx = self._to_idx(name)
+        for alias, value in self.items():
+            idx = self._to_idx(alias)
+            name = self._idx_to_name[idx]
             cursor.write_int(idx)
             self._idx_to_spec[idx].write(cursor, value, name)
 
