@@ -150,7 +150,7 @@ class Cursor:
             return self._peek_raw_byte()
         return self._peek_raw_bytes(length)
 
-    def startswith(self, data: int | typing.ByteString) -> bool:
+    def peek_matches(self, data: int | typing.ByteString) -> bool:
         if isinstance(data, int):
             return self._peek_raw_byte() == data
         return self._peek_raw_bytes(len(data)) == data
