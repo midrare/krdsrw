@@ -146,7 +146,7 @@ class Array(RestrictedList[T], Object):
     def elmt_name(self) -> str:
         return self._elmt_name
 
-    def make(self, *args, **kwargs) -> T:
+    def make_element(self, *args, **kwargs) -> T:
         if issubclass(self._elmt_spec.cls_, Basic) and (args or kwargs):
             return self._elmt_spec.make(*args, **kwargs)
 
@@ -159,7 +159,7 @@ class Array(RestrictedList[T], Object):
         return result
 
     def make_and_append(self, *args, **kwargs) -> T:
-        result = self.make(*args, **kwargs)
+        result = self.make_element(*args, **kwargs)
         self.append(result)
         return result
 
