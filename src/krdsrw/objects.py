@@ -302,7 +302,7 @@ class IntMap(RestrictedDict[str, typing.Any], Object):
 
     @typing.override
     def _pre_del_filter(self, key: typing.Any) -> bool:
-        return False
+        return True
 
     @typing.override
     def _pre_write_filter(self, key: typing.Any, value: typing.Any) -> bool:
