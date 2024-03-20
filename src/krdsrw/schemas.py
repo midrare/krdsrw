@@ -7,15 +7,15 @@ import sys
 import types
 import typing
 
-from .types import Bool
-from .types import Byte
-from .types import Char
-from .types import Short
-from .types import Int
-from .types import Long
-from .types import Float
-from .types import Double
-from .types import Utf8Str
+from .basic import Bool
+from .basic import Byte
+from .basic import Char
+from .basic import Short
+from .basic import Int
+from .basic import Long
+from .basic import Float
+from .basic import Double
+from .basic import Utf8Str
 from .types import Spec
 
 _bool: typing.Final[Spec[Bool]] = Spec(Bool)
