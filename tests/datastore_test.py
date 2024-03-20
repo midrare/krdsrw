@@ -1,7 +1,7 @@
 import typing
 import pathlib
 
-from krdsrw.containers import DataStore
+from krdsrw.objects import DataStore
 from krdsrw.cursor import Cursor
 
 TEMPEST_EPUB: typing.Final[

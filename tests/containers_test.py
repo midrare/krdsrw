@@ -2,9 +2,9 @@ import pytest
 
 from krdsrw.cursor import Cursor
 from krdsrw.basics import Int
-from krdsrw.types import Spec
-from krdsrw.containers import Array
-from krdsrw.containers import DynamicMap
+from krdsrw.specs import Spec
+from krdsrw.objects import Array
+from krdsrw.objects import DynamicMap
 
 
 class TestSpec:
