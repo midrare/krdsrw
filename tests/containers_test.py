@@ -1,7 +1,7 @@
 import pytest
 
 from krdsrw.cursor import Cursor
-from krdsrw.types import Int
+from krdsrw.basics import Int
 from krdsrw.types import Spec
 from krdsrw.containers import Array
 from krdsrw.containers import DynamicMap
