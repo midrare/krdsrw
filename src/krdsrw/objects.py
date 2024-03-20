@@ -349,23 +349,30 @@ class Record(RestrictedDict[str, T], Object):
 
 # can contain Bool, Char, Byte, Short, Int, Long, Float, Double, Utf8Str, Object
 class IntMap(RestrictedDict[str, typing.Any], Object):
-    def __init__(
-        self,
-        *args,
-        _schema_intmap_idx_alias_name_spec: list[tuple[int, str, str, Spec]],
-        **kwargs,
-    ):
+    def __init__(self, *args, **kwargs):
+        idx_alias_name_spec = kwargs.pop('_schema_intmap_idx_alias_name_spec')
+
         self._idx_to_spec: dict[int, Spec] = {}
         self._idx_to_name: dict[int, str] = {}
         self._idx_to_alias: dict[int, str] = {}
 
-        for idx, alias, name, spec in _schema_intmap_idx_alias_name_spec:
+        for idx, alias, name, spec in idx_alias_name_spec:
             self._idx_to_alias[idx] = alias
             self._idx_to_name[idx] = name
             self._idx_to_spec[idx] = spec
 
         # parent constructor after schema setup so hooks run correctly
         super().__init__(*args, **kwargs)
+
+    @classmethod
+    def spec(
+        cls,
+        idx_alias_name_spec: list[tuple[int, str, str, Spec]],
+    ) -> Spec[typing.Self]:
+        return Spec(
+            cls,
+            _schema_intmap_idx_alias_name_spec=copy.deepcopy(
+                idx_alias_name_spec))
 
     @typing.override
     def _pre_read_filter(self, key: typing.Any) -> bool:
