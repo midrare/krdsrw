@@ -19,3 +19,4 @@ repos:
     rev: v0.40.2
     hooks:
       - id: yapf
+        args: [ -i ]
