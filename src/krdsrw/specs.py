@@ -57,8 +57,13 @@ class Spec(typing.Generic[T]):
         assert o is not None, 'Failed to create object'
         return o
 
-    def make(self) -> T:
-        return self._cls(*self._args, **self._kwargs)
+    def make(self, *args, **kwargs) -> T:
+        return self._cls(
+            *self._args,
+            *args,
+            **self._kwargs,
+            **kwargs,
+        )
 
     def write(self, cursor: Cursor, o: T, name: None | str = None):
         if name:
@@ -84,16 +89,3 @@ class Spec(typing.Generic[T]):
         return isinstance(o, self._cls) \
         or ((builtin := getattr(self._cls, 'builtin')) \
         and inspect.isclass(builtin) and isinstance(o, builtin))
-
-    def cast(self, o: typing.Any) -> T:
-        if issubclass(self._cls, list):
-            o2 = self._cls(*self._args, **self._kwargs)
-            o2.extend(o)
-            return o2
-
-        if issubclass(self._cls, dict):
-            o2 = self._cls(*self._args, **self._kwargs)
-            o2.update(o)
-            return o2
-
-        return self._cls(o, *self._args, **self._kwargs)

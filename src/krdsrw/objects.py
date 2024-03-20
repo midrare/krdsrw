@@ -148,7 +148,7 @@ class Array(RestrictedList[T], Object):
 
     def make(self, *args, **kwargs) -> T:
         if issubclass(self._elmt_spec.cls_, Basic) and (args or kwargs):
-            return self._elmt_spec.cast(*args, **kwargs)
+            return self._elmt_spec.make(*args, **kwargs)
 
         result = self._elmt_spec.make()
         if isinstance(result, dict) and (args or kwargs):
@@ -169,7 +169,7 @@ class Array(RestrictedList[T], Object):
 
     @typing.override
     def _pre_write_transform(self, value: typing.Any) -> T:
-        return self._elmt_spec.cast(value)
+        return self._elmt_spec.make(value)
 
 
 class Record(RestrictedDict[str, T], Object):
@@ -249,7 +249,7 @@ class Record(RestrictedDict[str, T], Object):
             value = maker.make()
         elif isinstance(value, (bool, int, float, str, bytes)) \
         and not isinstance(value, Basic):
-            value = maker.cast(value)
+            value = maker.make(value)
 
         return key, value  # type: ignore
 
@@ -394,7 +394,7 @@ class IntMap(RestrictedDict[str, typing.Any], Object):
         if issubclass(maker.cls_, Basic) \
         and isinstance(value, (bool, int, float, str, bytes)) \
         and not isinstance(value, Basic):
-            value = maker.cast(value)
+            value = maker.make(value)
 
         return self._to_alias(key), value
 
