@@ -1,9 +1,6 @@
 from __future__ import annotations
 import abc
 import base64
-import collections
-import collections.abc
-import copy
 import json
 import typing
 
@@ -14,8 +11,7 @@ from .restricted import RestrictedDict
 from .cursor import Cursor
 from .error import UnexpectedBytesError
 from .error import UnexpectedStructureError
-from .types import Object
-from .types import Spec
+from .specs import Spec
 from .basics import Basic
 from .basics import Byte
 from .basics import Char
@@ -26,6 +22,17 @@ from .basics import Long
 from .basics import Float
 from .basics import Double
 from .basics import Utf8Str
+
+
+class Object(metaclass=abc.ABCMeta):
+    @abc.abstractmethod
+    def read(self, cursor: Cursor):
+        raise NotImplementedError("Must be implemented by the subclass.")
+
+    @abc.abstractmethod
+    def write(self, cursor: Cursor):
+        raise NotImplementedError("Must be implemented by the subclass.")
+
 
 K = typing.TypeVar("K", bound=int | float | str)
 T = typing.TypeVar("T", bound=Byte | Char | Bool | Short | Int | Long \
@@ -934,11 +941,9 @@ WhisperstoreMigrationStatus = typing.TypedDict(
         'unknown2': Bool,
     })
 
+
 # can contain Bool, Char, Byte, Short, Int, Long, Float, Double, Utf8Str, Object
-from .typehints import _SchemaDict
-
-
-class DataStore(_SchemaDict, Object):
+class DataStore(RestrictedDict, Object):
     MAGIC_STR: typing.Final[bytes] = b"\x00\x00\x00\x00\x00\x1A\xB1\x26"
     FIXED_MYSTERY_NUM: typing.Final[int] = (
         1  # present after the signature; unknown what this number means
@@ -963,22 +968,6 @@ class DataStore(_SchemaDict, Object):
     @typing.override
     def _pre_del_filter(self, key: typing.Any) -> bool:
         return key in self.keys() or schemas.get_spec_by_name(key) is not None
-
-    def _key(self, key: typing.Any) -> bool | int | float | str:
-        spec = schemas.get_spec_by_name(key)
-        assert spec, 'spec should not be null'
-        if key not in self.keys():
-            self[key] = spec.make()
-        return key
-
-    def _key_value(
-        self,
-        key: typing.Any,
-        value: typing.Any,
-    ) -> tuple[bool | int | float | str, Bool | Char | Byte | Short | Int
-               | Long | Float | Double
-               | Utf8Str | Object]:
-        return key, value
 
     @classmethod
     def _eat_signature_or_error(cls, cursor: Cursor):

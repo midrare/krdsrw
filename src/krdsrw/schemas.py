@@ -16,7 +16,7 @@ from .basics import Long
 from .basics import Float
 from .basics import Double
 from .basics import Utf8Str
-from .types import Spec
+from .specs import Spec
 
 _bool: typing.Final[Spec[Bool]] = Spec(Bool)
 _byte: typing.Final[Spec[Byte]] = Spec(Byte)
@@ -43,7 +43,7 @@ _name_to_factory_map: dict[str, None | Spec] = {}
 def _timer_average_calculator_outliers() -> Spec:
     global _timer_average_calculator_calculator_outliers_factory
     if not _timer_average_calculator_calculator_outliers_factory:
-        from .containers import Array
+        from .objects import Array
         _timer_average_calculator_calculator_outliers_factory = Spec(
             Array,
             _schema_array_elmt_spec=_double,
@@ -55,8 +55,8 @@ def _timer_average_calculator_outliers() -> Spec:
 def _timer_average_calculator_distribution_normal() -> Spec:
     global _timer_average_calculator_distribution_normal_factory
     if not _timer_average_calculator_distribution_normal_factory:
-        from .containers import Record
-        from .containers import Spec
+        from .objects import Record
+        from .specs import Spec
         _timer_average_calculator_distribution_normal_factory = Spec(
             Record,
             _schema_record_required={
@@ -71,9 +71,9 @@ def _timer_average_calculator_distribution_normal() -> Spec:
 def _timer_average_calculator() -> Spec:
     global _timer_average_calculator_factory
     if not _timer_average_calculator_factory:
-        from .containers import Array
-        from .containers import Record
-        from .containers import Spec
+        from .objects import Array
+        from .objects import Record
+        from .specs import Spec
         _timer_average_calculator_factory = Spec(
             Record,
             _schema_record_required={
@@ -104,8 +104,8 @@ def _timer_average_calculator() -> Spec:
 def _timer_model() -> Spec:
     global _timer_model_factory
     if not _timer_model_factory:
-        from .containers import Record
-        from .containers import Spec
+        from .objects import Record
+        from .specs import Spec
 
         _timer_model_factory = Spec(
             Record,
@@ -128,7 +128,7 @@ def _timer_model() -> Spec:
 def _font_prefs() -> Spec:
     global _font_prefs_factory
     if not _font_prefs_factory:
-        from .containers import Record
+        from .objects import Record
 
         _font_prefs_factory = Spec(
             Record,
@@ -158,7 +158,7 @@ def _font_prefs() -> Spec:
 def _reader_state_preferences() -> Spec:
     global _reader_state_preferences_factory
     if not _reader_state_preferences_factory:
-        from .containers import Record
+        from .objects import Record
 
         _reader_state_preferences_factory = Spec(
             Record,
@@ -177,8 +177,8 @@ def _reader_state_preferences() -> Spec:
 def _annotation_cache_object() -> Spec:
     global _annotation_object_cache_factory
     if not _annotation_object_cache_factory:
-        from .containers import Array
-        from .containers import IntMap
+        from .objects import Array
+        from .objects import IntMap
 
         _annotation_object_cache_factory = Spec(
             IntMap,
@@ -218,9 +218,9 @@ def _annotation_cache_object() -> Spec:
 def _annotation_personal_element() -> Spec:
     global _annotation_personal_element_factory
     if not _annotation_personal_element_factory:
-        from .containers import DateTime
-        from .containers import Record
-        from .containers import Position
+        from .objects import DateTime
+        from .objects import Record
+        from .objects import Position
 
         _annotation_personal_element_factory = Spec(
             Record,
@@ -240,14 +240,14 @@ def _annotation_personal_element() -> Spec:
 def _name_to_factory() -> dict[str, None | Spec]:
     global _name_to_factory_map
     if not _name_to_factory_map:
-        from .containers import DateTime
-        from .containers import DynamicMap
-        from .containers import Array
-        from .containers import Record
-        from .containers import Json
-        from .containers import LastPageRead
-        from .containers import Position
-        from .containers import TimeZoneOffset
+        from .objects import DateTime
+        from .objects import DynamicMap
+        from .objects import Array
+        from .objects import Record
+        from .objects import Json
+        from .objects import LastPageRead
+        from .objects import Position
+        from .objects import TimeZoneOffset
 
         # NOTE if you update this schema map update the type hint maker too
         _name_to_factory_map = {

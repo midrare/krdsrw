@@ -1,26 +1,9 @@
-import abc
 import inspect
 import typing
 
-from .basic import Basic
 from .cursor import Cursor
 from .error import UnexpectedBytesError
 from .error import UnexpectedStructureError
-
-
-class Object(metaclass=abc.ABCMeta):
-    @abc.abstractmethod
-    def read(self, cursor: Cursor):
-        raise NotImplementedError("Must be implemented by the subclass.")
-
-    @abc.abstractmethod
-    def write(self, cursor: Cursor):
-        raise NotImplementedError("Must be implemented by the subclass.")
-
-    # @abc.abstractmethod
-    def __json__(self) -> None | bool | int | float | str | tuple | list | dict:
-        raise NotImplementedError("Must be implemented by the subclass.")
-
 
 T = typing.TypeVar("T", bound=typing.Any)
 
@@ -43,6 +26,7 @@ class Spec(typing.Generic[T]):
         return self._cls
 
     def read(self, cursor: Cursor, name: None | str = None) -> T:
+        from .objects import Object
         o = None
 
         if name:
@@ -83,9 +67,11 @@ class Spec(typing.Generic[T]):
             cursor.write(self._OBJECT_END)
 
     def is_basic(self) -> bool:
+        from .basics import Basic
         return issubclass(self._cls, Basic)
 
     def is_object(self) -> bool:
+        from .objects import Object
         return issubclass(self._cls, Object)
 
     @typing.override
