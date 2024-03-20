@@ -16,16 +16,16 @@ from .error import UnexpectedBytesError
 from .error import UnexpectedStructureError
 from .types import Object
 from .types import Spec
-from .basic import Basic
-from .basic import Byte
-from .basic import Char
-from .basic import Bool
-from .basic import Short
-from .basic import Int
-from .basic import Long
-from .basic import Float
-from .basic import Double
-from .basic import Utf8Str
+from .basics import Basic
+from .basics import Byte
+from .basics import Char
+from .basics import Bool
+from .basics import Short
+from .basics import Int
+from .basics import Long
+from .basics import Float
+from .basics import Double
+from .basics import Utf8Str
 
 K = typing.TypeVar("K", bound=int | float | str)
 T = typing.TypeVar("T", bound=Byte | Char | Bool | Short | Int | Long \

@@ -231,7 +231,7 @@ class Cursor:
         self.write(struct.pack(fmt, o))
 
     def read_byte(self, magic_byte: bool = True) -> int:
-        from .basic import Byte
+        from .basics import Byte
         magic_byte_ = _BYTE_MAGIC_BYTE if magic_byte else None
         return Byte(self._read_unpack('>b', magic_byte_))
 
@@ -240,7 +240,7 @@ class Cursor:
         self._write_pack(value, '>b', magic_byte_)
 
     def read_char(self, magic_byte: bool = True) -> int:
-        from .basic import Char
+        from .basics import Char
         magic_byte_ = _CHAR_MAGIC_BYTE if magic_byte else None
         return Char(self._read_unpack('>B', magic_byte_))
 
@@ -249,7 +249,7 @@ class Cursor:
         self._write_pack(value, '>B', magic_byte_)
 
     def read_bool(self, magic_byte: bool = True) -> bool | int:
-        from .basic import Bool
+        from .basics import Bool
         magic_byte_ = _BOOL_MAGIC_BYTE if magic_byte else None
         return Bool(self._read_unpack('>?', magic_byte_))
 
@@ -258,7 +258,7 @@ class Cursor:
         self._write_pack(value, '>?', magic_byte_)
 
     def read_int(self, magic_byte: bool = True) -> int:
-        from .basic import Int
+        from .basics import Int
         magic_byte_ = _INT_MAGIC_BYTE if magic_byte else None
         return Int(self._read_unpack('>l', magic_byte_))
 
@@ -267,7 +267,7 @@ class Cursor:
         self._write_pack(value, '>l', magic_byte_)
 
     def read_long(self, magic_byte: bool = True) -> int:
-        from .basic import Long
+        from .basics import Long
         magic_byte_ = _LONG_MAGIC_BYTE if magic_byte else None
         return Long(self._read_unpack('>q', magic_byte_))
 
@@ -276,7 +276,7 @@ class Cursor:
         self._write_pack(value, '>q', magic_byte_)
 
     def read_short(self, magic_byte: bool = True) -> int:
-        from .basic import Short
+        from .basics import Short
         magic_byte_ = _SHORT_MAGIC_BYTE if magic_byte else None
         return Short(self._read_unpack('>h', magic_byte_))
 
@@ -285,7 +285,7 @@ class Cursor:
         self._write_pack(value, '>h', magic_byte_)
 
     def read_float(self, magic_byte: bool = True) -> float:
-        from .basic import Float
+        from .basics import Float
         magic_byte_ = _FLOAT_MAGIC_BYTE if magic_byte else None
         return Float(self._read_unpack('>f', magic_byte_))
 
@@ -294,7 +294,7 @@ class Cursor:
         self._write_pack(value, '>f', magic_byte_)
 
     def read_double(self, magic_byte: bool = True) -> float:
-        from .basic import Double
+        from .basics import Double
         magic_byte_ = _DOUBLE_MAGIC_BYTE if magic_byte else None
         return Double(self._read_unpack('>d', magic_byte_))
 
@@ -310,7 +310,7 @@ class Cursor:
         if self._read_raw_byte() > 0:  # true if empty string
             return ''
 
-        from .basic import Utf8Str
+        from .basics import Utf8Str
         # NOTE even if the is_empty byte is false, the actual str
         #   length can still be 0
         read_len = struct.unpack_from(
@@ -329,11 +329,18 @@ class Cursor:
             self._write_raw_bytes(encoded)
 
     def peek_basic_type(self) -> None | type:
-        from . import basic
+        from .basics import Bool
+        from .basics import Byte
+        from .basics import Char
+        from .basics import Short
+        from .basics import Int
+        from .basics import Long
+        from .basics import Float
+        from .basics import Double
+        from .basics import Utf8Str
         b = self._peek_raw_byte()
 
-        for t in [basic.Bool, basic.Byte, basic.Char, basic.Short, basic.Int,
-                  basic.Long, basic.Float, basic.Double, basic.Utf8Str]:
+        for t in [ Bool, Byte, Char, Short, Int, Long, Float, Double, Utf8Str ]:
             if b == t.magic_byte:
                 return t
 
