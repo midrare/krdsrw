@@ -1,6 +1,4 @@
 import typing
-import os
-import sys
 import pathlib
 
 from krdsrw.containers import DataStore
