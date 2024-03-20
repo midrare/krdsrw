@@ -1,6 +1,7 @@
 from __future__ import annotations
 import abc
 import base64
+import copy
 import json
 import typing
 import warnings
@@ -182,14 +183,7 @@ class Record(RestrictedDict[str, T], Object):
     # hardcoded and knowing what value is where is determined by
     # the order of their appearance
 
-    def __init__(
-        self,
-        *args,
-        _schema_record_required: dict[str, Spec[T] | tuple[Spec[T], str]],
-        _schema_record_optional: None
-        | dict[str, Spec[T] | tuple[Spec[T], str]] = None,
-        **kwargs,
-    ):
+    def __init__(self, *args, **kwargs):
         def get_spec(v):
             if isinstance(v, (tuple, list)):
                 return next(e for e in v if isinstance(e, Spec))
@@ -204,20 +198,35 @@ class Record(RestrictedDict[str, T], Object):
                 return v
             return ''
 
+        required = kwargs.pop('_schema_record_required')
+        optional = kwargs.pop('_schema_record_optional', None) or {}
+
         self._required_spec: typing.Final[dict[str, Spec[T]]] \
-            = {k: get_spec(v) for k, v in _schema_record_required.items()}
+            = {k: get_spec(v) for k, v in required.items()}
         self._optional_spec: typing.Final[dict[str, Spec[T]]] \
-            = {k: get_spec(v) for k, v in (_schema_record_optional or {}).items()}
+            = {k: get_spec(v) for k, v in (optional or {}).items()}
         self._required_name: typing.Final[dict[str, str]] \
-            = {k: get_name(v) for k, v in _schema_record_required.items()}
+            = {k: get_name(v) for k, v in required.items()}
         self._optional_name: typing.Final[dict[str, str]] \
-            = {k: get_name(v) for k, v in (_schema_record_optional or {}).items()}
+            = {k: get_name(v) for k, v in (optional or {}).items()}
 
         for k, v in self._required_spec.items():
             self[k] = v.make()
 
         # call parent constructor last so that hooks will work
         super().__init__(*args, **kwargs)
+
+    @classmethod
+    def spec(
+        cls,
+        required: dict[str, Spec[T] | tuple[Spec[T], str]],
+        optional: None | dict[str, Spec[T] | tuple[Spec[T], str]] = None,
+    ) -> Spec[typing.Self]:
+        return Spec(
+            cls,
+            _schema_record_required=copy.deepcopy(required),
+            _schema_record_optional=copy.deepcopy(optional),
+        )
 
     @typing.override
     def _pre_read_filter(self, key: typing.Any) -> bool:

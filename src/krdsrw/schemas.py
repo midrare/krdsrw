@@ -47,14 +47,14 @@ def _timer_average_calculator_distribution_normal() -> Spec:
     global _timer_average_calculator_distribution_normal_factory
     if not _timer_average_calculator_distribution_normal_factory:
         from .objects import Record
-        from .specs import Spec
-        _timer_average_calculator_distribution_normal_factory = Spec(
-            Record,
-            _schema_record_required={
-                "count": _long,
-                "sum": _double,
-                "sum_of_squares": _double,
-            })
+        _timer_average_calculator_distribution_normal_factory = Record.spec({
+            "count":
+            _long,
+            "sum":
+            _double,
+            "sum_of_squares":
+            _double,
+        })
 
     return _timer_average_calculator_distribution_normal_factory
 
@@ -64,25 +64,22 @@ def _timer_average_calculator() -> Spec:
     if not _timer_average_calculator_factory:
         from .objects import Array
         from .objects import Record
-        from .specs import Spec
-        _timer_average_calculator_factory = Spec(
-            Record,
-            _schema_record_required={
-                "samples1":
-                Array.spec(_double),
-                "samples2":
-                Array.spec(_double),
-                "normal_distributions":
-                Array.spec(
-                    _timer_average_calculator_distribution_normal(),
-                    "timer.average.calculator.distribution.normal",
-                ),
-                "outliers":
-                Array.spec(
-                    _timer_average_calculator_outliers(),
-                    "timer.average.calculator.outliers",
-                ),
-            })
+        _timer_average_calculator_factory = Record.spec({
+            "samples1":
+            Array.spec(_double),
+            "samples2":
+            Array.spec(_double),
+            "normal_distributions":
+            Array.spec(
+                _timer_average_calculator_distribution_normal(),
+                "timer.average.calculator.distribution.normal",
+            ),
+            "outliers":
+            Array.spec(
+                _timer_average_calculator_outliers(),
+                "timer.average.calculator.outliers",
+            ),
+        })
 
     return _timer_average_calculator_factory
 
@@ -91,22 +88,19 @@ def _timer_model() -> Spec:
     global _timer_model_factory
     if not _timer_model_factory:
         from .objects import Record
-        from .specs import Spec
 
-        _timer_model_factory = Spec(
-            Record,
-            _schema_record_required={
-                "version":
-                _long,
-                "total_time":
-                _long,
-                "total_words":
-                _long,
-                "total_percent":
-                _double,
-                "average_calculator":
-                (_timer_average_calculator(), "timer.average.calculator"),
-            })
+        _timer_model_factory = Record.spec({
+            "version":
+            _long,
+            "total_time":
+            _long,
+            "total_words":
+            _long,
+            "total_percent":
+            _double,
+            "average_calculator":
+            (_timer_average_calculator(), "timer.average.calculator"),
+        })
 
     return _timer_model_factory
 
@@ -116,27 +110,24 @@ def _font_prefs() -> Spec:
     if not _font_prefs_factory:
         from .objects import Record
 
-        _font_prefs_factory = Spec(
-            Record,
-            _schema_record_required={
-                "typeface": _utf8str,
-                "line_sp": _int,
-                "size": _int,
-                "align": _int,
-                "inset_top": _int,
-                "inset_left": _int,
-                "inset_bottom": _int,
-                "inset_right": _int,
-                "unknown1": _int,
-            },
-            _schema_record_optional={
-                "bold": _int,
-                "user_sideloadable_font": _utf8str,
-                "custom_font_index": _int,
-                "mobi7_system_font": _utf8str,
-                "mobi7_restore_font": _bool,
-                "reading_preset_selected": _utf8str,
-            })
+        _font_prefs_factory = Record.spec({
+            "typeface": _utf8str,
+            "line_sp": _int,
+            "size": _int,
+            "align": _int,
+            "inset_top": _int,
+            "inset_left": _int,
+            "inset_bottom": _int,
+            "inset_right": _int,
+            "unknown1": _int,
+        }, {
+            "bold": _int,
+            "user_sideloadable_font": _utf8str,
+            "custom_font_index": _int,
+            "mobi7_system_font": _utf8str,
+            "mobi7_restore_font": _bool,
+            "reading_preset_selected": _utf8str,
+        })
 
     return _font_prefs_factory
 
@@ -146,16 +137,20 @@ def _reader_state_preferences() -> Spec:
     if not _reader_state_preferences_factory:
         from .objects import Record
 
-        _reader_state_preferences_factory = Spec(
-            Record,
-            _schema_record_required={
-                "font_preferences": _font_prefs(),
-                "left_margin": _int,
-                "right_margin": _int,
-                "top_margin": _int,
-                "bottom_margin": _int,
-                "unknown1": _bool,
-            })
+        _reader_state_preferences_factory = Record.spec({
+            "font_preferences":
+            _font_prefs(),
+            "left_margin":
+            _int,
+            "right_margin":
+            _int,
+            "top_margin":
+            _int,
+            "bottom_margin":
+            _int,
+            "unknown1":
+            _bool,
+        })
 
     return _reader_state_preferences_factory
 
@@ -201,16 +196,14 @@ def _annotation_personal_element() -> Spec:
         from .objects import Record
         from .objects import Position
 
-        _annotation_personal_element_factory = Spec(
-            Record,
-            _schema_record_required={
+        _annotation_personal_element_factory = Record.spec(
+            {
                 "start_pos": Spec(Position),
                 "end_pos": Spec(Position),
                 "creation_time": Spec(DateTime),
                 "last_modification_time": Spec(DateTime),
                 "template": _utf8str,
-            },
-            _schema_record_optional={
+            }, {
                 "note": _utf8str,
             })
     return _annotation_personal_element_factory
@@ -273,114 +266,88 @@ def _name_to_factory() -> dict[str, None | Spec]:
             "lpr":
             Spec(LastPageRead),
             "fpr":
-            Spec(
-                Record,
-                _schema_record_required={
-                    "pos": Spec(Position),
-                },
-                _schema_record_optional={
-                    "timestamp": Spec(DateTime),
-                    "timezone_offset": Spec(TimeZoneOffset),
-                    "country": _utf8str,
-                    "device": _utf8str,
-                }),
+            Record.spec({
+                "pos": Spec(Position),
+            }, {
+                "timestamp": Spec(DateTime),
+                "timezone_offset": Spec(TimeZoneOffset),
+                "country": _utf8str,
+                "device": _utf8str,
+            }),
             "updated_lpr":
-            Spec(
-                Record,
-                _schema_record_required={
-                    "pos": Spec(Position),
-                },
-                _schema_record_optional={
-                    "timestamp": Spec(DateTime),
-                    "timezone_offset": Spec(TimeZoneOffset),
-                    "country": _utf8str,
-                    "device": _utf8str,
-                }),
+            Record.spec({
+                "pos": Spec(Position),
+            }, {
+                "timestamp": Spec(DateTime),
+                "timezone_offset": Spec(TimeZoneOffset),
+                "country": _utf8str,
+                "device": _utf8str,
+            }),
 
             # amzn page num xref (i.e. page num map)
             "apnx.key":
-            Spec(
-                Record,
-                _schema_record_required={
-                    "asin": _utf8str,
-                    "cde_type": _utf8str,
-                    "sidecar_available": _bool,
-                    "opn_to_pos": Array.spec(_int),
-                    "first": _int,
-                    "unknown1": _int,
-                    "unknown2": _int,
-                    "page_map": _utf8str,
-                }),
+            Record.spec({
+                "asin": _utf8str,
+                "cde_type": _utf8str,
+                "sidecar_available": _bool,
+                "opn_to_pos": Array.spec(_int),
+                "first": _int,
+                "unknown1": _int,
+                "unknown2": _int,
+                "page_map": _utf8str,
+            }),
             "fixed.layout.data":
-            Spec(
-                Record,
-                _schema_record_required={
-                    "unknown1": _bool,
-                    "unknown2": _bool,
-                    "unknown3": _bool,
-                }),
+            Record.spec({
+                "unknown1": _bool,
+                "unknown2": _bool,
+                "unknown3": _bool,
+            }),
             "sharing.limits":
-            Spec(
-                Record,
-                _schema_record_required={
-                    # TODO discover structure for sharing.limits
-                    "accumulated": NotImplemented
-                }),
+            Record.spec({
+                # TODO discover structure for sharing.limits
+                "accumulated": NotImplemented
+            }),
             "language.store":
-            Spec(
-                Record,
-                _schema_record_required={
-                    "language": _utf8str,
-                    "unknown1": _int,
-                }),
+            Record.spec({
+                "language": _utf8str,
+                "unknown1": _int,
+            }),
             "periodicals.view.state":
-            Spec(
-                Record,
-                _schema_record_required={
-                    "unknown1": _utf8str,
-                    "unknown2": _int,
-                }),
+            Record.spec({
+                "unknown1": _utf8str,
+                "unknown2": _int,
+            }),
             "purchase.state.data":
-            Spec(
-                Record,
-                _schema_record_required={
-                    "state": _int,
-                    "time": Spec(DateTime),
-                }),
+            Record.spec({
+                "state": _int,
+                "time": Spec(DateTime),
+            }),
             "timer.model":
             _timer_model(),
             "timer.data.store":
-            Spec(
-                Record,
-                _schema_record_required={
-                    "on": _bool,
-                    "reading_timer_model": _timer_model(),
-                    "version": _int,
-                }),
+            Record.spec({
+                "on": _bool,
+                "reading_timer_model": _timer_model(),
+                "version": _int,
+            }),
             "timer.data.store.v2":
-            Spec(
-                Record,
-                _schema_record_required={
-                    "on": _bool,
-                    "reading_timer_model": _timer_model(),
-                    "version": _int,
-                    "last_option": _int,
-                }),
+            Record.spec({
+                "on": _bool,
+                "reading_timer_model": _timer_model(),
+                "version": _int,
+                "last_option": _int,
+            }),
             "book.info.store":
-            Spec(
-                Record,
-                _schema_record_required={
-                    "num_words": _long,
-                    "percent_of_book": _double,
-                }),
+            Record.spec({
+                "num_words": _long,
+                "percent_of_book": _double,
+            }),
             "page.history.store":
             Array.spec(
-                Spec(
-                    Record,
-                    _schema_record_required={
-                        "pos": Spec(Position),
-                        "time": Spec(DateTime),
-                    }),
+                Record.spec({
+                    "pos": Spec(Position),
+                    "time": Spec(DateTime),
+                }),
                 "page.history.record",
             ),
             "reader.state.preferences":
@@ -398,13 +365,11 @@ def _name_to_factory() -> dict[str, None | Spec]:
             "annotation.personal.clip_article":
             _annotation_personal_element(),
             "whisperstore.migration.status":
-            Spec(
-                Record,
-                _schema_record_required={
-                    "unknown1": _bool,
-                    "unknown2": _bool,
-                },
-            ),
+            Record.spec({
+                "unknown1": _bool,
+                "unknown2": _bool,
+            },
+                        ),
             "timer.average.calculator.distribution.normal":
             _timer_average_calculator_distribution_normal(),
             "timer.average.calculator.outliers":
