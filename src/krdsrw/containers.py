@@ -97,7 +97,7 @@ class Array(RestrictedList[T], Object):
 
     @typing.override
     def _pre_write_filter(self, value: typing.Any) -> bool:
-        return self._elmt_spec.is_castable(value)
+        return self._elmt_spec.is_compatible(value)
 
     @typing.override
     def _pre_write_transform(self, value: typing.Any) -> T:
@@ -307,7 +307,7 @@ class IntMap(RestrictedDict[str, typing.Any], Object):
 
         idx = self._to_idx(key) if isinstance(key, str) else key
         assert idx >= 0, 'failed to determine key'
-        if not self._idx_to_spec[idx].is_instance(value):
+        if not self._idx_to_spec[idx].is_compatible(value):
             return False
 
         return True

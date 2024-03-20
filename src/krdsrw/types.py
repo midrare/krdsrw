@@ -1612,9 +1612,6 @@ class Spec(typing.Generic[T]):
     def is_basic(self) -> bool:
         return issubclass(self._cls, Basic)
 
-    def is_container(self) -> bool:
-        return issubclass(self._cls, (tuple, list, dict))
-
     def is_object(self) -> bool:
         return issubclass(self._cls, Object)
 
@@ -1626,19 +1623,7 @@ class Spec(typing.Generic[T]):
             and self._kwargs == o._kwargs
         return super().__eq__(o)
 
-    def is_instance(self, o: typing.Any) -> bool:
-        return isinstance(o, self._cls)
-
-    def is_subclass(self, cls_: type) -> bool:
-        return issubclass(cls_, self._cls)
-
-    def is_castable(self, o: typing.Any) -> bool:
-        return isinstance(o, self._cls) \
-        or (issubclass(self._cls, Basic) \
-            and (builtin := getattr(self._cls, 'builtin'))
-            and isinstance(o, builtin))
-
-    def is_compatible(self, o: typing.Any) -> bool:
+    def is_compatible(self, o: type | typing.Any) -> bool:
         if inspect.isclass(o):
             return issubclass(o, self._cls) \
             or ((builtin := getattr(self._cls, 'builtin')) \
