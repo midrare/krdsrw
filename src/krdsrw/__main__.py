@@ -5,8 +5,8 @@ import argparse
 import json
 import sys
 
-from . import containers
 from . import cursor
+from . import objects
 
 
 def main(argv: None | list[str] = None) -> int:
@@ -35,7 +35,7 @@ def main(argv: None | list[str] = None) -> int:
         csr = cursor.Cursor()
         csr.load(args.in_file.read())
 
-        root = containers.DataStore()
+        root = objects.DataStore()
         root.read(csr)
 
         ser = json.dumps(root, default=lambda o: o.__json__(), indent=2)
