@@ -37,10 +37,8 @@ def _timer_average_calculator_outliers() -> Spec:
     global _timer_average_calculator_calculator_outliers_factory
     if not _timer_average_calculator_calculator_outliers_factory:
         from .objects import Array
-        _timer_average_calculator_calculator_outliers_factory = Spec(
-            Array,
-            _schema_array_elmt_spec=_double,
-        )
+        _timer_average_calculator_calculator_outliers_factory \
+            = Array.spec(_double)
 
     return _timer_average_calculator_calculator_outliers_factory
 
@@ -71,23 +69,18 @@ def _timer_average_calculator() -> Spec:
             Record,
             _schema_record_required={
                 "samples1":
-                Spec(Array, _schema_array_elmt_spec=_double),
+                Array.spec(_double),
                 "samples2":
-                Spec(Array, _schema_array_elmt_spec=_double),
+                Array.spec(_double),
                 "normal_distributions":
-                Spec(
-                    Array,
-                    _schema_array_elmt_spec=
+                Array.spec(
                     _timer_average_calculator_distribution_normal(),
-                    _schema_array_elmt_name=
                     "timer.average.calculator.distribution.normal",
                 ),
                 "outliers":
-                Spec(
-                    Array,
-                    _schema_array_elmt_spec=_timer_average_calculator_outliers(
-                    ),
-                    _schema_array_elmt_name="timer.average.calculator.outliers",
+                Array.spec(
+                    _timer_average_calculator_outliers(),
+                    "timer.average.calculator.outliers",
                 ),
             })
 
@@ -178,30 +171,23 @@ def _annotation_cache_object() -> Spec:
             _schema_intmap_idx_alias_name_spec=[
                 (
                     0, "bookmarks", "saved.avl.interval.tree",
-                    Spec(
-                        Array,
-                        _schema_array_elmt_spec=_annotation_personal_element(),
-                        _schema_array_elmt_name="annotation.personal.bookmark")
-                ),
+                    Array.spec(
+                        _annotation_personal_element(),
+                        "annotation.personal.bookmark")),
                 (
                     1, "highlights", "saved.avl.interval.tree",
-                    Spec(
-                        Array,
-                        _schema_array_elmt_spec=_annotation_personal_element(),
-                        _schema_array_elmt_name="annotation.personal.highlight")
-                ),
+                    Array.spec(
+                        _annotation_personal_element(),
+                        "annotation.personal.highlight")),
                 (
                     2, "notes", "saved.avl.interval.tree",
-                    Spec(
-                        Array,
-                        _schema_array_elmt_spec=_annotation_personal_element(),
-                        _schema_array_elmt_name="annotation.personal.note")),
+                    Array.spec(
+                        _annotation_personal_element(),
+                        "annotation.personal.note")),
                 (
                     3, "clip_articles", "saved.avl.interval.tree",
-                    Spec(
-                        Array,
-                        _schema_array_elmt_spec=_annotation_personal_element(),
-                        _schema_array_elmt_name=
+                    Array.spec(
+                        _annotation_personal_element(),
                         "annotation.personal.clip_article")),
             ])
 
@@ -319,7 +305,7 @@ def _name_to_factory() -> dict[str, None | Spec]:
                     "asin": _utf8str,
                     "cde_type": _utf8str,
                     "sidecar_available": _bool,
-                    "opn_to_pos": Spec(Array, _schema_array_elmt_spec=_int),
+                    "opn_to_pos": Array.spec(_int),
                     "first": _int,
                     "unknown1": _int,
                     "unknown2": _int,
@@ -388,15 +374,14 @@ def _name_to_factory() -> dict[str, None | Spec]:
                     "percent_of_book": _double,
                 }),
             "page.history.store":
-            Spec(
-                Array,
-                _schema_array_elmt_spec=Spec(
+            Array.spec(
+                Spec(
                     Record,
                     _schema_record_required={
                         "pos": Spec(Position),
                         "time": Spec(DateTime),
                     }),
-                _schema_array_elmt_name="page.history.record",
+                "page.history.record",
             ),
             "reader.state.preferences":
             _reader_state_preferences(),

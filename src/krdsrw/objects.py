@@ -111,18 +111,22 @@ def _read_basic(cursor: Cursor) \
 
 class Array(RestrictedList[T], Object):
     # Array can contain Basic and other containers
-    def __init__(
-        self,
-        *args,
-        _schema_array_elmt_spec: Spec[T],
-        _schema_array_elmt_name: None | str = None,
-        **kwargs,
-    ):
-        self._elmt_spec: typing.Final[Spec[T]] = _schema_array_elmt_spec
-        self._elmt_name: typing.Final[str] = _schema_array_elmt_name or ''
+    def __init__(self, *args, **kwargs):
+        self._elmt_spec: typing.Final[Spec[T]] \
+            = kwargs.pop('_schema_array_elmt_spec')
+        self._elmt_name: typing.Final[str] \
+            = kwargs.pop('_schema_array_elmt_name', None) or ''
 
         # parent constructor /after/ specs set up so that hooks run correctly
         super().__init__(*args, **kwargs)
+
+    @classmethod
+    def spec(cls, elmt: Spec[T], name: None | str = None) -> Spec[typing.Self]:
+        return Spec(
+            cls,
+            _schema_array_elmt_spec=elmt,
+            _schema_array_elmt_name=name,
+        )
 
     @typing.override
     def read(self, cursor: Cursor):
