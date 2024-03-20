@@ -1,6 +1,8 @@
 import inspect
 import typing
 
+from .basics import read_utf8str
+from .basics import write_utf8str
 from .cursor import Cursor
 from .error import UnexpectedBytesError
 from .error import UnexpectedStructureError
@@ -34,7 +36,7 @@ class Spec(typing.Generic[T]):
                 raise UnexpectedBytesError(
                     cursor.tell(), self._OBJECT_BEGIN, cursor.peek())
 
-            name_ = cursor.read_utf8str(False)
+            name_ = read_utf8str(cursor, False)
             if not name_:
                 raise UnexpectedStructureError('Object has blank name.')
             if name_ != name:
@@ -61,7 +63,7 @@ class Spec(typing.Generic[T]):
     def write(self, cursor: Cursor, o: T, name: None | str = None):
         if name:
             cursor.write(self._OBJECT_BEGIN)
-            cursor.write_utf8str(name, False)
+            write_utf8str(cursor, name, False)
         o.write(cursor)
         if name:
             cursor.write(self._OBJECT_END)

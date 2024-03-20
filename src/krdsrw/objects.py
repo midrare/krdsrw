@@ -23,6 +23,66 @@ from .basics import Long
 from .basics import Float
 from .basics import Double
 from .basics import Utf8Str
+from .basics import read_byte
+from .basics import write_byte
+from .basics import read_int
+from .basics import write_int
+from .basics import read_long
+from .basics import write_long
+from .basics import read_utf8str
+from .basics import write_utf8str
+
+_OBJECT_BEGIN_INDICATOR: typing.Final[int] = 254
+_OBJECT_END_INDICATOR: typing.Final[int] = 255
+
+
+def peek_object_schema(csr: Cursor, magic_byte: bool = True) -> None | str:
+    schema = None
+    csr.save()
+    if not magic_byte or csr.eat(_OBJECT_BEGIN_INDICATOR):
+        schema = read_utf8str(csr, False)
+    csr.restore()
+    return schema
+
+
+def peek_object_type(csr: Cursor, magic_byte: bool = True) -> None | type:
+    from . import schemas
+    cls_ = None
+    csr.save()
+
+    if not magic_byte or csr.eat(_OBJECT_BEGIN_INDICATOR):
+        schema = read_utf8str(csr, False)
+        fct = schemas.get_spec_by_name(schema)
+        assert fct, f'Unsupported schema \"{schema}\".'
+        cls_ = fct.cls_
+
+    csr.restore()
+    return cls_
+
+
+def read_object(csr: Cursor, name: None | str = None) -> tuple[typing.Any, str]:
+    assert name is None or name, 'expected either null or non-empty name'
+    from . import schemas
+
+    name_ = peek_object_schema(csr)
+    if not name_:
+        raise UnexpectedStructureError('Failed to read name for object.')
+    if name is not None and name_ != name:
+        raise UnexpectedStructureError(
+            f'Object name "{name_}" does not match expected name "{name}"')
+    maker = schemas.get_spec_by_name(name_)
+    if not maker:
+        raise UnexpectedStructureError(f'Unsupported schema \"{name_}\".')
+    o = maker.read(csr, name_)
+    return o, name_
+
+
+def write_object(csr: Cursor, o: typing.Any, name: str):
+    assert name, 'expected non-empty name'
+    csr.write(_OBJECT_BEGIN_INDICATOR)
+    write_utf8str(csr, name, False)
+    o.write(csr)
+    csr.write(_OBJECT_END_INDICATOR)
 
 
 class Object(metaclass=abc.ABCMeta):
@@ -67,14 +127,14 @@ class Array(RestrictedList[T], Object):
     @typing.override
     def read(self, cursor: Cursor):
         self.clear()
-        size = cursor.read_int()
+        size = read_int(cursor)
         for _ in range(size):
             e = self._elmt_spec.read(cursor, self._elmt_name)
             self.append(e)
 
     @typing.override
     def write(self, cursor: Cursor):
-        cursor.write_int(len(self))
+        write_int(cursor, len(self))
         for e in self:
             self._elmt_spec.write(cursor, e, self._elmt_name)
 
@@ -365,9 +425,9 @@ class IntMap(RestrictedDict[str, typing.Any], Object):
     @typing.override
     def read(self, cursor: Cursor):
         self.clear()
-        size = cursor.read_int()
+        size = read_int(cursor)
         for _ in range(size):
-            idxnum = cursor.read_int()
+            idxnum = read_int(cursor)
 
             if idxnum not in list(self._idx_to_spec.keys()) \
                     + list(self._idx_to_alias.keys()):
@@ -379,12 +439,12 @@ class IntMap(RestrictedDict[str, typing.Any], Object):
 
     @typing.override
     def write(self, cursor: Cursor):
-        cursor.write_int(len(self))
+        write_int(cursor, len(self))
 
         for alias, value in self.items():
             idx = self._to_idx(alias)
             name = self._idx_to_name[idx]
-            cursor.write_int(idx)
+            write_int(cursor, idx)
             self._idx_to_spec[idx].write(cursor, value, name)
 
 
@@ -433,19 +493,19 @@ class DynamicMap(RestrictedDict[str, typing.Any], Object):
     @typing.override
     def read(self, cursor: Cursor):
         self.clear()
-        size = cursor.read_int()
+        size = read_int(cursor)
         for _ in range(size):
-            key = cursor.read_utf8str()
+            key = read_utf8str(cursor)
             value = _read_basic(cursor)
             assert value is not None, 'Value not found'
             self[key] = value
 
     @typing.override
     def write(self, cursor: Cursor):
-        cursor.write_int(len(self))
+        write_int(cursor, len(self))
         for key, value in self.items():
             assert isinstance(key, str)
-            cursor.write_utf8str(key)
+            write_utf8str(cursor, key)
             value.write(cursor)
 
 
@@ -466,11 +526,11 @@ class DateTime(Object):
 
     @typing.override
     def read(self, cursor: Cursor):
-        self._value = cursor.read_long()
+        self._value = read_long(cursor)
 
     @typing.override
     def write(self, cursor: Cursor):
-        cursor.write_long(max(-1, self._value))
+        write_long(cursor, max(-1, self._value))
 
     def __eq__(self, other: typing.Any) -> bool:
         if isinstance(other, self.__class__):
@@ -506,13 +566,13 @@ class Json(Object):
 
     @typing.override
     def read(self, cursor: Cursor):
-        s = cursor.read_utf8str()
+        s = read_utf8str(cursor)
         self._value = json.loads(s) if s is not None and s else None
 
     @typing.override
     def write(self, cursor: Cursor):
         s = json.dumps(self._value) if self._value is not None else ""
-        cursor.write_utf8str(s)
+        write_utf8str(cursor, s)
 
     def __eq__(self, other: typing.Any) -> bool:
         if isinstance(other, self.__class__):
@@ -576,9 +636,9 @@ class LastPageRead(Object):  # aka LPR. this is kindle reading pos info
             self._pos.read(cursor)
         elif type_byte == Byte.magic_byte:
             # new LPR version
-            self._lpr_version = cursor.read_byte()
+            self._lpr_version = read_byte(cursor)
             self._pos.read(cursor)
-            self._timestamp = int(cursor.read_long())
+            self._timestamp = int(read_long(cursor))
         else:
             raise UnexpectedBytesError(
                 cursor.tell(), [Utf8Str.magic_byte, Byte.magic_byte], type_byte)
@@ -593,9 +653,9 @@ class LastPageRead(Object):  # aka LPR. this is kindle reading pos info
         else:
             # new LPR version
             lpr_version = max(self.EXTENDED_LPR_VERSION, self._lpr_version)
-            cursor.write_byte(lpr_version)
+            write_byte(cursor, lpr_version)
             self._pos.write(cursor)
-            cursor.write_long(self._timestamp)
+            write_long(cursor, self._timestamp)
 
     def __eq__(self, other: typing.Any) -> bool:
         if isinstance(other, self.__class__):
@@ -669,7 +729,7 @@ class Position(Object):
 
     @typing.override
     def read(self, cursor: Cursor):
-        s = cursor.read_utf8str()
+        s = read_utf8str(cursor)
         split = s.split(":", 2)
         if len(split) > 1:
             b = base64.b64decode(split[0])
@@ -696,7 +756,7 @@ class Position(Object):
             s += ":"
         s += str(
             self._value if self._value is not None and self._value >= 0 else -1)
-        cursor.write_utf8str(s)
+        write_utf8str(cursor, s)
 
     def __json__(self) -> None | bool | int | float | str | tuple | list | dict:
         return {
@@ -746,11 +806,11 @@ class TimeZoneOffset(Object):
 
     @typing.override
     def read(self, cursor: Cursor):
-        self._value = cursor.read_long()
+        self._value = read_long(cursor)
 
     @typing.override
     def write(self, cursor: Cursor):
-        cursor.write_long(max(-1, self._value))
+        write_long(cursor, max(-1, self._value))
 
     def __eq__(self, other: typing.Any) -> bool:
         if isinstance(other, self.__class__):
@@ -994,7 +1054,7 @@ class DataStore(RestrictedDict, Object):
     @classmethod
     def _eat_fixed_mystery_num_or_error(cls, cursor: Cursor):
         cursor.save()
-        value = cursor.read_long()
+        value = read_long(cursor)
         if value != cls.FIXED_MYSTERY_NUM:
             cursor.restore()
             raise UnexpectedBytesError(
@@ -1009,18 +1069,18 @@ class DataStore(RestrictedDict, Object):
         self._eat_signature_or_error(cursor)
         self._eat_fixed_mystery_num_or_error(cursor)
 
-        size = cursor.read_int()
+        size = read_int(cursor)
         for _ in range(size):
-            value, name = cursor.read_object()
+            value, name = read_object(cursor)
             assert name, 'Object has blank name.'
             self[name] = value
 
     def write(self, cursor: Cursor):
         cursor.write(self.MAGIC_STR)
-        cursor.write_long(self.FIXED_MYSTERY_NUM)
-        cursor.write_int(len(self))
+        write_long(cursor, self.FIXED_MYSTERY_NUM)
+        write_int(cursor, len(self))
         for name, value in self.items():
-            cursor.write_object(value, name)
+            write_object(cursor, value, name)
 
     def __str__(self) -> str:
         return f"{self.__class__.__name__}{dict(self)}"
