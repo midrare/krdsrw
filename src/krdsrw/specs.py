@@ -66,14 +66,6 @@ class Spec(typing.Generic[T]):
         if name:
             cursor.write(self._OBJECT_END)
 
-    def is_basic(self) -> bool:
-        from .basics import Basic
-        return issubclass(self._cls, Basic)
-
-    def is_object(self) -> bool:
-        from .objects import Object
-        return issubclass(self._cls, Object)
-
     @typing.override
     def __eq__(self, o: typing.Any) -> bool:
         if isinstance(o, self.__class__):

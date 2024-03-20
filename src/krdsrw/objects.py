@@ -86,7 +86,7 @@ class Array(RestrictedList[T], Object):
         return self._elmt_name
 
     def make(self, *args, **kwargs) -> T:
-        if self._elmt_spec.is_basic() and (args or kwargs):
+        if issubclass(self._elmt_spec.cls_, Basic) and (args or kwargs):
             return self._elmt_spec.cast(*args, **kwargs)
 
         result = self._elmt_spec.make()
@@ -330,7 +330,7 @@ class IntMap(RestrictedDict[str, typing.Any], Object):
         value: typing.Any,
     ) -> tuple[str, typing.Any]:
         maker = self._idx_to_spec[self._to_idx(key)]
-        if maker.is_basic() \
+        if issubclass(maker.cls_, Basic) \
         and isinstance(value, (bool, int, float, str, bytes)) \
         and not isinstance(value, Basic):
             value = maker.cast(value)
