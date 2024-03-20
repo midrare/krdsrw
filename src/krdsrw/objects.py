@@ -3,6 +3,7 @@ import abc
 import base64
 import json
 import typing
+import warnings
 
 from . import schemas
 
@@ -408,12 +409,24 @@ class DynamicMap(RestrictedDict[str, typing.Any], Object):
     ) -> tuple[str, typing.Any]:
         if not isinstance(value, Basic):
             if isinstance(value, bool):
+                warnings.warn(
+                    f"Implicit type conversion "
+                    + f"from {value} to Bool({value})")
                 value = Bool(value)
             elif isinstance(value, int):
+                warnings.warn(
+                    f"Implicit type conversion "
+                    + f"from {value} to Int({value})")
                 value = Int(value)
             elif isinstance(value, float):
+                warnings.warn(
+                    f"Implicit type conversion "
+                    + f"from {value} to Double({value})")
                 value = Double(value)
             elif isinstance(value, str):
+                warnings.warn(
+                    f"Implicit type conversion "
+                    + f"from \"{value}\" to Utf8Str({value})")
                 value = Utf8Str(value)
         return super()._pre_write_transform(key, value)
 
