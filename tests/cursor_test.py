@@ -59,7 +59,7 @@ def test_cursor_peek_len():
 
 def test_cursor_peek_matches():
     csr = cursor.Cursor(b'ABCDEFGHIJKLMNOPQRSTUVWXYZ')
-    assert csr.startswith(b'ABCD')
+    assert csr.peek_matches(b'ABCD')
 
 
 def test_cursor_write():
