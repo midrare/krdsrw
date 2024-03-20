@@ -1,6 +1,7 @@
 import pytest
 
 from krdsrw.cursor import Cursor
+from krdsrw.basics import Basic
 from krdsrw.basics import Int
 from krdsrw.specs import Spec
 from krdsrw.objects import Array
@@ -19,7 +20,7 @@ class TestSpec:
 
     def test_is_basic(self):
         o = Spec(Int)
-        assert o.is_basic()
+        assert issubclass(o.cls_, Basic)
 
 
 class TestArray:
