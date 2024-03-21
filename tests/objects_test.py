@@ -10,6 +10,7 @@ from krdsrw.basics import Utf8Str
 from krdsrw.specs import Spec
 from krdsrw.objects import Array
 from krdsrw.objects import DynamicMap
+from krdsrw.objects import Object
 from krdsrw.objects import Record
 from krdsrw.objects import peek_object_schema
 from krdsrw.objects import peek_object_type
@@ -99,6 +100,12 @@ def test_write_object():
         + b'\x01\x00\x00\x00\x3F\x01\x00\x00\x00\x50\x01\x00\x00\x00\x00\x01' \
         + b'\x00\x00\x00\x50\x01\x00\x00\x00\x00\x01\x00\x00\x00\x01\x03\x01' \
         + b'\x01\xFF\xFF\xFF\xFF\x03\x01\x00\x00\x03\x01\xFF'
+
+
+class TestObject:
+    def test_create(self):
+        with pytest.raises(TypeError):
+            Object()  # type: ignore
 
 
 class TestSpec:
