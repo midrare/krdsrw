@@ -31,6 +31,7 @@ class Field:
         | tuple[None | type | str | typing.Literal['*'] | typing.Any, ...] \
         | list[None | type | str | typing.Literal['*'] | typing.Any]
     value: None | type | typing.Literal['*'] | typing.Any \
+        | tuple[None | type | typing.Literal['*'] | typing.Any, ...] \
         | list[None | type | typing.Literal['*'] | typing.Any]
     is_readable: bool = True
     is_writable: bool = True
