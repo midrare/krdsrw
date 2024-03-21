@@ -366,8 +366,7 @@ def _name_to_factory() -> dict[str, None | Spec]:
             Record.spec({
                 "unknown1": _bool,
                 "unknown2": _bool,
-            },
-                        ),
+            }),
             "timer.average.calculator.distribution.normal":
             _timer_average_calculator_distribution_normal(),
             "timer.average.calculator.outliers":
