@@ -14,6 +14,8 @@ from .cursor import Cursor
 from .error import UnexpectedBytesError
 from .error import UnexpectedStructureError
 from .specs import Spec
+from .specs import Field
+from .specs import Index
 from .basics import Basic
 from .basics import Byte
 from .basics import Char
@@ -111,12 +113,15 @@ def _read_basic(cursor: Cursor) \
 
 
 class Array(RestrictedList[T], Object):
+    _ELMT_SPEC: typing.Final[str] = '_schema_array_elmt_spec'
+    _ELMT_NAME: typing.Final[str] = '_schema_array_elmt_name'
+
     # Array can contain Basic and other containers
     def __init__(self, *args, **kwargs):
         self._elmt_spec: typing.Final[Spec[T]] \
-            = kwargs.pop('_schema_array_elmt_spec')
+            = kwargs.pop(self._ELMT_SPEC)
         self._elmt_name: typing.Final[str] \
-            = kwargs.pop('_schema_array_elmt_name', None) or ''
+            = kwargs.pop(self._ELMT_NAME, None) or ''
 
         # parent constructor /after/ specs set up so that hooks run correctly
         super().__init__(*args, **kwargs)
@@ -125,8 +130,11 @@ class Array(RestrictedList[T], Object):
     def spec(cls, elmt: Spec[T], name: None | str = None) -> Spec[typing.Self]:
         return Spec(
             cls,
-            _schema_array_elmt_spec=elmt,
-            _schema_array_elmt_name=name,
+            kwargs={
+                cls._ELMT_SPEC: elmt,
+                cls._ELMT_NAME: name
+            },
+            indexes=[Index(elmt.cls_)],
         )
 
     @typing.override
@@ -183,6 +191,9 @@ class Record(RestrictedDict[str, T], Object):
     # hardcoded and knowing what value is where is determined by
     # the order of their appearance
 
+    _REQUIRED: typing.Final[str] = '_schema_record_required'
+    _OPTIONAL: typing.Final[str] = '_schema_record_optional'
+
     def __init__(self, *args, **kwargs):
         def get_spec(v):
             if isinstance(v, (tuple, list)):
@@ -198,8 +209,8 @@ class Record(RestrictedDict[str, T], Object):
                 return v
             return ''
 
-        required = kwargs.pop('_schema_record_required')
-        optional = kwargs.pop('_schema_record_optional', None) or {}
+        required = kwargs.pop(self._REQUIRED)
+        optional = kwargs.pop(self._OPTIONAL, None) or {}
 
         self._required_spec: typing.Final[dict[str, Spec[T]]] \
             = {k: get_spec(v) for k, v in required.items()}
@@ -224,8 +235,19 @@ class Record(RestrictedDict[str, T], Object):
     ) -> Spec[typing.Self]:
         return Spec(
             cls,
-            _schema_record_required=copy.deepcopy(required),
-            _schema_record_optional=copy.deepcopy(optional),
+            kwargs={
+                cls._REQUIRED: copy.deepcopy(required),
+                cls._OPTIONAL: copy.deepcopy(optional),
+            },
+            indexes=[
+                Field(
+                    k,
+                    v[0] if isinstance(v, (tuple, list)) else v,
+                    is_deletable=False) for k, v in required.items()
+            ] + [
+                Field(k, v[0] if isinstance(v, (tuple, list)) else v)
+                for k, v in (optional or {}).items()
+            ],
         )
 
     @typing.override
@@ -349,8 +371,11 @@ class Record(RestrictedDict[str, T], Object):
 
 # can contain Bool, Char, Byte, Short, Int, Long, Float, Double, Utf8Str, Object
 class IntMap(RestrictedDict[str, typing.Any], Object):
+    _IDX_ALIAS_NAME_SPEC: typing.Final[str] \
+        = '_schema_intmap_idx_alias_name_spec'
+
     def __init__(self, *args, **kwargs):
-        idx_alias_name_spec = kwargs.pop('_schema_intmap_idx_alias_name_spec')
+        idx_alias_name_spec = kwargs.pop(self._IDX_ALIAS_NAME_SPEC)
 
         self._idx_to_spec: dict[int, Spec] = {}
         self._idx_to_name: dict[int, str] = {}
@@ -371,8 +396,8 @@ class IntMap(RestrictedDict[str, typing.Any], Object):
     ) -> Spec[typing.Self]:
         return Spec(
             cls,
-            _schema_intmap_idx_alias_name_spec=copy.deepcopy(
-                idx_alias_name_spec))
+            kwargs={cls._IDX_ALIAS_NAME_SPEC: idx_alias_name_spec},
+        )
 
     @typing.override
     def _pre_read_filter(self, key: typing.Any) -> bool:
