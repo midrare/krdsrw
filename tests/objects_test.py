@@ -199,6 +199,29 @@ class TestArray:
             + b'\x01\x00\x00\x00\x0b' \
             + b'\x01\x00\x00\x00\x0c'
 
+    def test_elmt_cls(self):
+        spc = Array.spec(Spec(Int))
+        o = spc.make()
+        assert o.elmt_cls == Int
+
+    def test_elmt_name(self):
+        spc = Array.spec(Spec(Int), 'abc')
+        o = spc.make()
+        assert o.elmt_name == 'abc'
+
+    def test_make_element(self):
+        spc = Array.spec(Spec(Int))
+        arr = spc.make()
+        o = arr.make_element(1337)
+        assert o == 1337
+
+    def test_make_and_append(self):
+        spc = Array.spec(Spec(Int))
+        arr = spc.make()
+        o = arr.make_and_append(1337)
+        assert o == 1337
+        assert arr == [1337]
+
 
 def test_dynamic_map_put_key():
     o = DynamicMap()
