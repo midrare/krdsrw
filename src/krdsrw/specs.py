@@ -130,10 +130,15 @@ class Spec(typing.Generic[T]):
         return super().__eq__(o)
 
     def is_compatible(self, o: type | typing.Any) -> bool:
-        if inspect.isclass(o):
-            return issubclass(o, self._cls) \
-            or ((builtin := getattr(self._cls, 'builtin')) \
-            and inspect.isclass(builtin) and issubclass(o, builtin))
-        return isinstance(o, self._cls) \
-        or ((builtin := getattr(self._cls, 'builtin')) \
-        and inspect.isclass(builtin) and isinstance(o, builtin))
+        if (inspect.isclass(o) and issubclass(o, self._cls)) \
+        or (not inspect.isclass(o) and isinstance(o, self._cls)):
+            return True
+
+        builtin = getattr(self._cls, 'builtin', None)
+
+        if builtin is not None and inspect.isclass(builtin) \
+        and ((inspect.isclass(o) and issubclass(o, builtin)) \
+        or (not inspect.isclass(o) and isinstance(o, builtin))):
+            return True
+
+        return False
