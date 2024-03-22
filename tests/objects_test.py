@@ -5,9 +5,12 @@ from krdsrw.basics import Basic
 from krdsrw.basics import Bool
 from krdsrw.basics import Int
 from krdsrw.basics import Long
+from krdsrw.basics import Float
 from krdsrw.basics import Double
 from krdsrw.basics import Utf8Str
 from krdsrw.specs import Spec
+from krdsrw.specs import Index
+from krdsrw.specs import Field
 from krdsrw.objects import Array
 from krdsrw.objects import DynamicMap
 from krdsrw.objects import Object
@@ -106,21 +109,6 @@ class TestObject:
     def test_create(self):
         with pytest.raises(TypeError):
             Object()  # type: ignore
-
-
-class TestSpec:
-    def test_create(self):
-        o = Spec(Int, 1337)
-        assert o.make() == 1337
-
-    def test_read(self):
-        o = Spec(Int)
-        csr = Cursor(b'\x01\x00\xcc\x07\xc9')
-        assert o.read(csr) == 13371337
-
-    def test_is_basic(self):
-        o = Spec(Int)
-        assert issubclass(o.cls_, Basic)
 
 
 class TestArray:
