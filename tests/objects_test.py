@@ -223,6 +223,71 @@ class TestArray:
         assert arr == [1337]
 
 
+class TestRecord:
+    def test_create(self):
+        spc = Record.spec({
+            'a': Spec(Int),
+            'b': Spec(Float)
+        }, {
+            'c': Spec(Double),
+            'd': Spec(Utf8Str)
+        })
+
+        spc.make({ 'a': 123, 'b': 4.56, 'c': 7.89, 'd': 'hello'})
+
+    def test_required_optional(self):
+        spc = Record.spec({
+            'a': Spec(Int),
+            'b': Spec(Float)
+        }, {
+            'c': Spec(Double),
+            'd': Spec(Utf8Str)
+        })
+
+        o = spc.make({ 'a': 123, 'b': 4.56, 'c': 7.89, 'd': 'hello'})
+
+        assert o.required == { 'a': Int, 'b': Float }
+        assert o.optional == { 'c': Double, 'd': Utf8Str }
+
+    def test_read(self):
+        spc = Record.spec({
+            'a': Spec(Int),
+            'b': Spec(Float)
+        }, {
+            'c': Spec(Double),
+            'd': Spec(Utf8Str)
+        })
+
+        csr = Cursor(
+            b'\x01\x00\x00\x05\x39\x06\x00\x00' \
+            + b'\x00\x00\x04\x00\x00\x00\x00\x00' \
+            + b'\x00\x00\x00\x03\x00\x00\x03\x61' \
+            + b'\x62\x63')
+
+        o = spc.read(csr)
+        assert o == { 'a': 1337, 'b': 0.0, 'c': 0.0, 'd': 'abc'}
+
+    def test_write(self):
+        spc = Record.spec({
+            'a': Spec(Int),
+            'b': Spec(Float)
+        }, {
+            'c': Spec(Double),
+            'd': Spec(Utf8Str)
+        })
+
+        o = spc.make({ 'a': 123, 'b': 4.56, 'c': 7.89, 'd': 'xyz'})
+
+        csr = Cursor()
+        o.write(csr)
+
+        assert csr.dump() == \
+            b'\x01\x00\x00\x00\x7b\x06\x40\x91' \
+            + b'\xeb\x85\x04\x40\x1f\x8f\x5c\x28' \
+            + b'\xf5\xc2\x8f\x03\x00\x00\x03\x78' \
+            + b'\x79\x7a'
+
+
 def test_dynamic_map_put_key():
     o = DynamicMap()
     o['a'] = Int(0x0a)
