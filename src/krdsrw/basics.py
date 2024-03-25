@@ -2,6 +2,15 @@ import abc
 import struct
 import typing
 
+from .builtins import _Bool
+from .builtins import _Byte
+from .builtins import _Char
+from .builtins import _Short
+from .builtins import _Int
+from .builtins import _Long
+from .builtins import _Float
+from .builtins import _Double
+from .builtins import _Utf8Str
 from .cursor import Cursor
 from .error import UnexpectedBytesError
 from .error import UnexpectedStructureError
@@ -216,23 +225,11 @@ class Basic(metaclass=abc.ABCMeta):
         raise NotImplementedError("Must be implemented by the subclass.")
 
 
-class Byte(int, Basic):
+class Byte(_Byte, Basic):
     # signed byte
     builtin: type[int | float | str] = int
     size: int = struct.calcsize('>b')
     magic_byte: int = 0x07
-
-    @typing.override
-    def __new__(cls, *args, **kwargs) -> typing.Self:
-        return super().__new__(cls, *args, **kwargs)
-
-    @typing.override
-    def __str__(self) -> str:
-        return f"0x{hex(self)}"
-
-    @typing.override
-    def __repr__(self) -> str:
-        return f"{self.__class__.__name__}{{0x{hex(self)}}}"
 
     @typing.override
     @classmethod
@@ -249,175 +246,12 @@ class Byte(int, Basic):
     def to_bytes(self, *_unused, **_unused2) -> bytes:
         return struct.pack('>b', self)
 
-    @typing.override
-    def __add__(self, other: int) -> typing.Self:
-        o = super().__add__(other)
-        return self.__class__(o)
 
-    @typing.override
-    def __sub__(self, other: int) -> typing.Self:
-        o = super().__sub__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __mul__(self, other: int) -> typing.Self:
-        o = super().__mul__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __truediv__(self, other: int) -> typing.Self:
-        o = super().__truediv__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __floordiv__(self, other: int) -> typing.Self:
-        o = super().__floordiv__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __mod__(self, other: int) -> typing.Self:
-        o = super().__mod__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __divmod__(self, other: int) -> tuple[typing.Self, typing.Self]:
-        q, r = super().__divmod__(other)
-        return self.__class__(q), self.__class__(r)
-
-    @typing.override
-    def __pow__(  # type: ignore
-        self, other: int, modulo: None | int = None) -> typing.Self:
-        o = super().__pow__(other, modulo)
-        return self.__class__(o)
-
-    @typing.override
-    def __lshift__(self, other: int) -> typing.Self:
-        o = super().__lshift__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __rshift__(self, other: int) -> typing.Self:
-        o = super().__rshift__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __and__(self, other: int) -> typing.Self:
-        o = super().__and__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __xor__(self, other: int) -> typing.Self:
-        o = super().__xor__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __or__(self, other: int) -> typing.Self:
-        o = super().__or__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __radd__(self, other: int) -> typing.Self:
-        o = super().__radd__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __rsub__(self, other: int) -> typing.Self:
-        o = super().__rsub__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __rmul__(self, other: int) -> typing.Self:
-        o = super().__rmul__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __rtruediv__(self, other: int) -> typing.Self:
-        o = super().__rtruediv__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __rfloordiv__(self, other: int) -> typing.Self:
-        o = super().__rfloordiv__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __rmod__(self, other: int) -> typing.Self:
-        o = super().__rmod__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __rdivmod__(self, other: int) -> tuple[typing.Self, typing.Self]:
-        q, r = super().__rdivmod__(other)
-        return self.__class__(q), self.__class__(r)
-
-    @typing.override
-    def __rpow__(self, other: int, modulo: None | int = None) -> typing.Self:
-        o = super().__rpow__(other, modulo)
-        return self.__class__(o)
-
-    @typing.override
-    def __rlshift__(self, other: int) -> typing.Self:
-        o = super().__rlshift__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __rrshift__(self, other: int) -> typing.Self:
-        o = super().__rrshift__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __rand__(self, other: int) -> typing.Self:
-        o = super().__rand__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __rxor__(self, other: int) -> typing.Self:
-        o = super().__rxor__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __ror__(self, other: int) -> typing.Self:
-        o = super().__ror__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __neg__(self) -> typing.Self:
-        o = super().__neg__()
-        return self.__class__(o)
-
-    @typing.override
-    def __pos__(self) -> typing.Self:
-        o = super().__pos__()
-        return self.__class__(o)
-
-    @typing.override
-    def __abs__(self) -> typing.Self:
-        o = super().__abs__()
-        return self.__class__(o)
-
-    @typing.override
-    def __invert__(self) -> typing.Self:
-        o = super().__invert__()
-        return self.__class__(o)
-
-
-class Char(int, Basic):
+class Char(_Char, Basic):
     # unsigned (?) char
     builtin: type[int | float | str] = int
     size: int = struct.calcsize('>B')
     magic_byte: int = 0x09
-
-    @typing.override
-    def __new__(cls, *args, **kwargs) -> typing.Self:
-        return super().__new__(cls, *args, **kwargs)
-
-    @typing.override
-    def __str__(self) -> str:
-        return str(chr(self))
-
-    @typing.override
-    def __repr__(self) -> str:
-        return f"{self.__class__.__name__}{{{chr(self)}}}"
 
     @typing.override
     @classmethod
@@ -434,175 +268,12 @@ class Char(int, Basic):
     def to_bytes(self, *_unused, **_unused2) -> bytes:
         return struct.pack('>B', self)
 
-    @typing.override
-    def __add__(self, other: int) -> typing.Self:
-        o = super().__add__(other)
-        return self.__class__(o)
 
-    @typing.override
-    def __sub__(self, other: int) -> typing.Self:
-        o = super().__sub__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __mul__(self, other: int) -> typing.Self:
-        o = super().__mul__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __truediv__(self, other: int) -> typing.Self:
-        o = super().__truediv__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __floordiv__(self, other: int) -> typing.Self:
-        o = super().__floordiv__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __mod__(self, other: int) -> typing.Self:
-        o = super().__mod__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __divmod__(self, other: int) -> tuple[typing.Self, typing.Self]:
-        q, r = super().__divmod__(other)
-        return self.__class__(q), self.__class__(r)
-
-    @typing.override
-    def __pow__(  # type: ignore
-        self, other: int, modulo: None | int = None) -> typing.Self:
-        o = super().__pow__(other, modulo)
-        return self.__class__(o)
-
-    @typing.override
-    def __lshift__(self, other: int) -> typing.Self:
-        o = super().__lshift__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __rshift__(self, other: int) -> typing.Self:
-        o = super().__rshift__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __and__(self, other: int) -> typing.Self:
-        o = super().__and__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __xor__(self, other: int) -> typing.Self:
-        o = super().__xor__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __or__(self, other: int) -> typing.Self:
-        o = super().__or__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __radd__(self, other: int) -> typing.Self:
-        o = super().__radd__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __rsub__(self, other: int) -> typing.Self:
-        o = super().__rsub__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __rmul__(self, other: int) -> typing.Self:
-        o = super().__rmul__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __rtruediv__(self, other: int) -> typing.Self:
-        o = super().__rtruediv__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __rfloordiv__(self, other: int) -> typing.Self:
-        o = super().__rfloordiv__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __rmod__(self, other: int) -> typing.Self:
-        o = super().__rmod__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __rdivmod__(self, other: int) -> tuple[typing.Self, typing.Self]:
-        q, r = super().__rdivmod__(other)
-        return self.__class__(q), self.__class__(r)
-
-    @typing.override
-    def __rpow__(self, other: int, modulo: None | int = None) -> typing.Self:
-        o = super().__rpow__(other, modulo)
-        return self.__class__(o)
-
-    @typing.override
-    def __rlshift__(self, other: int) -> typing.Self:
-        o = super().__rlshift__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __rrshift__(self, other: int) -> typing.Self:
-        o = super().__rrshift__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __rand__(self, other: int) -> typing.Self:
-        o = super().__rand__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __rxor__(self, other: int) -> typing.Self:
-        o = super().__rxor__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __ror__(self, other: int) -> typing.Self:
-        o = super().__ror__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __neg__(self) -> typing.Self:
-        o = super().__neg__()
-        return self.__class__(o)
-
-    @typing.override
-    def __pos__(self) -> typing.Self:
-        o = super().__pos__()
-        return self.__class__(o)
-
-    @typing.override
-    def __abs__(self) -> typing.Self:
-        o = super().__abs__()
-        return self.__class__(o)
-
-    @typing.override
-    def __invert__(self) -> typing.Self:
-        o = super().__invert__()
-        return self.__class__(o)
-
-
-class Bool(int, Basic):
+class Bool(_Bool, Basic):
     # 1-byte bool 0=false, 1=true
     builtin: type[int | float | str] = int
     size: int = struct.calcsize('>?')
     magic_byte: int = 0x00
-
-    @typing.override
-    def __new__(cls, *args, **kwargs) -> typing.Self:
-        return super().__new__(cls, *args, **kwargs)
-
-    @typing.override
-    def __str__(self) -> str:
-        return str(bool(self))
-
-    @typing.override
-    def __repr__(self) -> str:
-        return f"{self.__class__.__name__}{{{bool(self)}}}"
 
     @typing.override
     @classmethod
@@ -619,170 +290,12 @@ class Bool(int, Basic):
     def to_bytes(self, *_unused, **_unused2) -> bytes:
         return struct.pack('>?', self)
 
-    @typing.override
-    def __add__(self, other: int) -> typing.Self:
-        o = super().__add__(other)
-        return self.__class__(o)
 
-    @typing.override
-    def __sub__(self, other: int) -> typing.Self:
-        o = super().__sub__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __mul__(self, other: int) -> typing.Self:
-        o = super().__mul__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __truediv__(self, other: int) -> typing.Self:
-        o = super().__truediv__(other)
-        return self.__class__(o)
-
-    def __floordiv__(self, other: int) -> typing.Self:
-        o = super().__floordiv__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __mod__(self, other: int) -> typing.Self:
-        o = super().__mod__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __divmod__(self, other: int) -> tuple[typing.Self, typing.Self]:
-        q, r = super().__divmod__(other)
-        return self.__class__(q), self.__class__(r)
-
-    @typing.override
-    def __pow__(  # type: ignore
-        self, other: int, modulo: None | int = None) -> typing.Self:
-        o = super().__pow__(other, modulo)
-        return self.__class__(o)
-
-    @typing.override
-    def __lshift__(self, other: int) -> typing.Self:
-        o = super().__lshift__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __rshift__(self, other: int) -> typing.Self:
-        o = super().__rshift__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __and__(self, other: int) -> typing.Self:
-        o = super().__and__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __xor__(self, other: int) -> typing.Self:
-        o = super().__xor__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __or__(self, other: int) -> typing.Self:
-        o = super().__or__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __radd__(self, other: int) -> typing.Self:
-        o = super().__radd__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __rsub__(self, other: int) -> typing.Self:
-        o = super().__rsub__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __rmul__(self, other: int) -> typing.Self:
-        o = super().__rmul__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __rtruediv__(self, other: int) -> typing.Self:
-        o = super().__rtruediv__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __rfloordiv__(self, other: int) -> typing.Self:
-        o = super().__rfloordiv__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __rmod__(self, other: int) -> typing.Self:
-        o = super().__rmod__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __rdivmod__(self, other: int) -> tuple[typing.Self, typing.Self]:
-        q, r = super().__rdivmod__(other)
-        return self.__class__(q), self.__class__(r)
-
-    @typing.override
-    def __rpow__(self, other: int, modulo: None | int = None) -> typing.Self:
-        o = super().__rpow__(other, modulo)
-        return self.__class__(o)
-
-    @typing.override
-    def __rlshift__(self, other: int) -> typing.Self:
-        o = super().__rlshift__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __rrshift__(self, other: int) -> typing.Self:
-        o = super().__rrshift__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __rand__(self, other: int) -> typing.Self:
-        o = super().__rand__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __rxor__(self, other: int) -> typing.Self:
-        o = super().__rxor__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __ror__(self, other: int) -> typing.Self:
-        o = super().__ror__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __neg__(self) -> typing.Self:
-        o = super().__neg__()
-        return self.__class__(o)
-
-    @typing.override
-    def __pos__(self) -> typing.Self:
-        o = super().__pos__()
-        return self.__class__(o)
-
-    @typing.override
-    def __abs__(self) -> typing.Self:
-        o = super().__abs__()
-        return self.__class__(o)
-
-    @typing.override
-    def __invert__(self) -> typing.Self:
-        o = super().__invert__()
-        return self.__class__(o)
-
-
-class Short(int, Basic):
+class Short(_Short, Basic):
     # 2 byte signed integer
     builtin: type[int | float | str] = int
     size: int = struct.calcsize('>h')
     magic_byte: int = 0x05
-
-    @typing.override
-    def __new__(cls, *args, **kwargs) -> typing.Self:
-        return super().__new__(cls, *args, **kwargs)
-
-    @typing.override
-    def __repr__(self) -> str:
-        return f"{self.__class__.__name__}{{{int(self)}}}"
 
     @typing.override
     @classmethod
@@ -799,171 +312,12 @@ class Short(int, Basic):
     def to_bytes(self, *_unused, **_unused2) -> bytes:
         return struct.pack('>h', self)
 
-    @typing.override
-    def __add__(self, other: int) -> typing.Self:
-        o = super().__add__(other)
-        return self.__class__(o)
 
-    @typing.override
-    def __sub__(self, other: int) -> typing.Self:
-        o = super().__sub__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __mul__(self, other: int) -> typing.Self:
-        o = super().__mul__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __truediv__(self, other: int) -> typing.Self:
-        o = super().__truediv__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __floordiv__(self, other: int) -> typing.Self:
-        o = super().__floordiv__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __mod__(self, other: int) -> typing.Self:
-        o = super().__mod__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __divmod__(self, other: int) -> tuple[typing.Self, typing.Self]:
-        q, r = super().__divmod__(other)
-        return self.__class__(q), self.__class__(r)
-
-    @typing.override
-    def __pow__(  # type: ignore
-        self, other: int, modulo: None | int = None) -> typing.Self:
-        o = super().__pow__(other, modulo)
-        return self.__class__(o)
-
-    @typing.override
-    def __lshift__(self, other: int) -> typing.Self:
-        o = super().__lshift__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __rshift__(self, other: int) -> typing.Self:
-        o = super().__rshift__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __and__(self, other: int) -> typing.Self:
-        o = super().__and__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __xor__(self, other: int) -> typing.Self:
-        o = super().__xor__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __or__(self, other: int) -> typing.Self:
-        o = super().__or__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __radd__(self, other: int) -> typing.Self:
-        o = super().__radd__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __rsub__(self, other: int) -> typing.Self:
-        o = super().__rsub__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __rmul__(self, other: int) -> typing.Self:
-        o = super().__rmul__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __rtruediv__(self, other: int) -> typing.Self:
-        o = super().__rtruediv__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __rfloordiv__(self, other: int) -> typing.Self:
-        o = super().__rfloordiv__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __rmod__(self, other: int) -> typing.Self:
-        o = super().__rmod__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __rdivmod__(self, other: int) -> tuple[typing.Self, typing.Self]:
-        q, r = super().__rdivmod__(other)
-        return self.__class__(q), self.__class__(r)
-
-    @typing.override
-    def __rpow__(self, other: int, modulo: None | int = None) -> typing.Self:
-        o = super().__rpow__(other, modulo)
-        return self.__class__(o)
-
-    @typing.override
-    def __rlshift__(self, other: int) -> typing.Self:
-        o = super().__rlshift__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __rrshift__(self, other: int) -> typing.Self:
-        o = super().__rrshift__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __rand__(self, other: int) -> typing.Self:
-        o = super().__rand__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __rxor__(self, other: int) -> typing.Self:
-        o = super().__rxor__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __ror__(self, other: int) -> typing.Self:
-        o = super().__ror__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __neg__(self) -> typing.Self:
-        o = super().__neg__()
-        return self.__class__(o)
-
-    @typing.override
-    def __pos__(self) -> typing.Self:
-        o = super().__pos__()
-        return self.__class__(o)
-
-    @typing.override
-    def __abs__(self) -> typing.Self:
-        o = super().__abs__()
-        return self.__class__(o)
-
-    @typing.override
-    def __invert__(self) -> typing.Self:
-        o = super().__invert__()
-        return self.__class__(o)
-
-
-class Int(int, Basic):
+class Int(_Int, Basic):
     # 4-byte signed integer
     builtin: type[int | float | str] = int
     size: int = struct.calcsize('>l')
     magic_byte: int = 0x01
-
-    @typing.override
-    def __new__(cls, *args, **kwargs) -> typing.Self:
-        return super().__new__(cls, *args, **kwargs)
-
-    @typing.override
-    def __repr__(self) -> str:
-        return f"{self.__class__.__name__}{{{int(self)}}}"
 
     @typing.override
     @classmethod
@@ -980,171 +334,12 @@ class Int(int, Basic):
     def to_bytes(self, *_unused, **_unused2) -> bytes:
         return struct.pack('>l', self)
 
-    @typing.override
-    def __add__(self, other: int) -> typing.Self:
-        o = super().__add__(other)
-        return self.__class__(o)
 
-    @typing.override
-    def __sub__(self, other: int) -> typing.Self:
-        o = super().__sub__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __mul__(self, other: int) -> typing.Self:
-        o = super().__mul__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __truediv__(self, other: int) -> typing.Self:
-        o = super().__truediv__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __floordiv__(self, other: int) -> typing.Self:
-        o = super().__floordiv__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __mod__(self, other: int) -> typing.Self:
-        o = super().__mod__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __divmod__(self, other: int) -> tuple[typing.Self, typing.Self]:
-        q, r = super().__divmod__(other)
-        return self.__class__(q), self.__class__(r)
-
-    @typing.override
-    def __pow__(  # type: ignore
-        self, other: int, modulo: None | int = None) -> typing.Self:
-        o = super().__pow__(other, modulo)
-        return self.__class__(o)
-
-    @typing.override
-    def __lshift__(self, other: int) -> typing.Self:
-        o = super().__lshift__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __rshift__(self, other: int) -> typing.Self:
-        o = super().__rshift__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __and__(self, other: int) -> typing.Self:
-        o = super().__and__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __xor__(self, other: int) -> typing.Self:
-        o = super().__xor__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __or__(self, other: int) -> typing.Self:
-        o = super().__or__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __radd__(self, other: int) -> typing.Self:
-        o = super().__radd__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __rsub__(self, other: int) -> typing.Self:
-        o = super().__rsub__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __rmul__(self, other: int) -> typing.Self:
-        o = super().__rmul__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __rtruediv__(self, other: int) -> typing.Self:
-        o = super().__rtruediv__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __rfloordiv__(self, other: int) -> typing.Self:
-        o = super().__rfloordiv__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __rmod__(self, other: int) -> typing.Self:
-        o = super().__rmod__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __rdivmod__(self, other: int) -> tuple[typing.Self, typing.Self]:
-        q, r = super().__rdivmod__(other)
-        return self.__class__(q), self.__class__(r)
-
-    @typing.override
-    def __rpow__(self, other: int, modulo: None | int = None) -> typing.Self:
-        o = super().__rpow__(other, modulo)
-        return self.__class__(o)
-
-    @typing.override
-    def __rlshift__(self, other: int) -> typing.Self:
-        o = super().__rlshift__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __rrshift__(self, other: int) -> typing.Self:
-        o = super().__rrshift__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __rand__(self, other: int) -> typing.Self:
-        o = super().__rand__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __rxor__(self, other: int) -> typing.Self:
-        o = super().__rxor__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __ror__(self, other: int) -> typing.Self:
-        o = super().__ror__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __neg__(self) -> typing.Self:
-        o = super().__neg__()
-        return self.__class__(o)
-
-    @typing.override
-    def __pos__(self) -> typing.Self:
-        o = super().__pos__()
-        return self.__class__(o)
-
-    @typing.override
-    def __abs__(self) -> typing.Self:
-        o = super().__abs__()
-        return self.__class__(o)
-
-    @typing.override
-    def __invert__(self) -> typing.Self:
-        o = super().__invert__()
-        return self.__class__(o)
-
-
-class Long(int, Basic):
+class Long(_Long, Basic):
     # 8-byte signed integer
     builtin: type[int | float | str] = int
     size: int = struct.calcsize('>q')
     magic_byte: int = 0x02
-
-    @typing.override
-    def __new__(cls, *args, **kwargs) -> typing.Self:
-        return super().__new__(cls, *args, **kwargs)
-
-    @typing.override
-    def __repr__(self) -> str:
-        return f"{self.__class__.__name__}{{{int(self)}}}"
 
     @typing.override
     @classmethod
@@ -1161,171 +356,12 @@ class Long(int, Basic):
     def to_bytes(self, *_unused, **_unused2) -> bytes:
         return struct.pack('>q', self)
 
-    @typing.override
-    def __add__(self, other: int) -> typing.Self:
-        o = super().__add__(other)
-        return self.__class__(o)
 
-    @typing.override
-    def __sub__(self, other: int) -> typing.Self:
-        o = super().__sub__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __mul__(self, other: int) -> typing.Self:
-        o = super().__mul__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __truediv__(self, other: int) -> typing.Self:
-        o = super().__truediv__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __floordiv__(self, other: int) -> typing.Self:
-        o = super().__floordiv__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __mod__(self, other: int) -> typing.Self:
-        o = super().__mod__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __divmod__(self, other: int) -> tuple[typing.Self, typing.Self]:
-        q, r = super().__divmod__(other)
-        return self.__class__(q), self.__class__(r)
-
-    @typing.override
-    def __pow__(  # type: ignore
-        self, other: int, modulo: None | int = None) -> typing.Self:
-        o = super().__pow__(other, modulo)
-        return self.__class__(o)
-
-    @typing.override
-    def __lshift__(self, other: int) -> typing.Self:
-        o = super().__lshift__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __rshift__(self, other: int) -> typing.Self:
-        o = super().__rshift__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __and__(self, other: int) -> typing.Self:
-        o = super().__and__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __xor__(self, other: int) -> typing.Self:
-        o = super().__xor__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __or__(self, other: int) -> typing.Self:
-        o = super().__or__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __radd__(self, other: int) -> typing.Self:
-        o = super().__radd__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __rsub__(self, other: int) -> typing.Self:
-        o = super().__rsub__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __rmul__(self, other: int) -> typing.Self:
-        o = super().__rmul__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __rtruediv__(self, other: int) -> typing.Self:
-        o = super().__rtruediv__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __rfloordiv__(self, other: int) -> typing.Self:
-        o = super().__rfloordiv__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __rmod__(self, other: int) -> typing.Self:
-        o = super().__rmod__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __rdivmod__(self, other: int) -> tuple[typing.Self, typing.Self]:
-        q, r = super().__rdivmod__(other)
-        return self.__class__(q), self.__class__(r)
-
-    @typing.override
-    def __rpow__(self, other: int, modulo: None | int = None) -> typing.Self:
-        o = super().__rpow__(other, modulo)
-        return self.__class__(o)
-
-    @typing.override
-    def __rlshift__(self, other: int) -> typing.Self:
-        o = super().__rlshift__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __rrshift__(self, other: int) -> typing.Self:
-        o = super().__rrshift__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __rand__(self, other: int) -> typing.Self:
-        o = super().__rand__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __rxor__(self, other: int) -> typing.Self:
-        o = super().__rxor__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __ror__(self, other: int) -> typing.Self:
-        o = super().__ror__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __neg__(self) -> typing.Self:
-        o = super().__neg__()
-        return self.__class__(o)
-
-    @typing.override
-    def __pos__(self) -> typing.Self:
-        o = super().__pos__()
-        return self.__class__(o)
-
-    @typing.override
-    def __abs__(self) -> typing.Self:
-        o = super().__abs__()
-        return self.__class__(o)
-
-    @typing.override
-    def __invert__(self) -> typing.Self:
-        o = super().__invert__()
-        return self.__class__(o)
-
-
-class Float(float, Basic):
+class Float(_Float, Basic):
     # 4-byte float
     builtin: type[int | float | str] = float
     size: int = struct.calcsize('>f')
     magic_byte: int = 0x06
-
-    @typing.override
-    def __new__(cls, *args, **kwargs) -> typing.Self:
-        return super().__new__(cls, *args, **kwargs)
-
-    @typing.override
-    def __repr__(self) -> str:
-        return f"{self.__class__.__name__}{{{float(self)}}}"
 
     @typing.override
     @classmethod
@@ -1342,115 +378,12 @@ class Float(float, Basic):
     def to_bytes(self) -> bytes:
         return struct.pack('>f', self)
 
-    @typing.override
-    def __add__(self, other: float) -> typing.Self:
-        o = super().__add__(other)
-        return self.__class__(o)
 
-    @typing.override
-    def __sub__(self, other: float) -> typing.Self:
-        o = super().__sub__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __mul__(self, other: float) -> typing.Self:
-        o = super().__mul__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __truediv__(self, other: float) -> typing.Self:
-        o = super().__truediv__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __floordiv__(self, other: float) -> typing.Self:
-        o = super().__floordiv__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __mod__(self, other: float) -> typing.Self:
-        o = super().__mod__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __divmod__(self, other: float) -> tuple[typing.Self, typing.Self]:
-        q, r = super().__divmod__(other)
-        return self.__class__(q), self.__class__(r)
-
-    @typing.override
-    def __pow__(self, other: float, modulo: None = None) -> typing.Self:
-        o = super().__pow__(other, modulo)
-        return self.__class__(o)
-
-    @typing.override
-    def __radd__(self, other: float) -> typing.Self:
-        o = super().__radd__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __rsub__(self, other: float) -> typing.Self:
-        o = super().__rsub__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __rmul__(self, other: float) -> typing.Self:
-        o = super().__rmul__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __rtruediv__(self, other: float) -> typing.Self:
-        o = super().__rtruediv__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __rfloordiv__(self, other: float) -> typing.Self:
-        o = super().__rfloordiv__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __rmod__(self, other: float) -> typing.Self:
-        o = super().__rmod__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __rdivmod__(self, other: float) -> tuple[typing.Self, typing.Self]:
-        q, r = super().__rdivmod__(other)
-        return self.__class__(q), self.__class__(r)
-
-    @typing.override
-    def __rpow__(self, other: float, modulo: None = None) -> typing.Self:
-        o = super().__rpow__(other, modulo)
-        return self.__class__(o)
-
-    @typing.override
-    def __neg__(self) -> typing.Self:
-        o = super().__neg__()
-        return self.__class__(o)
-
-    @typing.override
-    def __pos__(self) -> typing.Self:
-        o = super().__pos__()
-        return self.__class__(o)
-
-    @typing.override
-    def __abs__(self) -> typing.Self:
-        o = super().__abs__()
-        return self.__class__(o)
-
-
-class Double(float, Basic):
+class Double(_Double, Basic):
     # 8-byte float
     builtin: type[int | float | str] = float
     size: int = struct.calcsize('>d')
     magic_byte: int = 0x04
-
-    @typing.override
-    def __new__(cls, *args, **kwargs) -> typing.Self:
-        return super().__new__(cls, *args, **kwargs)
-
-    @typing.override
-    def __repr__(self) -> str:
-        return f"{self.__class__.__name__}{{{float(self)}}}"
 
     @typing.override
     @classmethod
@@ -1467,103 +400,8 @@ class Double(float, Basic):
     def to_bytes(self) -> bytes:
         return struct.pack('>d', self)
 
-    @typing.override
-    def __add__(self, other: float) -> typing.Self:
-        o = super().__add__(other)
-        return self.__class__(o)
 
-    @typing.override
-    def __sub__(self, other: float) -> typing.Self:
-        o = super().__sub__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __mul__(self, other: float) -> typing.Self:
-        o = super().__mul__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __truediv__(self, other: float) -> typing.Self:
-        o = super().__truediv__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __floordiv__(self, other: float) -> typing.Self:
-        o = super().__floordiv__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __mod__(self, other: float) -> typing.Self:
-        o = super().__mod__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __divmod__(self, other: float) -> tuple[typing.Self, typing.Self]:
-        q, r = super().__divmod__(other)
-        return self.__class__(q), self.__class__(r)
-
-    @typing.override
-    def __pow__(self, other: float, modulo: None = None) -> typing.Self:
-        o = super().__pow__(other, modulo)
-        return self.__class__(o)
-
-    @typing.override
-    def __radd__(self, other: float) -> typing.Self:
-        o = super().__radd__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __rsub__(self, other: float) -> typing.Self:
-        o = super().__rsub__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __rmul__(self, other: float) -> typing.Self:
-        o = super().__rmul__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __rtruediv__(self, other: float) -> typing.Self:
-        o = super().__rtruediv__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __rfloordiv__(self, other: float) -> typing.Self:
-        o = super().__rfloordiv__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __rmod__(self, other: float) -> typing.Self:
-        o = super().__rmod__(other)
-        return self.__class__(o)
-
-    @typing.override
-    def __rdivmod__(self, other: float) -> tuple[typing.Self, typing.Self]:
-        q, r = super().__rdivmod__(other)
-        return self.__class__(q), self.__class__(r)
-
-    @typing.override
-    def __rpow__(self, other: float, modulo: None = None) -> typing.Self:
-        o = super().__rpow__(other, modulo)
-        return self.__class__(o)
-
-    @typing.override
-    def __neg__(self) -> typing.Self:
-        o = super().__neg__()
-        return self.__class__(o)
-
-    @typing.override
-    def __pos__(self) -> typing.Self:
-        o = super().__pos__()
-        return self.__class__(o)
-
-    @typing.override
-    def __abs__(self) -> typing.Self:
-        o = super().__abs__()
-        return self.__class__(o)
-
-
-class Utf8Str(str, Basic):
+class Utf8Str(_Utf8Str, Basic):
     # 1-byte bool true if str is empty
     # then 2-byte str length (may be 0)
     # then UTF-8 str bytes of aforementioned length (empty if bool is True)
@@ -1590,10 +428,6 @@ class Utf8Str(str, Basic):
     def __init__(self, *args, **kwargs):
         super().__init__()
         self.prefer_null: bool
-
-    @typing.override
-    def __repr__(self) -> str:
-        return f"{self.__class__.__name__}{{\"{str(self)}\"}}"
 
     @typing.override
     @classmethod
