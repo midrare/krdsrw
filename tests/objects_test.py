@@ -287,6 +287,21 @@ class TestRecord:
             + b'\xf5\xc2\x8f\x03\x00\x00\x03\x78' \
             + b'\x79\x7a'
 
+    def test_access(self):
+        spc = Record.spec({
+            'a': Spec(Int),
+            'b': Spec(Float)
+        }, {
+            'c': Spec(Double),
+            'd': Spec(Utf8Str)
+        })
+
+        o = spc.make({ 'a': 123, 'b': 4.56, 'c': 7.89, 'd': 'hello'})
+        assert o['a'] == 123
+        assert o['b'] == 4.56
+        assert o['c'] == 7.89
+        assert o['d'] == 'hello'
+
 
 def test_dynamic_map_put_key():
     o = DynamicMap()
