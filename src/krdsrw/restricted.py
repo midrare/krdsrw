@@ -8,8 +8,9 @@ T = typing.TypeVar("T", bound=typing.Any)
 
 class RestrictedList(list[T]):
     def __init__(self, *args, **kwargs):
-        super().__init__()
-        self[:] = list(*args, **kwargs)
+        super().__init__(
+            self._pre_write_transform(e) \
+            for e in list(*args, **kwargs))
 
     def _pre_write_filter(self, value: typing.Any) -> bool:
         return True
