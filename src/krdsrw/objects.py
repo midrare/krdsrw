@@ -8,8 +8,8 @@ import warnings
 
 from . import schemas
 
-from .restricted import RestrictedList
-from .restricted import RestrictedDict
+from .containers import ListBase
+from .containers import DictBase
 from .cursor import Cursor
 from .error import UnexpectedBytesError
 from .error import UnexpectedStructureError
@@ -112,7 +112,7 @@ def _read_basic(cursor: Cursor) \
     return None
 
 
-class Array(RestrictedList[T], Object):
+class Array(ListBase[T], Object):
     _ELMT_SPEC: typing.Final[str] = '_schema_array_elmt_spec'
     _ELMT_NAME: typing.Final[str] = '_schema_array_elmt_name'
 
@@ -185,7 +185,7 @@ class Array(RestrictedList[T], Object):
         return self._elmt_spec.make(value)
 
 
-class Record(RestrictedDict[str, T], Object):
+class Record(DictBase[str, T], Object):
     # Record can contain basics and other containers
     # keys are just arbitrary aliases for convenience. values are
     # hardcoded and knowing what value is where is determined by
@@ -370,7 +370,7 @@ class Record(RestrictedDict[str, T], Object):
 
 
 # can contain Bool, Char, Byte, Short, Int, Long, Float, Double, Utf8Str, Object
-class IntMap(RestrictedDict[str, typing.Any], Object):
+class IntMap(DictBase[str, typing.Any], Object):
     _IDX_ALIAS_NAME_SPEC: typing.Final[str] \
         = '_schema_intmap_idx_alias_name_spec'
 
@@ -494,7 +494,7 @@ class IntMap(RestrictedDict[str, typing.Any], Object):
 
 
 # can contain Bool, Char, Byte, Short, Int, Long, Float, Double, Utf8Str
-class DynamicMap(RestrictedDict[str, typing.Any], Object):
+class DynamicMap(DictBase[str, typing.Any], Object):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -1061,7 +1061,7 @@ WhisperstoreMigrationStatus = typing.TypedDict(
 
 
 # can contain Bool, Char, Byte, Short, Int, Long, Float, Double, Utf8Str, Object
-class DataStore(RestrictedDict, Object):
+class DataStore(DictBase, Object):
     MAGIC_STR: typing.Final[bytes] = b"\x00\x00\x00\x00\x00\x1A\xB1\x26"
     FIXED_MYSTERY_NUM: typing.Final[int] = (
         1  # present after the signature; unknown what this number means

@@ -4,21 +4,21 @@ import typing
 
 import pytest
 
-from krdsrw.restricted import ChainDict
-from krdsrw.restricted import RestrictedDict
-from krdsrw.restricted import RestrictedList
+from krdsrw.containers import ChainDict
+from krdsrw.containers import DictBase
+from krdsrw.containers import ListBase
 
 
 class TestRestrictedList:
     def test_instantiate(self):
-        class CC(RestrictedList[int]):
+        class CC(ListBase[int]):
             pass
 
         o = CC()
         assert o is not None
 
     def test_write_filter(self):
-        class CC(RestrictedList[int]):
+        class CC(ListBase[int]):
             @typing.override
             def _pre_write_filter(self, value: int) -> bool:
                 return isinstance(value, int) and value % 2 == 0
@@ -36,7 +36,7 @@ class TestRestrictedList:
             o.append(9)
 
     def test_write_transform(self):
-        class CC(RestrictedList[int]):
+        class CC(ListBase[int]):
             @typing.override
             def _pre_write_transform(self, value: int) -> int:
                 return value**2
@@ -53,7 +53,7 @@ class TestRestrictedList:
         assert o == [ 4, 144, 36, 64 ]
 
     def test_post_write_hook(self):
-        class CC(RestrictedList[int]):
+        class CC(ListBase[int]):
             def __init__(self, *args, **kwargs):
                 super().__init__(*args, **kwargs)
                 self.is_modified: bool = False
@@ -75,24 +75,24 @@ class TestRestrictedList:
 
 class TestRestrictedDict:
     def test_instantiate(self):
-        o = RestrictedDict()  # no error
+        o = DictBase()  # no error
         assert o is not None
 
     def test_eq_operator(self):
-        o = RestrictedDict()
+        o = DictBase()
         assert o == {}
 
-        o = RestrictedDict({})
+        o = DictBase({})
         assert o == {}
 
-        o = RestrictedDict({ 'a': 'A'})
+        o = DictBase({ 'a': 'A'})
         assert o == { 'a': 'A'}
 
-        o = RestrictedDict({ 'a': 'A', 'b': 'B', 'c': 'C'})
+        o = DictBase({ 'a': 'A', 'b': 'B', 'c': 'C'})
         assert o == { 'a': 'A', 'b': 'B', 'c': 'C'}
 
     def test_or_operator(self):
-        class CC(RestrictedDict[str, int]):
+        class CC(DictBase[str, int]):
             @typing.override
             def _pre_write_filter(
                 self,
@@ -122,7 +122,7 @@ class TestRestrictedDict:
         o |= CC({ 'int': 456 })
 
     def test_write_filter(self):
-        class CC(RestrictedDict[str, int]):
+        class CC(DictBase[str, int]):
             @typing.override
             def _pre_write_filter(
                 self,
@@ -163,7 +163,7 @@ class TestRestrictedDict:
             })
 
     def test_write_transform(self):
-        class CC(RestrictedDict[str, int]):
+        class CC(DictBase[str, int]):
             @typing.override
             def _pre_write_transform(
                 self,
@@ -185,7 +185,7 @@ class TestRestrictedDict:
         assert o == { 'A': 2, 'B': 4, 'C': 6 }
 
     def test_read_filter(self):
-        class CC(RestrictedDict[typing.Any, typing.Any]):
+        class CC(DictBase[typing.Any, typing.Any]):
             @typing.override
             def _pre_read_filter(self, key: typing.Any) -> bool:
                 return isinstance(key, str) and len(key) <= 1
@@ -213,7 +213,7 @@ class TestRestrictedDict:
             o.get('aa', 0)
 
     def test_read_transform(self):
-        class CC(RestrictedDict[typing.Any, typing.Any]):
+        class CC(DictBase[typing.Any, typing.Any]):
             @typing.override
             def _pre_read_transform(self, key: typing.Any) -> typing.Any:
                 if isinstance(key, str):
@@ -241,7 +241,7 @@ class TestRestrictedDict:
         assert o.get('aa', 0) == 0
 
     def test_del_filter(self):
-        class CC(RestrictedDict[typing.Any, typing.Any]):
+        class CC(DictBase[typing.Any, typing.Any]):
             @typing.override
             def _pre_del_filter(self, key: typing.Any) -> typing.Any:
                 return not isinstance(key, str) or not key.startswith('req_')
@@ -285,7 +285,7 @@ class TestRestrictedDict:
             del o['req_a']
 
     def test_del_transform(self):
-        class CC(RestrictedDict[typing.Any, typing.Any]):
+        class CC(DictBase[typing.Any, typing.Any]):
             @typing.override
             def _pre_del_transform(self, key: typing.Any) -> typing.Any:
                 if isinstance(key, str):
@@ -329,7 +329,7 @@ class TestRestrictedDict:
         assert o == { 'b': 2, 'c': 3 }
 
     def test_modified_hook(self):
-        class CC(RestrictedDict[typing.Any, typing.Any]):
+        class CC(DictBase[typing.Any, typing.Any]):
             def __init__(self, *args, **kwargs):
                 super().__init__(*args, **kwargs)
                 self.is_modified: bool = False

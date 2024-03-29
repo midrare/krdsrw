@@ -9,7 +9,7 @@ K = typing.TypeVar("K", bound=int | float | str)
 T = typing.TypeVar("T", bound=typing.Any)
 
 
-class RestrictedList(list[T]):
+class ListBase(list[T]):
     def __init__(self, *args, **kwargs):
         super().__init__(
             self._pre_write_transform(e) \
@@ -154,7 +154,7 @@ class RestrictedList(list[T]):
         self._post_write_hook()
 
 
-class RestrictedDict(dict[K, T]):
+class DictBase(dict[K, T]):
     def __init__(self, *args, **kwargs):
         super().__init__(self._transform_for_write(dict(*args, **kwargs)))
 
@@ -358,7 +358,7 @@ class RestrictedDict(dict[K, T]):
 class ChainDict(dict):
     def __init__(self, *args, **kwargs):
         self._parents: list[weakref.ReferenceType[typing.Self]] = []
-        self._candidates: dict[typing.Any, typing.Any] = {}
+        self._standins: dict[typing.Any, typing.Any] = {}
         # parent constructor last so hooks work correctly
         super().__init__(*args, **kwargs)
 
@@ -366,10 +366,10 @@ class ChainDict(dict):
         return self.__class__()
 
     def _get_candidate(self, key: typing.Any) -> typing.Any:
-        result = self._candidates.get(key)
+        result = self._standins.get(key)
         if result is None:
             result = self._make_candidate(key)
-            self._candidates[key] = result
+            self._standins[key] = result
         return result
 
     @typing.override
@@ -395,7 +395,9 @@ class ChainDict(dict):
                 self._parents.remove(p_ref)
                 continue
 
-            for k, v in list(parent._candidates.items()):
-                if v is self:
-                    parent._candidates.pop(k)
+            for k, v in list(parent._standins.items()):
+                if v is not self:
+                    continue
+                parent._standins.pop(k)
+                if k not in parent.keys():
                     parent[k] = self
