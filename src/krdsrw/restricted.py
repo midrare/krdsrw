@@ -1,6 +1,9 @@
 import collections.abc
 import copy
+import operator
+import re
 import typing
+import weakref
 
 K = typing.TypeVar("K", bound=int | float | str)
 T = typing.TypeVar("T", bound=typing.Any)
@@ -350,3 +353,49 @@ class RestrictedDict(dict[K, T]):
     ) -> typing.Self:
         self.update(dict(other))
         return self
+
+
+class ChainDict(dict):
+    def __init__(self, *args, **kwargs):
+        self._parents: list[weakref.ReferenceType[typing.Self]] = []
+        self._candidates: dict[typing.Any, typing.Any] = {}
+        # parent constructor last so hooks work correctly
+        super().__init__(*args, **kwargs)
+
+    def _make_candidate(self, key: typing.Any) -> typing.Any:
+        return self.__class__()
+
+    def _get_candidate(self, key: typing.Any) -> typing.Any:
+        result = self._candidates.get(key)
+        if result is None:
+            result = self._make_candidate(key)
+            self._candidates[key] = result
+        return result
+
+    @typing.override
+    def __getitem__(self, key: typing.Any) -> typing.Any:
+        o = None
+
+        if o is None and super().__contains__(key):
+            o = super().__getitem__(key)
+
+        if o is None:
+            o = self._get_candidate(key)
+            if not any(e() is self for e in o._parents):
+                o._parents.append(weakref.ref(self))
+
+        return o
+
+    @typing.override
+    def __setitem__(self, key: typing.Any, value: typing.Any):
+        super().__setitem__(key, value)
+        for p_ref in list(self._parents):
+            parent = p_ref()
+            if parent is None:
+                self._parents.remove(p_ref)
+                continue
+
+            for k, v in list(parent._candidates.items()):
+                if v is self:
+                    parent._candidates.pop(k)
+                    parent[k] = self
