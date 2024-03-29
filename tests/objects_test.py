@@ -17,6 +17,7 @@ from krdsrw.specs import Field
 from krdsrw.objects import Array
 from krdsrw.objects import DataStore
 from krdsrw.objects import DynamicMap
+from krdsrw.objects import IntMap
 from krdsrw.objects import Object
 from krdsrw.objects import Record
 from krdsrw.objects import peek_object_schema
@@ -301,6 +302,30 @@ class TestRecord:
         assert o['b'] == 4.56
         assert o['c'] == 7.89
         assert o['d'] == 'hello'
+
+
+class TestIntMap:
+    def test_instantiate(self):
+        spc = IntMap.spec([
+            (0, "apple", "name.a", Array.spec(Spec(Int), "x")),
+            (1, "banana", "name.b", Array.spec(Spec(Int), "y")),
+            (2, "pear", "name.c", Array.spec(Spec(Int), "z")),
+        ])
+        spc.make()
+
+    def test_make_element(self):
+        spc = IntMap.spec([
+            (0, "apple", "name.a", Array.spec(Spec(Int), "x")),
+            (1, "banana", "name.b", Array.spec(Spec(Int), "y")),
+            (2, "pear", "name.c", Array.spec(Spec(Int), "z")),
+        ])
+
+        o = spc.make()
+        o.setdefault('apple')
+        o['apple'].make_and_append(111)
+        o['banana'].make_and_append(222)
+        o['pear'].make_and_append(333)
+        print(o)
 
 
 def test_dynamic_map_put_key():
