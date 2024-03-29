@@ -4,6 +4,7 @@ import typing
 
 import pytest
 
+from krdsrw.restricted import ChainDict
 from krdsrw.restricted import RestrictedDict
 from krdsrw.restricted import RestrictedList
 
@@ -351,3 +352,63 @@ class TestRestrictedDict:
         o = CC()
         o.update({ 'a': 123, 'b': 456 })
         assert o.is_modified
+
+
+class TestChainDict:
+    def test_instantiate(self):
+        ChainDict()
+
+    def test_single_read(self):
+        o = ChainDict()
+        o['a0']
+        assert o == {}
+
+    def test_single_write(self):
+        o = ChainDict()
+        o['a0'] = 'hello'
+        assert o == { 'a0': 'hello'}
+
+    def test_nested_lvl2_read(self):
+        o = ChainDict()
+        o['a0']['b0']
+        assert o == {}
+
+    def test_nested_lvl2_write(self):
+        o = ChainDict()
+        o['a0']['b0'] = 'hello'
+        assert o == { 'a0': { 'b0': 'hello'} }
+
+    def test_nested_lvl3_read(self):
+        o = ChainDict()
+        o['a0']['b0']['c0']
+        assert o == {}
+
+    def test_nested_lvl3_write(self):
+        o = ChainDict()
+        o['a0']['b0']['c0'] = 'hello'
+        assert o == { 'a0': { 'b0': { 'c0': 'hello'} } }
+
+    def test_nested_lvl4_write(self):
+        o = ChainDict()
+        o['a0']['b0']['c0'] = 'hello'
+        o['a0']['b0']['c1'] = 'world'
+        o['a0']['b1'] = 'lorem'
+        o['a0']['b2'] = 'ipsum'
+        o['a0']['b3']['c2']['d0']
+        o['a0']['b3']['c2']['d1'] = True
+
+        assert o == {
+            'a0': {
+                'b0': {
+                    'c0': 'hello',
+                    'c1': 'world',
+                },
+                'b1': 'lorem',
+                'b2': 'ipsum',
+                'b3': {
+                    'c2': {
+                        'd1': True,
+                    }
+                }
+            },
+        }
