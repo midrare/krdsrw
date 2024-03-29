@@ -279,7 +279,7 @@ class Record(RestrictedDict[str, T], Object):
     ) -> tuple[str, T]:
         maker = self._required_spec.get(key) or self._optional_spec.get(key)
         if not maker:
-            raise Exception(f"No template for key \"{key}\".")
+            raise KeyError(f"No template for key \"{key}\".")
         if value is None:
             value = maker.make()
         elif isinstance(value, (bool, int, float, str, bytes)) \
