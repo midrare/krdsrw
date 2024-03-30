@@ -66,6 +66,31 @@ class TestListBase:
         assert isinstance(o, ListBase)
         assert o.copy() == [ 1, 2, 3 ]
 
+    def test_count(self):
+        o = ListBase()
+        assert o.count(9) == 0
+
+        o = ListBase([ 1, 2, 3 ])
+        assert o.count(9) == 0
+
+        o = ListBase([9])
+        assert o.count(9) == 1
+
+        o = ListBase([ 9, 9, 9 ])
+        assert o.count(9) == 3
+
+        o = ListBase([ 1, 9 ])
+        assert o.count(9) == 1
+
+        o = ListBase([ 9, 1 ])
+        assert o.count(9) == 1
+
+        o = ListBase([ 1, 9, 1 ])
+        assert o.count(9) == 1
+
+        o = ListBase([ 9, 1, 9 ])
+        assert o.count(9) == 2
+
     def test_allowed(self):
         class CustomClass(ListBase[int]):
             @typing.override
