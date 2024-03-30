@@ -91,6 +91,31 @@ class TestListBase:
         o = ListBase([ 9, 1, 9 ])
         assert o.count(9) == 2
 
+    def test_insert(self):
+        o = ListBase()
+        o.insert(0, 6)
+        o.insert(0, 5)
+        o.insert(0, 4)
+        assert o == [ 4, 5, 6 ]
+
+        o = ListBase([ 1, 2, 3 ])
+        o.insert(0, 6)
+        o.insert(0, 5)
+        o.insert(0, 4)
+        assert o == [ 4, 5, 6, 1, 2, 3 ]
+
+        o = ListBase([ 1, 2, 3 ])
+        o.insert(1, 4)
+        o.insert(3, 5)
+        o.insert(5, 6)
+        assert o == [ 1, 4, 2, 5, 3, 6 ]
+
+        o = ListBase([ 1, 2, 3 ])
+        o.insert(3, 6)
+        o.insert(2, 5)
+        o.insert(1, 4)
+        assert o == [ 1, 4, 2, 5, 3, 6 ]
+
     def test_allowed(self):
         class CustomClass(ListBase[int]):
             @typing.override
