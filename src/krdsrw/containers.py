@@ -58,7 +58,7 @@ class ListBase(list[T], _Observable, metaclass=abc.ABCMeta):
     def _remove_observer(self, receiver: typing.Any):
         self._parents[:] = [ e for e in self._parents if e() is not receiver ]
 
-    def _commit_parent(self):
+    def _notify_observers(self):
         while self._parents:
             ref = self._parents.pop()
             if ref is None:
@@ -125,7 +125,7 @@ class ListBase(list[T], _Observable, metaclass=abc.ABCMeta):
             super().__setitem__(i, self._transform(o))
 
         self._modified = True
-        self._commit_parent()
+        self._notify_observers()
 
     @typing.override
     def __add__(  # type: ignore
@@ -156,7 +156,7 @@ class ListBase(list[T], _Observable, metaclass=abc.ABCMeta):
 
         result = super().__iadd__(self._transform(e) for e in other)
         self._modified = True
-        self._commit_parent()
+        self._notify_observers()
 
         return result
 
@@ -168,7 +168,7 @@ class ListBase(list[T], _Observable, metaclass=abc.ABCMeta):
 
         super().append(self._transform(o))
         self._modified = True
-        self._commit_parent()
+        self._notify_observers()
 
     @typing.override
     def insert(self, i: typing.SupportsIndex, o: int | float | str | T):
@@ -178,7 +178,7 @@ class ListBase(list[T], _Observable, metaclass=abc.ABCMeta):
 
         super().insert(i, self._transform(o))
         self._modified = True
-        self._commit_parent()
+        self._notify_observers()
 
     @typing.override
     def copy(self) -> typing.Self:
@@ -194,7 +194,7 @@ class ListBase(list[T], _Observable, metaclass=abc.ABCMeta):
 
         super().extend(self._transform(e) for e in other)
         self._modified = True
-        self._commit_parent()
+        self._notify_observers()
 
     @typing.override
     def count(self, o: bool | int | float | str | bytes | T) -> int:
@@ -204,7 +204,7 @@ class ListBase(list[T], _Observable, metaclass=abc.ABCMeta):
     def pop(self, idx: typing.SupportsIndex = -1) -> T:
         result = super().pop(idx)
         self._modified = True
-        self._commit_parent()
+        self._notify_observers()
         return result
 
     @typing.override
@@ -212,14 +212,14 @@ class ListBase(list[T], _Observable, metaclass=abc.ABCMeta):
         super().remove(value)
         self._standins.remove(value)
         self._modified = True
-        self._commit_parent()
+        self._notify_observers()
 
     @typing.override
     def clear(self):
         super().clear()
         self._standins.clear()
         self._modified = True
-        self._commit_parent()
+        self._notify_observers()
 
 
 class DictBase(dict[K, T], _Observable):
@@ -270,6 +270,16 @@ class DictBase(dict[K, T], _Observable):
     def _remove_observer(self, receiver: typing.Any):
         self._parents[:] = [ e for e in self._parents if e() is not receiver ]
 
+    def _notify_observers(self):
+        while self._parents:
+            ref = self._parents.pop()
+            if ref is None:
+                continue
+            parent = ref()
+            if parent is None or not isinstance(parent, _Observable):
+                continue
+            parent._on_observed(self)
+
     @typing.override
     def _on_observed(self, sender: typing.Any):
         for k, v in list(self._key_to_standin.items()):
@@ -282,16 +292,6 @@ class DictBase(dict[K, T], _Observable):
                 f"Key-value pair ({k}, {sender}) is not writable " \
                 + "(should have been screened out before this point)."
             super().__setitem__(k, sender)
-
-    def _commit_parent(self):
-        while self._parents:
-            ref = self._parents.pop()
-            if ref is None:
-                continue
-            parent = ref()
-            if parent is None or not isinstance(parent, _Observable):
-                continue
-            parent._on_observed(self)
 
     def _is_key_deletable(self, key: typing.Any) -> bool:
         return True
@@ -322,7 +322,7 @@ class DictBase(dict[K, T], _Observable):
         key_, default_ = self._transform_key_value(key, default)
         result = super().setdefault(key_, default_)
         self._is_modified = True
-        self._commit_parent()
+        self._notify_observers()
 
         return result
 
@@ -348,7 +348,7 @@ class DictBase(dict[K, T], _Observable):
         super().update(other)
         if other:
             self._is_modified = True
-            self._commit_parent()
+            self._notify_observers()
 
     @typing.override
     def __eq__(self, o: typing.Any) -> bool:
@@ -373,7 +373,7 @@ class DictBase(dict[K, T], _Observable):
         super().__delitem__(key_)  # type: ignore
         if is_contained:
             self._is_modified = True
-            self._commit_parent()
+            self._notify_observers()
 
     @typing.override
     def __getitem__(self, key: K) -> T:
@@ -405,7 +405,7 @@ class DictBase(dict[K, T], _Observable):
         key_, item_ = self._transform_key_value(key, item)
         super().__setitem__(key_, item_)  # type: ignore
         self._is_modified = True
-        self._commit_parent()
+        self._notify_observers()
 
     @typing.override
     def get(self, key: K, default: None | T = None) -> T:  # type: ignore
@@ -428,7 +428,7 @@ class DictBase(dict[K, T], _Observable):
 
         if len(self) != before:
             self._is_modified = True
-            self._commit_parent()
+            self._notify_observers()
 
         return result
 
@@ -443,7 +443,7 @@ class DictBase(dict[K, T], _Observable):
                 # no need for transform b/c already in dict
                 super().__delitem__(k)
                 self._is_modified = True
-                self._commit_parent()
+                self._notify_observers()
                 return (k, v)
 
         # same exception as plain dict
@@ -469,7 +469,7 @@ class DictBase(dict[K, T], _Observable):
 
         if is_modified:
             self._is_modified = True
-            self._commit_parent()
+            self._notify_observers()
 
     @typing.override
     def copy(self) -> typing.Self:
