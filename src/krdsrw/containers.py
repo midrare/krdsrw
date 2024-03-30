@@ -259,6 +259,10 @@ class DictBase(dict[K, T], _Observable):
         return None
 
     def _add_standin(self, key: typing.Any, child: typing.Any):
+        assert key not in self.keys(), \
+            f"Cannot create stand-in for key-value ({key}, {child}) " \
+            + "that already exists (should have been screened out " \
+            + "before this point)"
         self._key_to_standin[key] = child
         if isinstance(child, _Observable):
             child._add_observer(self)
