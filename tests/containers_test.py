@@ -830,6 +830,36 @@ class TestDictBase:
         o['x'] = -2
         assert o == { 'a': 1, 'b': -1, 'c': 3, 'x': -2 }
 
+    def test_or_operator(self):
+        class CustomClass(DictBase[str, int]):
+            @typing.override
+            def _is_key_value_writable(
+                self,
+                key: typing.Any,
+                value: typing.Any,
+            ) -> bool:
+                return isinstance(key, str) and isinstance(value, int)
+
+        o = CustomClass({ 'a': 123 }) | { 'b': 456 }  # no error
+        with pytest.raises(ValueError):
+            o = CustomClass({ 'a': 123 }) | { 'b': b'ZZZ'}
+
+        o = { 'float': 1.23 } | CustomClass({ 'int': 456 })
+        o = { 'bytes': b'ZZZ'} | CustomClass({ 'int': 456 })
+
+        o = CustomClass({ 'a': 1 })
+        o |= { 'b': 2 }
+
+        with pytest.raises(ValueError):
+            o = CustomClass({ 'a': 123 })
+            o |= { 'b': b'ZZZ'}
+
+        o = { 'float': 1.23 }
+        o |= CustomClass({ 'int': 456 })
+
+        o = { 'bytes': b'ZZZ'}
+        o |= CustomClass({ 'int': 456 })
+
     def test_update(self):
         o = DictBase()
         o.update({ 'x': -1, 'y': -2, 'z': -3 })
@@ -860,36 +890,6 @@ class TestDictBase:
         o.setdefault('a', -1)
         o.setdefault('x', -2)
         assert o == { 'a': 1, 'b': 2, 'c': 3, 'x': -2 }
-
-    def test_or_operator(self):
-        class CustomClass(DictBase[str, int]):
-            @typing.override
-            def _is_key_value_writable(
-                self,
-                key: typing.Any,
-                value: typing.Any,
-            ) -> bool:
-                return isinstance(key, str) and isinstance(value, int)
-
-        o = CustomClass({ 'a': 123 }) | { 'b': 456 }  # no error
-        with pytest.raises(ValueError):
-            o = CustomClass({ 'a': 123 }) | { 'b': b'ZZZ'}
-
-        o = { 'float': 1.23 } | CustomClass({ 'int': 456 })
-        o = { 'bytes': b'ZZZ'} | CustomClass({ 'int': 456 })
-
-        o = CustomClass({ 'a': 1 })
-        o |= { 'b': 2 }
-
-        with pytest.raises(ValueError):
-            o = CustomClass({ 'a': 123 })
-            o |= { 'b': b'ZZZ'}
-
-        o = { 'float': 1.23 }
-        o |= CustomClass({ 'int': 456 })
-
-        o = { 'bytes': b'ZZZ'}
-        o |= CustomClass({ 'int': 456 })
 
     def test_write_filter(self):
         class CustomClass(DictBase[str, int]):
