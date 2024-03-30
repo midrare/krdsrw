@@ -36,7 +36,7 @@ class ListBase(list[T], _Chainable, metaclass=abc.ABCMeta):
     def _transform(self, value: typing.Any) -> T:
         return value
 
-    def _add_child(self, child: typing.Any):
+    def _add_standin(self, child: typing.Any):
         if any(e is child for e in self._standins):
             return
         if any(e is child for e in self):
