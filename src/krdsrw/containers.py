@@ -41,9 +41,8 @@ class ListBase(list[T], _Observable, metaclass=abc.ABCMeta):
         return value
 
     def _add_standin(self, child: typing.Any):
-        if any(e is child for e in self._standins):
-            return
-        if any(e is child for e in self):
+        if any(e is child for e in self._standins) \
+        or any(e is child for e in self):
             return
         self._standins.append(child)
 
