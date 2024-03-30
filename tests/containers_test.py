@@ -952,6 +952,124 @@ class TestDictBase:
         o.setdefault('x', -2)
         assert o == { 'a': 1, 'b': 2, 'c': 3, 'x': -2 }
 
+    def test_clear(self):
+        o = DictBase()
+        o.clear()
+        assert o == {}
+
+        o = DictBase({ 'a': 1, 'b': 2, 'c': 3 })
+        o.clear()
+        assert o == {}
+
+    def test_copy(self):
+        o = DictBase()
+        assert isinstance(o, DictBase)
+        assert o.copy() == {}
+
+        o = DictBase({ 'a': 1, 'b': 2, 'c': 3 })
+        assert isinstance(o, DictBase)
+        assert o.copy() == { 'a': 1, 'b': 2, 'c': 3 }
+
+    def test_fromkeys(self):
+        o = DictBase.fromkeys([], 0)
+        assert o == {}
+
+        o = DictBase.fromkeys([ 'a', 'b', 'c'], 0)
+        assert o == { 'a': 0, 'b': 0, 'c': 0 }
+
+        o = DictBase.fromkeys([])
+        assert o == {}
+
+        o = DictBase.fromkeys([ 'a', 'b', 'c'])
+        assert o == { 'a': None, 'b': None, 'c': None }
+
+    def test_get(self):
+        o = DictBase()
+        assert o.get('a') is None
+
+        o = DictBase()
+        assert o.get('a', 123) == 123
+
+        o = DictBase({ 'a': 1, 'b': 2, 'c': 3 })
+        assert o.get('a') == 1
+
+        o = DictBase({ 'a': 1, 'b': 2, 'c': 3 })
+        assert o.get('x') is None
+
+        o = DictBase({ 'a': 1, 'b': 2, 'c': 3 })
+        assert o.get('x', 9) == 9
+
+    def test_items(self):
+        o = DictBase()
+        assert list(o.items()) == []
+
+        o = DictBase({ 'a': 1, 'b': 2, 'c': 3 })
+        assert list(o.items()) == [('a', 1), ('b', 2), ('c', 3)]
+
+    def test_keys(self):
+        o = DictBase()
+        assert list(o.keys()) == []
+
+        o = DictBase({ 'a': 1, 'b': 2, 'c': 3 })
+        assert list(o.keys()) == [ 'a', 'b', 'c']
+
+        o = DictBase({ 'a': 1, 'b': 2, 'c': 3 })
+        o['a'] = 5
+        assert list(o.keys()) == [ 'a', 'b', 'c']
+
+        o = DictBase({ 'a': 1, 'b': 2, 'c': 3 })
+        o['d'] = 5
+        assert list(o.keys()) == [ 'a', 'b', 'c', 'd']
+
+    def test_values(self):
+        o = DictBase()
+        assert list(o.values()) == []
+
+        o = DictBase({ 'a': 1, 'b': 2, 'c': 3 })
+        assert list(o.values()) == [ 1, 2, 3 ]
+
+        o = DictBase({ 'a': 1, 'b': 2, 'c': 3 })
+        o['a'] = 5
+        assert list(o.values()) == [ 5, 2, 3 ]
+
+        o = DictBase({ 'a': 1, 'b': 2, 'c': 3 })
+        o['d'] = 5
+        assert list(o.values()) == [ 1, 2, 3, 5 ]
+
+    def test_pop(self):
+        o = DictBase()
+        with pytest.raises(KeyError):
+            o.pop('a')
+
+        o = DictBase()
+        assert o.pop('a', 0) == 0
+
+        o = DictBase({ 'a': 1, 'b': 2, 'c': 3 })
+        assert o.pop('a', 9) == 1
+
+        o = DictBase({ 'a': 1, 'b': 2, 'c': 3 })
+        with pytest.raises(KeyError):
+            assert o.pop('x') == 9
+
+        o = DictBase({ 'a': 1, 'b': 2, 'c': 3 })
+        assert o.pop('x', 9) == 9
+
+    def test_popitem(self):
+        o = DictBase()
+        with pytest.raises(KeyError):
+            o.popitem()
+
+        o = DictBase({ 'a': 1, 'b': 2, 'c': 3 })
+        assert o.popitem() == ('c', 3)
+
+        o = DictBase({ 'a': 1, 'b': 2, 'c': 3 })
+        o['a'] = 5
+        assert o.popitem() == ('c', 3)
+
+        o = DictBase({ 'a': 1, 'b': 2, 'c': 3 })
+        o['x'] = -1
+        assert o.popitem() == ('x', -1)
+
     def test_write_filter(self):
         class CustomClass(DictBase[str, int]):
             @typing.override
