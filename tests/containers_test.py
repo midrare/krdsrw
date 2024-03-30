@@ -161,6 +161,49 @@ class TestListBase:
         o.remove(9)
         assert o == [ 1, 2, 9, 3 ]
 
+    def test_pop(self):
+        o = ListBase()
+        with pytest.raises(IndexError):
+            o.pop(0)
+
+        o = ListBase()
+        with pytest.raises(IndexError):
+            o.pop(999)
+
+        o = ListBase([ 1, 2, 3 ])
+        assert o.pop(0) == 1
+
+        o = ListBase([ 1, 2, 3 ])
+        assert o.pop(1) == 2
+
+        o = ListBase([ 1, 2, 3 ])
+        assert o.pop(2) == 3
+
+        o = ListBase([ 1, 2, 3 ])
+        assert o.pop(-1) == 3
+
+        o = ListBase([ 1, 2, 3 ])
+        assert o.pop(-2) == 2
+
+        o = ListBase([ 1, 2, 3 ])
+        assert o.pop(-3) == 1
+
+        with pytest.raises(IndexError):
+            o = ListBase([ 1, 2, 3 ])
+            o.pop(-4)
+
+        with pytest.raises(IndexError):
+            o = ListBase([ 1, 2, 3 ])
+            o.pop(3)
+
+        with pytest.raises(IndexError):
+            o = ListBase([ 1, 2, 3 ])
+            o.pop(-999)
+
+        with pytest.raises(IndexError):
+            o = ListBase([ 1, 2, 3 ])
+            o.pop(999)
+
     def test_allowed(self):
         class CustomClass(ListBase[int]):
             @typing.override
