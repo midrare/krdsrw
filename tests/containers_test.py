@@ -13,8 +13,11 @@ class TestListBase:
         class CustomClass(ListBase[int]):
             pass
 
-        o = CustomClass()
-        assert o is not None
+        o = CustomClass()  # no error
+        assert o == []
+
+        o = CustomClass([ 2, 4, 6, 8 ])  # no error
+        assert o == [ 2, 4, 6, 8 ]
 
     def test_allowed(self):
         class CustomClass(ListBase[int]):
