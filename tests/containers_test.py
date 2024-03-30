@@ -100,11 +100,56 @@ class TestDictBase:
         o = DictBase({})
         assert o == {}
 
-        o = DictBase({ 'a': 'A'})
-        assert o == { 'a': 'A'}
+        o = DictBase({ 'a': 1, 'b': 2, 'c': 3 })
+        assert o == { 'a': 1, 'b': 2, 'c': 3 }
 
-        o = DictBase({ 'a': 'A', 'b': 'B', 'c': 'C'})
-        assert o == { 'a': 'A', 'b': 'B', 'c': 'C'}
+        o = DictBase()
+        o['x'] = -1
+        o['y'] = -2
+        o['z'] = -3
+        assert o == { 'x': -1, 'y': -2, 'z': -3 }
+
+        o = DictBase({})
+        o['x'] = -1
+        o['y'] = -2
+        o['z'] = -3
+        assert o == { 'x': -1, 'y': -2, 'z': -3 }
+
+        o = DictBase({ 'a': 1, 'b': 2, 'c': 3 })
+        o['x'] = -1
+        o['y'] = -2
+        o['z'] = -3
+        assert o == { 'a': 1, 'b': 2, 'c': 3, 'x': -1, 'y': -2, 'z': -3 }
+
+        o = DictBase()
+        o.update({ 'x': -1, 'y': -2, 'z': -3 })
+        assert o == { 'x': -1, 'y': -2, 'z': -3 }
+
+        o = DictBase({})
+        o.update({ 'x': -1, 'y': -2, 'z': -3 })
+        assert o == { 'x': -1, 'y': -2, 'z': -3 }
+
+        o = DictBase({ 'a': 1, 'b': 2, 'c': 3 })
+        o.update({ 'x': -1, 'y': -2, 'z': -3 })
+        assert o == { 'a': 1, 'b': 2, 'c': 3, 'x': -1, 'y': -2, 'z': -3 }
+
+        o = DictBase()
+        o.setdefault('x', -1)
+        o.setdefault('y', -2)
+        o.setdefault('z', -3)
+        assert o == { 'x': -1, 'y': -2, 'z': -3 }
+
+        o = DictBase({})
+        o.setdefault('x', -1)
+        o.setdefault('y', -2)
+        o.setdefault('z', -3)
+        assert o == { 'x': -1, 'y': -2, 'z': -3 }
+
+        o = DictBase({ 'a': 1, 'b': 2, 'c': 3 })
+        o.setdefault('x', -1)
+        o.setdefault('y', -2)
+        o.setdefault('z', -3)
+        assert o == { 'a': 1, 'b': 2, 'c': 3, 'x': -1, 'y': -2, 'z': -3 }
 
     def test_or_operator(self):
         class CustomClass(DictBase[str, int]):
