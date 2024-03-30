@@ -502,6 +502,15 @@ class TestListBase:
         o.sort(key=lambda n: n * 2 if n % 2 == 0 else n, reverse=True)
         assert o == [ 4, 5, 2, 3, 1 ]
 
+    def test_reverse(self):
+        o = ListBase()
+        o.reverse()
+        assert o == []
+
+        o = ListBase([ 1, 2, 3, 4, 5 ])
+        o.reverse()
+        assert o == [ 5, 4, 3, 2, 1 ]
+
     def test_allowed(self):
         class CustomClass(ListBase[int]):
             @typing.override
