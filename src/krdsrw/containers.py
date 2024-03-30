@@ -240,8 +240,10 @@ class DictBase(dict[K, T], _Chainable):
     def _make_standin(self, key: typing.Any) -> None | T:
         return None
 
-    def _add_child(self, child: typing.Any):
-        raise NotImplementedError
+    def _add_standin(self, key: typing.Any, child: typing.Any):
+        self._key_to_standin[key] = child
+        if isinstance(child, _Chainable):
+            child._add_parent(self)
 
     @typing.override
     def _add_parent(self, parent: typing.Any):
