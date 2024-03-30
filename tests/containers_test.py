@@ -22,6 +22,19 @@ class TestListBase:
         o = ListBase([ 1, 2, 3 ])
         assert o == [ 1, 2, 3 ]
 
+    def test_append(self):
+        o = ListBase()
+        o.append(4)
+        o.append(5)
+        o.append(6)
+        assert o == [ 4, 5, 6 ]
+
+        o = ListBase([ 1, 2, 3 ])
+        o.append(4)
+        o.append(5)
+        o.append(6)
+        assert o == [ 1, 2, 3, 4, 5, 6 ]
+
     def test_allowed(self):
         class CustomClass(ListBase[int]):
             @typing.override
