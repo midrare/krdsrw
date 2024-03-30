@@ -840,25 +840,41 @@ class TestDictBase:
             ) -> bool:
                 return isinstance(key, str) and isinstance(value, int)
 
-        o = CustomClass({ 'a': 123 }) | { 'b': 456 }  # no error
-        with pytest.raises(ValueError):
-            o = CustomClass({ 'a': 123 }) | { 'b': b'ZZZ'}
+        o = CustomClass({ 'a': 1 }) | { 'b': 2 }  # no error
+        assert isinstance(o, CustomClass)
+        assert o == { 'a': 1, 'b': 2 }
 
-        o = { 'float': 1.23 } | CustomClass({ 'int': 456 })
-        o = { 'bytes': b'ZZZ'} | CustomClass({ 'int': 456 })
+        with pytest.raises(ValueError):
+            o = CustomClass({ 'a': 1 }) | { 'b': b'B'}
+
+        o = { 'a': 1 } | CustomClass({ 'b': 2 })
+        assert o == { 'a': 1, 'b': 2 }
+
+        o = { 'a': b'A'} | CustomClass({ 'b': 2 })
+        assert o == { 'a': b'A', 'b': 2 }
+
+    def test_ior_operator(self):
+        class CustomClass(DictBase[str, int]):
+            @typing.override
+            def _is_key_value_writable(
+                self,
+                key: typing.Any,
+                value: typing.Any,
+            ) -> bool:
+                return isinstance(key, str) and isinstance(value, int)
+
+        o = CustomClass({ 'a': 1 })
+        with pytest.raises(ValueError):
+            o |= { 'b': 'INVALID_VALUE'}
 
         o = CustomClass({ 'a': 1 })
         o |= { 'b': 2 }
+        assert isinstance(o, CustomClass)
+        assert o == { 'a': 1, 'b': 2 }
 
-        with pytest.raises(ValueError):
-            o = CustomClass({ 'a': 123 })
-            o |= { 'b': b'ZZZ'}
-
-        o = { 'float': 1.23 }
-        o |= CustomClass({ 'int': 456 })
-
-        o = { 'bytes': b'ZZZ'}
-        o |= CustomClass({ 'int': 456 })
+        o = { 'a': 1 }
+        o |= CustomClass({ 'b': 2 })
+        assert o == { 'a': 1, 'b': 2 }
 
     def test_len_operator(self):
         o = DictBase()
@@ -875,6 +891,35 @@ class TestDictBase:
         o = DictBase({ 'a': 1, 'b': 2, 'c': 3 })
         del o['a']
         assert o == { 'b': 2, 'c': 3 }
+
+    def test_in_operator(self):
+        o = DictBase()
+        assert 'a' not in o
+
+        o = DictBase({ 'a': 1, 'b': 2, 'c': 3 })
+        assert 'a' in o
+
+    def test_iter_operator(self):
+        o = DictBase()
+        assert list(iter(o)) == []
+
+        o = DictBase({ 'a': 1, 'b': 2, 'c': 3 })
+        assert list(iter(o)) == [ 'a', 'b', 'c']
+
+    def test_reversed_operator(self):
+        o = DictBase()
+        assert list(reversed(o)) == []
+
+        o = DictBase({ 'a': 1, 'b': 2, 'c': 3 })
+        assert list(reversed(o)) == [ 'c', 'b', 'a']
+
+        o = DictBase({ 'a': 1, 'b': 2, 'c': 3 })
+        o['a'] = 9
+        assert list(reversed(o)) == [ 'c', 'b', 'a']
+
+        o = DictBase({ 'a': 1, 'b': 2, 'c': 3 })
+        o['d'] = 9
+        assert list(reversed(o)) == [ 'd', 'c', 'b', 'a']
 
     def test_update(self):
         o = DictBase()
