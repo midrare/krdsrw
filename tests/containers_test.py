@@ -8,8 +8,9 @@ from krdsrw.containers import ListBase
 
 class TestListBase:
     def test_instantiate(self):
-        class CustomClass(ListBase[int]):
-            pass
+        ListBase()  # no error
+        ListBase([])  # no error
+        ListBase([ 2, 4, 6, 8 ])  # no error
 
         o = CustomClass()  # no error
         assert o == []
