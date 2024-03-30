@@ -177,11 +177,11 @@ class Array(ListBase[T], Object):
         return result
 
     @typing.override
-    def _pre_write_filter(self, value: typing.Any) -> bool:
+    def _is_allowed(self, value: typing.Any) -> bool:
         return self._elmt_spec.is_compatible(value)
 
     @typing.override
-    def _pre_write_transform(self, value: typing.Any) -> T:
+    def _transform(self, value: typing.Any) -> T:
         return self._elmt_spec.make(value)
 
 
@@ -221,11 +221,13 @@ class Record(DictBase[str, T], Object):
         self._optional_name: typing.Final[dict[str, str]] \
             = {k: get_name(v) for k, v in (optional or {}).items()}
 
+        init = dict(*args, **kwargs)
         for k, v in self._required_spec.items():
-            self[k] = v.make()
+            if k not in init:
+                init[k] = v.make()
 
         # call parent constructor last so that hooks will work
-        super().__init__(*args, **kwargs)
+        super().__init__(init)
 
     @classmethod
     def spec(
@@ -251,13 +253,14 @@ class Record(DictBase[str, T], Object):
         )
 
     @typing.override
-    def _pre_read_filter(self, key: typing.Any) -> bool:
+    def _is_key_readable(self, key: typing.Any) -> bool:
         if not isinstance(key, str):
             return False
         return key in self._required_spec or key in self._optional_spec
 
     @typing.override
-    def _pre_write_filter(self, key: typing.Any, value: typing.Any) -> bool:
+    def _is_key_value_writable(
+            self, key: typing.Any, value: typing.Any) -> bool:
         if not isinstance(key, str):
             return False
         maker = self._required_spec.get(key) or self._optional_spec.get(key)
@@ -268,11 +271,11 @@ class Record(DictBase[str, T], Object):
         return True
 
     @typing.override
-    def _pre_del_filter(self, key: typing.Any) -> bool:
+    def _is_key_deletable(self, key: typing.Any) -> bool:
         return key not in self._required_spec
 
     @typing.override
-    def _pre_write_transform(
+    def _transform_key_value(
         self,
         key: typing.Any,
         value: typing.Any,
@@ -400,18 +403,19 @@ class IntMap(DictBase[str, typing.Any], Object):
         )
 
     @typing.override
-    def _pre_read_filter(self, key: typing.Any) -> bool:
+    def _is_key_readable(self, key: typing.Any) -> bool:
         return key in list(self._idx_to_spec.keys()) \
             + list(self._idx_to_name.keys()) \
             + list(self._idx_to_alias.keys()) \
             + list(self._idx_to_alias.values())
 
     @typing.override
-    def _pre_del_filter(self, key: typing.Any) -> bool:
+    def _is_key_deletable(self, key: typing.Any) -> bool:
         return True
 
     @typing.override
-    def _pre_write_filter(self, key: typing.Any, value: typing.Any) -> bool:
+    def _is_key_value_writable(
+            self, key: typing.Any, value: typing.Any) -> bool:
         if key not in list(self._idx_to_spec.keys()) \
                 + list(self._idx_to_name.keys()) \
                 + list(self._idx_to_alias.keys()) \
@@ -426,11 +430,11 @@ class IntMap(DictBase[str, typing.Any], Object):
         return True
 
     @typing.override
-    def _pre_read_transform(self, key: typing.Any) -> str:
+    def _transform_key(self, key: typing.Any) -> str:
         return self._to_alias(key)
 
     @typing.override
-    def _pre_write_transform(
+    def _transform_key_value(
         self,
         key: typing.Any,
         value: typing.Any,
@@ -442,6 +446,14 @@ class IntMap(DictBase[str, typing.Any], Object):
             value = maker.make(value)
 
         return self._to_alias(key), value
+
+    @typing.override
+    def _make_standin(self, key: typing.Any) -> None | typing.Any:
+        idx = self._to_idx(key)
+        fact = self._idx_to_spec.get(idx)
+        if fact is None:
+            return None
+        return fact.make()
 
     def _to_idx(self, alias: int | str) -> int:
         if isinstance(alias, int):
@@ -499,15 +511,16 @@ class DynamicMap(DictBase[str, typing.Any], Object):
         super().__init__(*args, **kwargs)
 
     @typing.override
-    def _pre_read_filter(self, key: typing.Any) -> bool:
+    def _is_key_readable(self, key: typing.Any) -> bool:
         return isinstance(key, str)
 
     @typing.override
-    def _pre_write_filter(self, key: typing.Any, value: typing.Any) -> bool:
+    def _is_key_value_writable(
+            self, key: typing.Any, value: typing.Any) -> bool:
         return isinstance(key, str) and isinstance(value, Basic)
 
     @typing.override
-    def _pre_write_transform(
+    def _transform_key_value(
         self,
         key: typing.Any,
         value: typing.Any,
@@ -533,7 +546,7 @@ class DynamicMap(DictBase[str, typing.Any], Object):
                     f"Implicit type conversion "
                     + f"from \"{value}\" to Utf8Str({value})")
                 value = Utf8Str(value)
-        return super()._pre_write_transform(key, value)
+        return super()._transform_key_value(key, value)
 
     @typing.override
     def read(self, cursor: Cursor):
@@ -1076,15 +1089,16 @@ class DataStore(DictBase, Object):
         super().__init__()
 
     @typing.override
-    def _pre_read_filter(self, key: typing.Any) -> bool:
+    def _is_key_readable(self, key: typing.Any) -> bool:
         return key in self.keys() or schemas.get_spec_by_name(key) is not None
 
     @typing.override
-    def _pre_write_filter(self, key: typing.Any, value: typing.Any) -> bool:
+    def _is_key_value_writable(
+            self, key: typing.Any, value: typing.Any) -> bool:
         return key in self.keys() or schemas.get_spec_by_name(key) is not None
 
     @typing.override
-    def _pre_del_filter(self, key: typing.Any) -> bool:
+    def _is_key_deletable(self, key: typing.Any) -> bool:
         return key in self.keys() or schemas.get_spec_by_name(key) is not None
 
     @classmethod

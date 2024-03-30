@@ -321,7 +321,6 @@ class TestIntMap:
         ])
 
         o = spc.make()
-        o.setdefault('apple')
         o['apple'].make_and_append(111)
         o['banana'].make_and_append(222)
         o['pear'].make_and_append(333)

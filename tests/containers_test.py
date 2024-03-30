@@ -9,7 +9,7 @@ from krdsrw.containers import DictBase
 from krdsrw.containers import ListBase
 
 
-class TestRestrictedList:
+class TestListBase:
     def test_instantiate(self):
         class CC(ListBase[int]):
             pass
@@ -20,7 +20,7 @@ class TestRestrictedList:
     def test_write_filter(self):
         class CC(ListBase[int]):
             @typing.override
-            def _pre_write_filter(self, value: int) -> bool:
+            def _is_allowed(self, value: int) -> bool:
                 return isinstance(value, int) and value % 2 == 0
 
         o = CC([ 2, 4, 6, 8 ])
@@ -38,7 +38,7 @@ class TestRestrictedList:
     def test_write_transform(self):
         class CC(ListBase[int]):
             @typing.override
-            def _pre_write_transform(self, value: int) -> int:
+            def _transform(self, value: int) -> int:
                 return value**2
 
         o = CC()
@@ -54,13 +54,7 @@ class TestRestrictedList:
 
     def test_post_write_hook(self):
         class CC(ListBase[int]):
-            def __init__(self, *args, **kwargs):
-                super().__init__(*args, **kwargs)
-                self.is_modified: bool = False
-
-            @typing.override
-            def _post_write_hook(self):
-                self.is_modified = True
+            pass
 
         o = CC()
         assert not o.is_modified
@@ -73,7 +67,7 @@ class TestRestrictedList:
         assert o.is_modified
 
 
-class TestRestrictedDict:
+class TestDictBase:
     def test_instantiate(self):
         o = DictBase()  # no error
         assert o is not None
@@ -94,7 +88,7 @@ class TestRestrictedDict:
     def test_or_operator(self):
         class CC(DictBase[str, int]):
             @typing.override
-            def _pre_write_filter(
+            def _is_key_value_writable(
                 self,
                 key: typing.Any,
                 value: typing.Any,
@@ -124,7 +118,7 @@ class TestRestrictedDict:
     def test_write_filter(self):
         class CC(DictBase[str, int]):
             @typing.override
-            def _pre_write_filter(
+            def _is_key_value_writable(
                 self,
                 key: typing.Any,
                 value: typing.Any,
@@ -165,7 +159,7 @@ class TestRestrictedDict:
     def test_write_transform(self):
         class CC(DictBase[str, int]):
             @typing.override
-            def _pre_write_transform(
+            def _transform_key_value(
                 self,
                 key: typing.Any,
                 value: typing.Any,
@@ -187,7 +181,7 @@ class TestRestrictedDict:
     def test_read_filter(self):
         class CC(DictBase[typing.Any, typing.Any]):
             @typing.override
-            def _pre_read_filter(self, key: typing.Any) -> bool:
+            def _is_key_readable(self, key: typing.Any) -> bool:
                 return isinstance(key, str) and len(key) <= 1
 
         with pytest.raises(KeyError):
@@ -215,7 +209,7 @@ class TestRestrictedDict:
     def test_read_transform(self):
         class CC(DictBase[typing.Any, typing.Any]):
             @typing.override
-            def _pre_read_transform(self, key: typing.Any) -> typing.Any:
+            def _transform_key(self, key: typing.Any) -> typing.Any:
                 if isinstance(key, str):
                     key = key.lower()
                 return key
@@ -243,7 +237,7 @@ class TestRestrictedDict:
     def test_del_filter(self):
         class CC(DictBase[typing.Any, typing.Any]):
             @typing.override
-            def _pre_del_filter(self, key: typing.Any) -> typing.Any:
+            def _is_key_deletable(self, key: typing.Any) -> typing.Any:
                 return not isinstance(key, str) or not key.startswith('req_')
 
         with pytest.raises(KeyError):
@@ -287,7 +281,7 @@ class TestRestrictedDict:
     def test_del_transform(self):
         class CC(DictBase[typing.Any, typing.Any]):
             @typing.override
-            def _pre_del_transform(self, key: typing.Any) -> typing.Any:
+            def _transform_key(self, key: typing.Any) -> typing.Any:
                 if isinstance(key, str):
                     key = key.lower()
                 return key
@@ -330,13 +324,7 @@ class TestRestrictedDict:
 
     def test_modified_hook(self):
         class CC(DictBase[typing.Any, typing.Any]):
-            def __init__(self, *args, **kwargs):
-                super().__init__(*args, **kwargs)
-                self.is_modified: bool = False
-
-            @typing.override
-            def _post_write_hook(self):
-                self.is_modified = True
+            pass
 
         o = CC({ 'a': 1, 'b': 2, 'c': 3 })
         assert not o.is_modified
@@ -353,43 +341,66 @@ class TestRestrictedDict:
         o.update({ 'a': 123, 'b': 456 })
         assert o.is_modified
 
+    def test_chain_single_read(self):
+        class CC(DictBase[typing.Any, typing.Any]):
+            def _make_standin(self, key: typing.Any) -> None | typing.Any:
+                return self.__class__()
 
-class TestChainDict:
-    def test_instantiate(self):
-        ChainDict()
-
-    def test_single_read(self):
-        o = ChainDict()
+        o = CC()
         o['a0']
         assert o == {}
 
-    def test_single_write(self):
-        o = ChainDict()
+    def test_chain_single_write(self):
+        class CC(DictBase[typing.Any, typing.Any]):
+            def _make_standin(self, key: typing.Any) -> None | typing.Any:
+                return self.__class__()
+
+        o = CC()
         o['a0'] = 'hello'
         assert o == { 'a0': 'hello'}
 
-    def test_nested_lvl2_read(self):
-        o = ChainDict()
+    def test_chain_nested_lvl2_read(self):
+        class CC(DictBase[typing.Any, typing.Any]):
+            def _make_standin(self, key: typing.Any) -> None | typing.Any:
+                return self.__class__()
+
+        o = CC()
         o['a0']['b0']
         assert o == {}
 
-    def test_nested_lvl2_write(self):
-        o = ChainDict()
+    def test_chain_nested_lvl2_write(self):
+        class CC(DictBase[typing.Any, typing.Any]):
+            def _make_standin(self, key: typing.Any) -> None | typing.Any:
+                return self.__class__()
+
+        o = CC()
         o['a0']['b0'] = 'hello'
         assert o == { 'a0': { 'b0': 'hello'} }
 
-    def test_nested_lvl3_read(self):
-        o = ChainDict()
+    def test_chain_nested_lvl3_read(self):
+        class CC(DictBase[typing.Any, typing.Any]):
+            def _make_standin(self, key: typing.Any) -> None | typing.Any:
+                return self.__class__()
+
+        o = CC()
         o['a0']['b0']['c0']
         assert o == {}
 
-    def test_nested_lvl3_write(self):
-        o = ChainDict()
+    def test_chain_nested_lvl3_write(self):
+        class CC(DictBase[typing.Any, typing.Any]):
+            def _make_standin(self, key: typing.Any) -> None | typing.Any:
+                return self.__class__()
+
+        o = CC()
         o['a0']['b0']['c0'] = 'hello'
         assert o == { 'a0': { 'b0': { 'c0': 'hello'} } }
 
-    def test_nested_lvl4_write(self):
-        o = ChainDict()
+    def test_chain_nested_lvl4_write(self):
+        class CC(DictBase[typing.Any, typing.Any]):
+            def _make_standin(self, key: typing.Any) -> None | typing.Any:
+                return self.__class__()
+
+        o = CC()
         o['a0']['b0']['c0'] = 'hello'
         o['a0']['b0']['c1'] = 'world'
         o['a0']['b1'] = 'lorem'
