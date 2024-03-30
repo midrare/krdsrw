@@ -15,6 +15,10 @@ class _Observable(metaclass=abc.ABCMeta):
         raise NotImplementedError("Must be implemented by subclass.")
 
     @abc.abstractmethod
+    def _remove_observer(self, receiver: typing.Any):
+        raise NotImplementedError("Must be implemented by subclass.")
+
+    @abc.abstractmethod
     def _on_observed(self, sender: typing.Any):
         raise NotImplementedError("Must be implemented by subclass.")
 
@@ -53,6 +57,13 @@ class ListBase(list[T], _Observable, metaclass=abc.ABCMeta):
         else:
             self._parents.append(weakref.ref(receiver))
 
+    @typing.override
+    def _remove_observer(self, receiver: typing.Any):
+        for i, ref in reversed(list(enumerate(self._parents))):
+            parent = ref()
+            if parent is None or parent is receiver:
+                self._parents.pop(i)
+
     def _commit_parent(self):
         while self._parents:
             ref = self._parents.pop()
@@ -65,10 +76,18 @@ class ListBase(list[T], _Observable, metaclass=abc.ABCMeta):
 
     @typing.override
     def _on_observed(self, sender: typing.Any):
-        if not self._is_allowed(sender):
-            raise ValueError(
-                f"The value \"{sender}\" is invalid for this container.")
-        super().append(sender)
+        assert self._is_allowed(sender), \
+            f"Invalid value \"{sender}\" " \
+            + "(should have been screened out before this point)"
+
+        found = False
+        for i, e in reversed(list(enumerate(self._standins))):
+            if e is sender:
+                self._standins.pop(i)
+                found = True
+
+        if found:
+            super().append(sender)
 
     @typing.overload
     def __setitem__(
@@ -197,6 +216,7 @@ class ListBase(list[T], _Observable, metaclass=abc.ABCMeta):
     @typing.override
     def remove(self, value: T):
         super().remove(value)
+        self._standins.remove(value)
         self._modified = True
         self._commit_parent()
 
@@ -256,6 +276,13 @@ class DictBase(dict[K, T], _Observable):
             self._parents.append(weakref.ref(receiver))
 
     @typing.override
+    def _remove_observer(self, receiver: typing.Any):
+        for i, ref in reversed(list(enumerate(self._parents))):
+            parent = ref()
+            if parent is None or parent is receiver:
+                self._parents.pop(i)
+
+    @typing.override
     def _on_observed(self, sender: typing.Any):
         for k, v in list(self._key_to_standin.items()):
             if v is not sender:
@@ -263,7 +290,9 @@ class DictBase(dict[K, T], _Observable):
             self._key_to_standin.pop(k)
             if k in self.keys():
                 continue
-            assert self._is_key_value_writable(k, sender)
+            assert self._is_key_value_writable(k, sender), \
+                f"Key-value pair ({k}, {sender}) is not writable " \
+                + "(should have been screened out before this point)."
             super().__setitem__(k, sender)
 
     def _commit_parent(self):
