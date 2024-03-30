@@ -12,14 +12,15 @@ class TestListBase:
         ListBase([])  # no error
         ListBase([ 2, 4, 6, 8 ])  # no error
 
-        o = CustomClass()  # no error
+    def test_eq_operator(self):
+        o = ListBase()
         assert o == []
 
-        o = CustomClass([])  # no error
+        o = ListBase([])
         assert o == []
 
-        o = CustomClass([ 2, 4, 6, 8 ])  # no error
-        assert o == [ 2, 4, 6, 8 ]
+        o = ListBase([ 1, 2, 3 ])
+        assert o == [ 1, 2, 3 ]
 
     def test_allowed(self):
         class CustomClass(ListBase[int]):
