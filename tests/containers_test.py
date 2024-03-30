@@ -867,6 +867,15 @@ class TestDictBase:
         o = DictBase({ 'a': 1, 'b': 2, 'c': 3 })
         assert len(o) == 3
 
+    def test_del_operator(self):
+        o = DictBase()
+        with pytest.raises(KeyError):
+            del o['a']
+
+        o = DictBase({ 'a': 1, 'b': 2, 'c': 3 })
+        del o['a']
+        assert o == { 'b': 2, 'c': 3 }
+
     def test_update(self):
         o = DictBase()
         o.update({ 'x': -1, 'y': -2, 'z': -3 })
