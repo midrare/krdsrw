@@ -81,6 +81,26 @@ class TestListBase:
         o[1] = 24
         assert o.is_modified
 
+    def test_chain(self):
+        class CustomClass(ListBase[typing.Any]):
+            pass
+
+        o2 = CustomClass()
+        o = CustomClass([o2])
+        assert not o.is_modified
+        assert not o2.is_modified
+
+        o2 = CustomClass()
+        o = CustomClass([o2])
+        o.append(o2)
+        assert not o2.is_modified
+        assert o.is_modified
+
+        o = CustomClass([ 1, 2, 3 ])
+        o2 = CustomClass([ 4, 5, 6 ])
+        o.append(o2)
+        assert o == [ 1, 2, 3, [ 4, 5, 6 ] ]
+
 
 class TestDictBase:
     def test_instantiate(self):
