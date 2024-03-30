@@ -16,7 +16,7 @@ class TestListBase:
         o = CustomClass()
         assert o is not None
 
-    def test_write_filter(self):
+    def test_allowed(self):
         class CustomClass(ListBase[int]):
             @typing.override
             def _is_allowed(self, value: int) -> bool:
@@ -42,7 +42,7 @@ class TestListBase:
         with pytest.raises(ValueError):
             o.append(9)
 
-    def test_write_transform(self):
+    def test_transform(self):
         class CustomClass(ListBase[int]):
             @typing.override
             def _transform(self, value: int) -> int:
@@ -59,7 +59,7 @@ class TestListBase:
         o[1] = 12  # no error
         assert o == [ 4, 144, 36, 64 ]
 
-    def test_post_write_hook(self):
+    def test_modified(self):
         class CustomClass(ListBase[int]):
             pass
 
