@@ -1,3 +1,5 @@
+from __future__ import annotations
+import abc
 import collections.abc
 import copy
 import typing
@@ -7,7 +9,17 @@ K = typing.TypeVar("K", bound=int | float | str)
 T = typing.TypeVar("T", bound=typing.Any)
 
 
-class ListBase(list[T]):
+class Chainable(metaclass=abc.ABCMeta):
+    @abc.abstractmethod
+    def _add_parent(self, parent: typing.Any):
+        raise NotImplementedError("Must be implemented by subclass.")
+
+    @abc.abstractmethod
+    def _commit_child(self, child: typing.Any):
+        raise NotImplementedError("Must be implemented by subclass.")
+
+
+class ListBase(list[T], Chainable, metaclass=abc.ABCMeta):
     def __init__(self, *args, **kwargs):
         super().__init__(
             self._pre_write_transform(e) \
@@ -351,51 +363,3 @@ class DictBase(dict[K, T]):
     ) -> typing.Self:
         self.update(dict(other))
         return self
-
-
-class ChainDict(dict):
-    def __init__(self, *args, **kwargs):
-        self._parents: list[weakref.ReferenceType[typing.Self]] = []
-        self._standins: dict[typing.Any, typing.Any] = {}
-        # parent constructor last so hooks work correctly
-        super().__init__(*args, **kwargs)
-
-    def _make_candidate(self, key: typing.Any) -> typing.Any:
-        return self.__class__()
-
-    def _get_candidate(self, key: typing.Any) -> typing.Any:
-        result = self._standins.get(key)
-        if result is None:
-            result = self._make_candidate(key)
-            self._standins[key] = result
-        return result
-
-    @typing.override
-    def __getitem__(self, key: typing.Any) -> typing.Any:
-        o = None
-
-        if o is None and super().__contains__(key):
-            o = super().__getitem__(key)
-
-        if o is None:
-            o = self._get_candidate(key)
-            if not any(e() is self for e in o._parents):
-                o._parents.append(weakref.ref(self))
-
-        return o
-
-    @typing.override
-    def __setitem__(self, key: typing.Any, value: typing.Any):
-        super().__setitem__(key, value)
-        for p_ref in list(self._parents):
-            parent = p_ref()
-            if parent is None:
-                self._parents.remove(p_ref)
-                continue
-
-            for k, v in list(parent._standins.items()):
-                if v is not self:
-                    continue
-                parent._standins.pop(k)
-                if k not in parent.keys():
-                    parent[k] = self
