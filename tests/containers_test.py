@@ -57,6 +57,15 @@ class TestListBase:
         o.clear()
         assert o == []
 
+    def test_copy(self):
+        o = ListBase()
+        assert isinstance(o, ListBase)
+        assert o.copy() == []
+
+        o = ListBase([ 1, 2, 3 ])
+        assert isinstance(o, ListBase)
+        assert o.copy() == [ 1, 2, 3 ]
+
     def test_allowed(self):
         class CustomClass(ListBase[int]):
             @typing.override
