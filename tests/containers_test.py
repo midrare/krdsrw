@@ -204,6 +204,251 @@ class TestListBase:
             o = ListBase([ 1, 2, 3 ])
             o.pop(999)
 
+    def test_index(self):
+        o = ListBase()
+        with pytest.raises(ValueError):
+            o.index(9)
+
+        o = ListBase([ 1, 2, 3 ])
+        with pytest.raises(ValueError):
+            o.index(9)
+
+        o = ListBase([9])
+        assert o.index(9) == 0
+
+        o = ListBase([ 9, 9 ])
+        assert o.index(9) == 0
+
+        o = ListBase([ 9, 9, 9 ])
+        assert o.index(9) == 0
+
+        o = ListBase([ 9, 2, 3 ])
+        assert o.index(9) == 0
+
+        o = ListBase([ 1, 9, 3 ])
+        assert o.index(9) == 1
+
+        o = ListBase([ 1, 2, 9 ])
+        assert o.index(9) == 2
+
+        o = ListBase([ 9, 2, 9 ])
+        assert o.index(9) == 0
+
+        o = ListBase([ 9, 9, 3 ])
+        assert o.index(9) == 0
+
+        o = ListBase([ 1, 9, 9 ])
+        assert o.index(9) == 1
+
+        o = ListBase([ 1, 2, 3, 4, 5 ])
+        with pytest.raises(ValueError):
+            o.index(9, 0)
+
+        o = ListBase([ 9, 2, 3, 4, 9 ])
+        assert o.index(9, 0) == 0
+
+        o = ListBase([ 9, 2, 3, 4, 5 ])
+        assert o.index(9, 0) == 0
+
+        o = ListBase([ 1, 2, 3, 4, 9 ])
+        assert o.index(9, 0) == 4
+
+        o = ListBase([ 1, 2, 9, 4, 5 ])
+        assert o.index(9, 0) == 2
+
+        o = ListBase([ 9, 9, 3, 4, 5 ])
+        assert o.index(9, 0) == 0
+
+        o = ListBase([ 1, 9, 9, 4, 5 ])
+        assert o.index(9, 0) == 1
+
+        o = ListBase([ 1, 2, 9, 9, 5 ])
+        assert o.index(9, 0) == 2
+
+        o = ListBase([ 1, 2, 3, 9, 9 ])
+        assert o.index(9, 0) == 3
+
+        o = ListBase([ 9, 2, 3, 4, 9 ])
+        assert o.index(9, 3) == 4
+
+        o = ListBase([ 1, 2, 3, 4, 5 ])
+        with pytest.raises(ValueError):
+            o.index(9, 3)
+
+        o = ListBase([ 9, 2, 3, 4, 5 ])
+        with pytest.raises(ValueError):
+            o.index(9, 3)
+
+        o = ListBase([ 1, 2, 3, 4, 9 ])
+        assert o.index(9, 3) == 4
+
+        o = ListBase([ 1, 2, 9, 4, 5 ])
+        with pytest.raises(ValueError):
+            o.index(9, 3)
+
+        o = ListBase([ 9, 9, 3, 4, 5 ])
+        with pytest.raises(ValueError):
+            o.index(9, 3)
+
+        o = ListBase([ 1, 9, 9, 4, 5 ])
+        with pytest.raises(ValueError):
+            o.index(9, 3)
+
+        o = ListBase([ 1, 2, 9, 9, 5 ])
+        assert o.index(9, 3) == 3
+
+        o = ListBase([ 1, 2, 3, 9, 9 ])
+        assert o.index(9, 3) == 3
+
+        o = ListBase([ 1, 2, 3, 4, 5 ])
+        with pytest.raises(ValueError):
+            o.index(9, 0, 3)
+
+        o = ListBase([ 9, 2, 3, 4, 9 ])
+        assert o.index(9, 0, 3) == 0
+
+        o = ListBase([ 9, 2, 3, 4, 5 ])
+        assert o.index(9, 0, 3) == 0
+
+        o = ListBase([ 1, 2, 3, 4, 9 ])
+        with pytest.raises(ValueError):
+            o.index(9, 0, 3)
+
+        o = ListBase([ 1, 2, 9, 4, 5 ])
+        assert o.index(9, 0, 3) == 2
+
+        o = ListBase([ 9, 9, 3, 4, 5 ])
+        assert o.index(9, 0, 3) == 0
+
+        o = ListBase([ 1, 9, 9, 4, 5 ])
+        assert o.index(9, 0, 3) == 1
+
+        o = ListBase([ 1, 2, 9, 9, 5 ])
+        assert o.index(9, 0, 3) == 2
+
+        o = ListBase([ 1, 2, 3, 9, 9 ])
+        with pytest.raises(ValueError):
+            o.index(9, 0, 3)
+
+        o = ListBase([ 9, 2, 3, 4, 9 ])
+        assert o.index(9, 3, 5) == 4
+
+        o = ListBase([ 1, 2, 3, 4, 5 ])
+        with pytest.raises(ValueError):
+            o.index(9, 3, 5)
+
+        o = ListBase([ 9, 2, 3, 4, 5 ])
+        with pytest.raises(ValueError):
+            o.index(9, 3, 5)
+
+        o = ListBase([ 1, 2, 3, 4, 9 ])
+        assert o.index(9, 3, 5) == 4
+
+        o = ListBase([ 1, 2, 9, 4, 5 ])
+        with pytest.raises(ValueError):
+            o.index(9, 3, 5)
+
+        o = ListBase([ 9, 9, 3, 4, 5 ])
+        with pytest.raises(ValueError):
+            o.index(9, 3, 5)
+
+        o = ListBase([ 1, 9, 9, 4, 5 ])
+        with pytest.raises(ValueError):
+            o.index(9, 3, 5)
+
+        o = ListBase([ 1, 2, 9, 9, 5 ])
+        assert o.index(9, 3, 5) == 3
+
+        o = ListBase([ 1, 2, 3, 9, 9 ])
+        assert o.index(9, 3, 5) == 3
+
+        o = ListBase([ 1, 2, 3, 4, 9 ])
+        assert o.index(9, 0, 6) == 4
+
+        o = ListBase([ 1, 2, 3, 4, 9 ])
+        assert o.index(9, 0, 999) == 4
+
+        o = ListBase([ 9, 2, 3, 4, 9 ])
+        assert o.index(9, 0, 999) == 0
+
+        o = ListBase([ 9, 2, 3, 4, 9 ])
+        assert o.index(9, 0, 999) == 0
+
+        o = ListBase([ 9, 2, 9, 4, 9 ])
+        assert o.index(9, 0, 999) == 0
+
+        o = ListBase([ 1, 2, 9, 4, 5 ])
+        assert o.index(9, 0, 999) == 2
+
+        o = ListBase([ 1, 2, 3, 4, 9 ])
+        assert o.index(9, -1, 999) == 4
+
+        o = ListBase([ 1, 2, 3, 4, 5 ])
+        with pytest.raises(ValueError):
+            o.index(9, -1, 1)
+
+        o = ListBase([ 1, 2, 3, 4, 9 ])
+        with pytest.raises(ValueError):
+            o.index(9, -1, 1)
+
+        o = ListBase([ 9, 2, 3, 4, 9 ])
+        with pytest.raises(ValueError):
+            o.index(9, -1, 1)
+
+        o = ListBase([ 9, 2, 3, 4, 5 ])
+        with pytest.raises(ValueError):
+            o.index(9, -1, 1)
+
+        o = ListBase([ 9, 2, 9, 4, 9 ])
+        with pytest.raises(ValueError):
+            o.index(9, -1, 1)
+
+        o = ListBase([ 1, 2, 9, 4, 5 ])
+        with pytest.raises(ValueError):
+            o.index(9, -1, 1)
+
+        o = ListBase([ 1, 2, 3, 4, 5 ])
+        with pytest.raises(ValueError):
+            o.index(9, -3, 5)
+
+        o = ListBase([ 1, 2, 3, 4, 9 ])
+        assert o.index(9, -3, 5) == 4
+
+        o = ListBase([ 9, 2, 3, 4, 9 ])
+        assert o.index(9, -3, 5) == 4
+
+        o = ListBase([ 9, 2, 3, 4, 5 ])
+        with pytest.raises(ValueError):
+            o.index(9, -3, 5)
+
+        o = ListBase([ 9, 2, 9, 4, 9 ])
+        assert o.index(9, -3, 5) == 2
+
+        o = ListBase([ 1, 2, 9, 4, 5 ])
+        assert o.index(9, -3, 5) == 2
+
+        o = ListBase([ 1, 2, 3, 4, 5 ])
+        with pytest.raises(ValueError):
+            o.index(9, -4, -2)
+
+        o = ListBase([ 1, 2, 3, 4, 9 ])
+        with pytest.raises(ValueError):
+            o.index(9, -4, -2)
+
+        o = ListBase([ 9, 2, 3, 4, 9 ])
+        with pytest.raises(ValueError):
+            o.index(9, -4, -2)
+
+        o = ListBase([ 9, 2, 3, 4, 5 ])
+        with pytest.raises(ValueError):
+            o.index(9, -4, -2)
+
+        o = ListBase([ 9, 2, 9, 4, 9 ])
+        assert o.index(9, -4, -2) == 2
+
+        o = ListBase([ 1, 2, 9, 4, 5 ])
+        assert o.index(9, -4, -2) == 2
+
     def test_allowed(self):
         class CustomClass(ListBase[int]):
             @typing.override
