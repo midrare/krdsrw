@@ -65,11 +65,15 @@ class TestListBase:
 
         o = CustomClass()
         assert not o.is_modified
+
+        o = CustomClass()
         o.append(2)
         assert o.is_modified
 
         o = CustomClass([ 2, 4, 6, 8 ])
         assert not o.is_modified
+
+        o = CustomClass([ 2, 4, 6, 8 ])
         o[1] = 24
         assert o.is_modified
 
