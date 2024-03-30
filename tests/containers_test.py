@@ -44,6 +44,19 @@ class TestListBase:
         o.extend([ 4, 5, 6 ])
         assert o == [ 1, 2, 3, 4, 5, 6 ]
 
+    def test_clear(self):
+        o = ListBase()
+        o.clear()
+        assert o == []
+
+        o = ListBase([1])
+        o.clear()
+        assert o == []
+
+        o = ListBase([ 1, 2, 3 ])
+        o.clear()
+        assert o == []
+
     def test_allowed(self):
         class CustomClass(ListBase[int]):
             @typing.override
