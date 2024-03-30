@@ -212,10 +212,24 @@ class ListBase(list[T], _Observable, metaclass=abc.ABCMeta):
 
     @typing.override
     def remove(self, value: T):
-        super().remove(value)
-        self._postulates.remove(value)
-        self._modified = True
-        self._notify_observers()
+        while True:
+            try:
+                super().remove(value)
+                self._modified = True
+                self._notify_observers()
+                break
+            except ValueError:
+                pass
+
+            try:
+                self._postulates.remove(value)
+                self._modified = True
+                self._notify_observers()
+                break
+            except ValueError:
+                pass
+
+            raise ValueError(f"Value \"{value}\" not in container.")
 
     @typing.override
     def clear(self):
