@@ -8,9 +8,9 @@ from krdsrw.containers import ListBase
 
 class TestListBase:
     def test_instantiate(self):
-        ListBase()  # no error
-        ListBase([])  # no error
-        ListBase([ 2, 4, 6, 8 ])  # no error
+        assert ListBase() is not None  # no error
+        assert ListBase([]) is not None  # no error
+        assert ListBase([ 2, 4, 6, 8 ]) is not None  # no error
 
     def test_eq_operator(self):
         o = ListBase()
@@ -517,12 +517,16 @@ class TestListBase:
             def _is_allowed(self, value: int) -> bool:
                 return isinstance(value, int) and value % 2 == 0
 
-        o = CustomClass([ 2, 4, 6, 8 ])  # no error
+        o = CustomClass()  # no error
+        assert o is not None
 
-        o = CustomClass([ 2, 4, 6, 8 ])
-        o[1] = 12  # no error
+        o = CustomClass([ 1, 2, 3 ])  # no error
+        assert o == [ 1, 2, 3 ]
 
-        o = CustomClass([ 2, 4, 6, 8 ])
+        o = CustomClass([ 1, 2, 3 ])
+        o[1] = 9  # no error
+        assert o == [ 1, 9, 3 ]
+
         with pytest.raises(ValueError):
             o[1] = 7
 
