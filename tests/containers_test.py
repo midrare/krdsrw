@@ -722,6 +722,66 @@ class TestListBase:
         o.append(o2)
         assert o == [ 1, 2, 3, [ 4, 5, 6 ] ]
 
+        o2 = CustomClass([ 4, 5, 5 ])
+        o = CustomClass([ 1, 2, o2 ])
+        assert not o2.is_modified
+        assert not o.is_modified
+
+        o2 = CustomClass([ 4, 5, 5 ])
+        o = CustomClass([ 1, 2, o2 ])
+        o.append(9)
+        assert o.is_modified
+        assert not o2.is_modified
+
+        o2 = CustomClass([ 4, 5, 5 ])
+        o = CustomClass([ 1, 2, o2 ])
+        o2.append(9)
+        assert not o.is_modified
+        assert o2.is_modified
+
+        o3 = CustomClass([ 5, 6 ])
+        o2 = CustomClass([ 3, 4, o3 ])
+        o = CustomClass([ 1, 2, o2 ])
+        assert o == [ 1, 2, [ 3, 4, [ 5, 6 ] ] ]
+        assert o2 == [ 3, 4, [ 5, 6 ] ]
+        assert o3 == [ 5, 6 ]
+        assert not o.is_modified
+        assert not o2.is_modified
+        assert not o3.is_modified
+
+        o3 = CustomClass([ 5, 6 ])
+        o2 = CustomClass([ 3, 4, o3 ])
+        o = CustomClass([ 1, 2, o2 ])
+        o3.append(9)
+        assert o == [ 1, 2, [ 3, 4, [ 5, 6, 9 ] ] ]
+        assert o2 == [ 3, 4, [ 5, 6, 9 ] ]
+        assert o3 == [ 5, 6, 9 ]
+        assert not o.is_modified
+        assert not o2.is_modified
+        assert o3.is_modified
+
+        o3 = CustomClass([ 5, 6 ])
+        o2 = CustomClass([ 3, 4, o3 ])
+        o = CustomClass([ 1, 2, o2 ])
+        o2.append(9)
+        assert o == [ 1, 2, [ 3, 4, [ 5, 6 ], 9 ] ]
+        assert o2 == [ 3, 4, [ 5, 6 ], 9 ]
+        assert o3 == [ 5, 6 ]
+        assert not o.is_modified
+        assert o2.is_modified
+        assert not o3.is_modified
+
+        o3 = CustomClass([ 5, 6 ])
+        o2 = CustomClass([ 3, 4, o3 ])
+        o = CustomClass([ 1, 2, o2 ])
+        o.append(9)
+        assert o == [ 1, 2, [ 3, 4, [ 5, 6 ] ], 9 ]
+        assert o2 == [ 3, 4, [ 5, 6 ] ]
+        assert o3 == [ 5, 6 ]
+        assert o.is_modified
+        assert not o2.is_modified
+        assert not o3.is_modified
+
 
 class TestDictBase:
     def test_instantiate(self):
