@@ -83,6 +83,8 @@ class ListBase(list[T], _Observable, metaclass=abc.ABCMeta):
 
         if found:
             super().append(sender)
+            self._modified = True
+            self._notify_observers()
 
     @typing.overload
     def __setitem__(
@@ -225,7 +227,7 @@ class ListBase(list[T], _Observable, metaclass=abc.ABCMeta):
 
 class DictBase(dict[K, T], _Observable):
     def __init__(self, *args, **kwargs):
-        self._is_modified: bool = False
+        self._modified: bool = False
         self._key_to_standin: dict[K, T] = {}
         self._parents: list[weakref.ReferenceType[_Observable]] = []
         init = self._transform_for_write(dict(*args, **kwargs))
@@ -233,7 +235,7 @@ class DictBase(dict[K, T], _Observable):
 
     @property
     def is_modified(self) -> bool:
-        return self._is_modified
+        return self._modified
 
     def _is_key_readable(self, key: typing.Any) -> bool:
         return True
@@ -290,6 +292,7 @@ class DictBase(dict[K, T], _Observable):
 
     @typing.override
     def _on_observed(self, sender: typing.Any):
+        found = False
         for k, v in list(self._key_to_standin.items()):
             if v is not sender:
                 continue
@@ -300,6 +303,11 @@ class DictBase(dict[K, T], _Observable):
                 f"Key-value pair ({k}, {sender}) is not writable " \
                 + "(should have been screened out before this point)."
             super().__setitem__(k, sender)
+            found = True
+
+        if found:
+            self._modified = True
+            self._notify_observers()
 
     @typing.override
     @classmethod
@@ -326,7 +334,7 @@ class DictBase(dict[K, T], _Observable):
 
         key_, default_ = self._transform_key_value(key, default)
         result = super().setdefault(key_, default_)
-        self._is_modified = True
+        self._modified = True
         self._notify_observers()
 
         return result
@@ -352,7 +360,7 @@ class DictBase(dict[K, T], _Observable):
         other = self._transform_for_write(dict(*args, **kwargs))
         super().update(other)
         if other:
-            self._is_modified = True
+            self._modified = True
             self._notify_observers()
 
     @typing.override
@@ -377,7 +385,7 @@ class DictBase(dict[K, T], _Observable):
         is_contained = super().__contains__(key_)
         super().__delitem__(key_)  # type: ignore
         if is_contained:
-            self._is_modified = True
+            self._modified = True
             self._notify_observers()
 
     @typing.override
@@ -409,7 +417,7 @@ class DictBase(dict[K, T], _Observable):
 
         key_, item_ = self._transform_key_value(key, item)
         super().__setitem__(key_, item_)  # type: ignore
-        self._is_modified = True
+        self._modified = True
         self._notify_observers()
 
     @typing.override
@@ -432,7 +440,7 @@ class DictBase(dict[K, T], _Observable):
         result = super().pop(key_, default)  # type: ignore
 
         if len(self) != before:
-            self._is_modified = True
+            self._modified = True
             self._notify_observers()
 
         return result
@@ -447,7 +455,7 @@ class DictBase(dict[K, T], _Observable):
             if self._is_key_deletable(k):
                 # no need for transform b/c already in dict
                 super().__delitem__(k)
-                self._is_modified = True
+                self._modified = True
                 self._notify_observers()
                 return (k, v)
 
@@ -473,7 +481,7 @@ class DictBase(dict[K, T], _Observable):
             self._key_to_standin.clear()
 
         if is_modified:
-            self._is_modified = True
+            self._modified = True
             self._notify_observers()
 
     @typing.override
