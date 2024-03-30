@@ -244,6 +244,9 @@ class DictBase(dict[K, T], _Observable):
             self, key: typing.Any, value: typing.Any) -> bool:
         return True
 
+    def _is_key_deletable(self, key: typing.Any) -> bool:
+        return True
+
     def _transform_key_value(
         self,
         key: typing.Any,
@@ -292,9 +295,6 @@ class DictBase(dict[K, T], _Observable):
                 f"Key-value pair ({k}, {sender}) is not writable " \
                 + "(should have been screened out before this point)."
             super().__setitem__(k, sender)
-
-    def _is_key_deletable(self, key: typing.Any) -> bool:
-        return True
 
     @typing.override
     @classmethod
