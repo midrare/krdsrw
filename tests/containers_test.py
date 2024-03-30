@@ -644,21 +644,62 @@ class TestListBase:
         assert o == [ 1, 16, 25, 36 ]
 
     def test_modified(self):
-        class CustomClass(ListBase[int]):
-            pass
-
-        o = CustomClass()
+        o = ListBase()
         assert not o.is_modified
 
-        o = CustomClass()
+        o = ListBase()
         o.append(2)
         assert o.is_modified
 
-        o = CustomClass([ 2, 4, 6, 8 ])
+        o = ListBase([ 2, 4, 6, 8 ])
         assert not o.is_modified
 
-        o = CustomClass([ 2, 4, 6, 8 ])
+        o = ListBase([ 2, 4, 6, 8 ])
         o[1] = 24
+        assert o.is_modified
+
+        o = ListBase()
+        o.extend([ 1, 2, 3 ])
+        assert o.is_modified
+
+        o = ListBase()
+        o.insert(0, 4)
+        assert o.is_modified
+
+        o = ListBase([ 1, 2, 3 ])
+        o.insert(1, 5)
+        assert o.is_modified
+
+        o = ListBase()
+        o += [ 1, 2, 3 ]
+        assert o.is_modified
+
+        o = ListBase([ 1, 2, 3 ])
+        o[2:3] = [ 4, 5, 6 ]
+        assert o.is_modified
+
+        o = ListBase([ 1, 2, 3 ])
+        o[0:2] = [ 4, 5, 6 ]
+        assert o.is_modified
+
+        o = ListBase([ 1, 2, 3 ])
+        o[1:9] = [ 4, 5, 6 ]
+        assert o.is_modified
+
+        o = ListBase([ 1, 2, 3 ])
+        o[-1:0] = [ 4, 5, 6 ]
+        assert o.is_modified
+
+        o = ListBase([ 1, 2, 3 ])
+        o[-9:0] = [ 4, 5, 6 ]
+        assert o.is_modified
+
+        o = ListBase([ 1, 2, 3 ])
+        o[-1:9] = [ 4, 5, 6 ]
+        assert o.is_modified
+
+        o = ListBase([ 1, 2, 3 ])
+        o[-9:9] = [ 4, 5, 6 ]
         assert o.is_modified
 
     def test_chain(self):
