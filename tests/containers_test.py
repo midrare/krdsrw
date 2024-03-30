@@ -593,6 +593,9 @@ class TestListBase:
             def _transform(self, value: int) -> int:
                 return value**2
 
+        o = CustomClass()  # no error
+        assert o is not None
+
         o = CustomClass()
         o.append(8)
         assert o == [64]
@@ -603,6 +606,42 @@ class TestListBase:
         o = CustomClass([ 2, 4, 6, 8 ])
         o[1] = 12  # no error
         assert o == [ 4, 144, 36, 64 ]
+
+        o = CustomClass()
+        o.append(4)
+        assert o == [16]
+
+        o = CustomClass()
+        o.extend([ 1, 2, 3 ])
+        assert o == [ 1, 4, 9 ]
+
+        o = CustomClass()
+        o.insert(0, 4)
+        assert o == [16]
+
+        o = CustomClass([ 1, 2, 3 ])
+        o.insert(1, 5)
+        assert o == [ 1, 25, 4, 9 ]
+
+        o = CustomClass()
+        o += [ 1, 2, 3 ]
+        assert o == [ 1, 4, 9 ]
+
+        o = CustomClass()
+        o += [ 1, 2, 3 ]
+        assert o == [ 1, 4, 9 ]
+
+        o = CustomClass([ 1, 2, 3 ])
+        o[2:3] = [ 4, 5, 6 ]
+        assert o == [ 1, 4, 16, 25, 36 ]
+
+        o = CustomClass([ 1, 2, 3 ])
+        o[0:2] = [ 4, 5, 6 ]
+        assert o == [ 16, 25, 36, 9 ]
+
+        o = CustomClass([ 1, 2, 3 ])
+        o[1:999] = [ 4, 5, 6 ]
+        assert o == [ 1, 16, 25, 36 ]
 
     def test_modified(self):
         class CustomClass(ListBase[int]):
