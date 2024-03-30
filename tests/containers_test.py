@@ -14,6 +14,9 @@ class TestListBase:
         o = CustomClass()  # no error
         assert o == []
 
+        o = CustomClass([])  # no error
+        assert o == []
+
         o = CustomClass([ 2, 4, 6, 8 ])  # no error
         assert o == [ 2, 4, 6, 8 ]
 
