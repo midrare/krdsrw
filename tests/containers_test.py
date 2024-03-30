@@ -515,7 +515,7 @@ class TestListBase:
         class CustomClass(ListBase[int]):
             @typing.override
             def _is_allowed(self, value: int) -> bool:
-                return isinstance(value, int) and value % 2 == 0
+                return isinstance(value, int)
 
         o = CustomClass()  # no error
         assert o is not None
@@ -527,19 +527,65 @@ class TestListBase:
         o[1] = 9  # no error
         assert o == [ 1, 9, 3 ]
 
+        o = CustomClass([ 1, 2, 3 ])
         with pytest.raises(ValueError):
-            o[1] = 7
+            o[1] = 'INVALID_VALUE'
 
         o = CustomClass()
-        o.append(8)  # no error
-
-        o = CustomClass()
-        with pytest.raises(ValueError):
-            o.append('ABC')
+        o.append(9)  # no error
+        assert o == [9]
 
         o = CustomClass()
         with pytest.raises(ValueError):
-            o.append(9)
+            o.append('INVALID_VALUE')
+
+        o = CustomClass()
+        o.extend([ 1, 2, 3 ])
+        assert o == [ 1, 2, 3 ]
+
+        o = CustomClass()
+        with pytest.raises(ValueError):
+            o.extend([ 1, 2, 'INVALID_VALUE'])
+
+        o = CustomClass()
+        with pytest.raises(ValueError):
+            o.insert(0, 'INVALID_VALUE')
+
+        o = CustomClass([ 1, 2, 3 ])
+        with pytest.raises(ValueError):
+            o.insert(1, 'INVALID_VALUE')
+
+        o = CustomClass()
+        o += [ 1, 2, 3 ]  # no error
+        assert o == [ 1, 2, 3 ]
+
+        o = CustomClass()
+        with pytest.raises(ValueError):
+            o += [ 1, 'INVALID_VALUE', 3 ]
+
+        o = CustomClass([ 1, 2, 3 ])
+        o[2:3] = [ 4, 5, 6 ]  # no error
+        assert o == [ 1, 2, 4, 5, 6 ]
+
+        o = CustomClass([ 1, 2, 3 ])
+        with pytest.raises(ValueError):
+            o[2:3] = [ 4, 'INVALID_VALUE', 6 ]
+
+        o = CustomClass([ 1, 2, 3 ])
+        o[0:2] = [ 4, 5, 6 ]  # no error
+        assert o == [ 4, 5, 6, 3 ]
+
+        o = CustomClass([ 1, 2, 3 ])
+        with pytest.raises(ValueError):
+            o[0:2] = [ 4, 'INVALID_VALUE', 6 ]
+
+        o = CustomClass([ 1, 2, 3 ])
+        o[1:999] = [ 4, 5, 6 ]  # no error
+        assert o == [ 1, 4, 5, 6 ]
+
+        o = CustomClass([ 1, 2, 3 ])
+        with pytest.raises(ValueError):
+            o[1:999] = [ 4, 'INVALID_VALUE', 6 ]
 
     def test_transform(self):
         class CustomClass(ListBase[int]):
