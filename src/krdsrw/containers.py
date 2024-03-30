@@ -49,20 +49,14 @@ class ListBase(list[T], _Observable, metaclass=abc.ABCMeta):
 
     @typing.override
     def _add_observer(self, receiver: typing.Any):
-        if not isinstance(receiver, _Observable):
+        if not isinstance(receiver, _Observable) \
+        or any(e() is receiver for e in self._parents):
             return
-        for e in self._parents:
-            if e() is receiver:
-                break
-        else:
-            self._parents.append(weakref.ref(receiver))
+        self._parents.append(weakref.ref(receiver))
 
     @typing.override
     def _remove_observer(self, receiver: typing.Any):
-        for i, ref in reversed(list(enumerate(self._parents))):
-            parent = ref()
-            if parent is None or parent is receiver:
-                self._parents.pop(i)
+        self._parents[:] = [ e for e in self._parents if e() is not receiver ]
 
     def _commit_parent(self):
         while self._parents:
@@ -267,20 +261,14 @@ class DictBase(dict[K, T], _Observable):
 
     @typing.override
     def _add_observer(self, receiver: typing.Any):
-        if not isinstance(receiver, _Observable):
+        if not isinstance(receiver, _Observable) \
+        or any(e() is receiver for e in self._parents):
             return
-        for e in self._parents:
-            if e() is receiver:
-                break
-        else:
-            self._parents.append(weakref.ref(receiver))
+        self._parents.append(weakref.ref(receiver))
 
     @typing.override
     def _remove_observer(self, receiver: typing.Any):
-        for i, ref in reversed(list(enumerate(self._parents))):
-            parent = ref()
-            if parent is None or parent is receiver:
-                self._parents.pop(i)
+        self._parents[:] = [ e for e in self._parents if e() is not receiver ]
 
     @typing.override
     def _on_observed(self, sender: typing.Any):
