@@ -4,7 +4,6 @@ import typing
 
 import pytest
 
-from krdsrw.containers import Chainable
 from krdsrw.containers import DictBase
 from krdsrw.containers import ListBase
 

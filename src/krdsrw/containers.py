@@ -9,7 +9,7 @@ K = typing.TypeVar("K", bound=int | float | str)
 T = typing.TypeVar("T", bound=typing.Any)
 
 
-class Chainable(metaclass=abc.ABCMeta):
+class _Chainable(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def _add_parent(self, parent: typing.Any):
         raise NotImplementedError("Must be implemented by subclass.")
@@ -19,10 +19,10 @@ class Chainable(metaclass=abc.ABCMeta):
         raise NotImplementedError("Must be implemented by subclass.")
 
 
-class ListBase(list[T], Chainable, metaclass=abc.ABCMeta):
+class ListBase(list[T], _Chainable, metaclass=abc.ABCMeta):
     def __init__(self, *args, **kwargs):
         self._modified: bool = False
-        self._parents: list[weakref.ReferenceType[Chainable]] = []
+        self._parents: list[weakref.ReferenceType[_Chainable]] = []
         self._standins: list[typing.Any] = []
         super().__init__(map(self._transform, list(*args, **kwargs)))
 
@@ -45,7 +45,7 @@ class ListBase(list[T], Chainable, metaclass=abc.ABCMeta):
 
     @typing.override
     def _add_parent(self, parent: typing.Any):
-        if not isinstance(parent, Chainable):
+        if not isinstance(parent, _Chainable):
             return
         for e in self._parents:
             if e() is parent:
@@ -59,7 +59,7 @@ class ListBase(list[T], Chainable, metaclass=abc.ABCMeta):
             if ref is None:
                 continue
             parent = ref()
-            if parent is None or not isinstance(parent, Chainable):
+            if parent is None or not isinstance(parent, _Chainable):
                 continue
             parent._commit_child(self)
 
@@ -208,11 +208,11 @@ class ListBase(list[T], Chainable, metaclass=abc.ABCMeta):
         self._commit_parent()
 
 
-class DictBase(dict[K, T], Chainable):
+class DictBase(dict[K, T], _Chainable):
     def __init__(self, *args, **kwargs):
         self._is_modified: bool = False
         self._key_to_standin: dict[K, T] = {}
-        self._parents: list[weakref.ReferenceType[Chainable]] = []
+        self._parents: list[weakref.ReferenceType[_Chainable]] = []
         init = self._transform_for_write(dict(*args, **kwargs))
         super().__init__(init)
 
@@ -245,7 +245,7 @@ class DictBase(dict[K, T], Chainable):
 
     @typing.override
     def _add_parent(self, parent: typing.Any):
-        if not isinstance(parent, Chainable):
+        if not isinstance(parent, _Chainable):
             return
         for e in self._parents:
             if e() is parent:
@@ -270,7 +270,7 @@ class DictBase(dict[K, T], Chainable):
             if ref is None:
                 continue
             parent = ref()
-            if parent is None or not isinstance(parent, Chainable):
+            if parent is None or not isinstance(parent, _Chainable):
                 continue
             parent._commit_child(self)
 
