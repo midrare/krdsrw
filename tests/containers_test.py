@@ -85,7 +85,13 @@ class TestListBase:
 class TestDictBase:
     def test_instantiate(self):
         o = DictBase()  # no error
-        assert o is not None
+        assert o == {}
+
+        o = DictBase({})  # no error
+        assert o == {}
+
+        o = DictBase({ 'a': 1, 'b': 2, 'c': 3 })
+        assert o == { 'a': 1, 'b': 2, 'c': 3 }
 
     def test_eq_operator(self):
         o = DictBase()
