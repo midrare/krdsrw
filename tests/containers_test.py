@@ -449,6 +449,59 @@ class TestListBase:
         o = ListBase([ 1, 2, 9, 4, 5 ])
         assert o.index(9, -4, -2) == 2
 
+    def test_sort(self):
+        o = ListBase()
+        o.sort()
+        assert o == []
+
+        o = ListBase([ 1, 2, 3, 4, 5 ])
+        o.sort()
+        assert o == [ 1, 2, 3, 4, 5 ]
+
+        o = ListBase([ 5, 4, 3, 2, 1 ])
+        o.sort()
+        assert o == [ 1, 2, 3, 4, 5 ]
+
+        o = ListBase([ 1, 5, 2, 4, 3 ])
+        o.sort()
+        assert o == [ 1, 2, 3, 4, 5 ]
+
+        o = ListBase([ 1, 2, 3, 4, 5 ])
+        o.sort(key=lambda n: n * 2 if n % 2 == 0 else n)
+        assert o == [ 1, 3, 2, 5, 4 ]
+
+        o = ListBase([ 5, 4, 3, 2, 1 ])
+        o.sort(key=lambda n: n * 2 if n % 2 == 0 else n)
+        assert o == [ 1, 3, 2, 5, 4 ]
+
+        o = ListBase([ 1, 5, 2, 4, 3 ])
+        o.sort(key=lambda n: n * 2 if n % 2 == 0 else n)
+        assert o == [ 1, 3, 2, 5, 4 ]
+
+        o = ListBase([ 1, 2, 3, 4, 5 ])
+        o.sort(reverse=True)
+        assert o == [ 5, 4, 3, 2, 1 ]
+
+        o = ListBase([ 5, 4, 3, 2, 1 ])
+        o.sort(reverse=True)
+        assert o == [ 5, 4, 3, 2, 1 ]
+
+        o = ListBase([ 1, 5, 2, 4, 3 ])
+        o.sort(reverse=True)
+        assert o == [ 5, 4, 3, 2, 1 ]
+
+        o = ListBase([ 1, 2, 3, 4, 5 ])
+        o.sort(key=lambda n: n * 2 if n % 2 == 0 else n, reverse=True)
+        assert o == [ 4, 5, 2, 3, 1 ]
+
+        o = ListBase([ 5, 4, 3, 2, 1 ])
+        o.sort(key=lambda n: n * 2 if n % 2 == 0 else n, reverse=True)
+        assert o == [ 4, 5, 2, 3, 1 ]
+
+        o = ListBase([ 1, 5, 2, 4, 3 ])
+        o.sort(key=lambda n: n * 2 if n % 2 == 0 else n, reverse=True)
+        assert o == [ 4, 5, 2, 3, 1 ]
+
     def test_allowed(self):
         class CustomClass(ListBase[int]):
             @typing.override
