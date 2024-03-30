@@ -1289,7 +1289,6 @@ class _Utf8Str(str):
         o = super().__rmul__(other)
         return self.__class__(o)
 
-    @typing.override
     def __bool__(self) -> bool:
         return len(str(self)) > 0
 
