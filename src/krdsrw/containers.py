@@ -1,7 +1,5 @@
 import collections.abc
 import copy
-import operator
-import re
 import typing
 import weakref
 
