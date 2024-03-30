@@ -860,6 +860,13 @@ class TestDictBase:
         o = { 'bytes': b'ZZZ'}
         o |= CustomClass({ 'int': 456 })
 
+    def test_len_operator(self):
+        o = DictBase()
+        assert len(o) == 0
+
+        o = DictBase({ 'a': 1, 'b': 2, 'c': 3 })
+        assert len(o) == 3
+
     def test_update(self):
         o = DictBase()
         o.update({ 'x': -1, 'y': -2, 'z': -3 })
