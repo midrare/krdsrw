@@ -9,20 +9,20 @@ K = typing.TypeVar("K", bound=int | float | str)
 T = typing.TypeVar("T", bound=typing.Any)
 
 
-class _Chainable(metaclass=abc.ABCMeta):
+class _Observable(metaclass=abc.ABCMeta):
     @abc.abstractmethod
-    def _add_parent(self, parent: typing.Any):
+    def _add_observer(self, receiver: typing.Any):
         raise NotImplementedError("Must be implemented by subclass.")
 
     @abc.abstractmethod
-    def _commit_child(self, child: typing.Any):
+    def _on_observed(self, sender: typing.Any):
         raise NotImplementedError("Must be implemented by subclass.")
 
 
-class ListBase(list[T], _Chainable, metaclass=abc.ABCMeta):
+class ListBase(list[T], _Observable, metaclass=abc.ABCMeta):
     def __init__(self, *args, **kwargs):
         self._modified: bool = False
-        self._parents: list[weakref.ReferenceType[_Chainable]] = []
+        self._parents: list[weakref.ReferenceType[_Observable]] = []
         self._standins: list[typing.Any] = []
         super().__init__(map(self._transform, list(*args, **kwargs)))
 
@@ -44,14 +44,14 @@ class ListBase(list[T], _Chainable, metaclass=abc.ABCMeta):
         self._standins.append(child)
 
     @typing.override
-    def _add_parent(self, parent: typing.Any):
-        if not isinstance(parent, _Chainable):
+    def _add_observer(self, receiver: typing.Any):
+        if not isinstance(receiver, _Observable):
             return
         for e in self._parents:
-            if e() is parent:
+            if e() is receiver:
                 break
         else:
-            self._parents.append(weakref.ref(parent))
+            self._parents.append(weakref.ref(receiver))
 
     def _commit_parent(self):
         while self._parents:
@@ -59,16 +59,16 @@ class ListBase(list[T], _Chainable, metaclass=abc.ABCMeta):
             if ref is None:
                 continue
             parent = ref()
-            if parent is None or not isinstance(parent, _Chainable):
+            if parent is None or not isinstance(parent, _Observable):
                 continue
-            parent._commit_child(self)
+            parent._on_observed(self)
 
     @typing.override
-    def _commit_child(self, child: typing.Any):
-        if not self._is_allowed(child):
+    def _on_observed(self, sender: typing.Any):
+        if not self._is_allowed(sender):
             raise ValueError(
-                f"The value \"{child}\" is invalid for this container.")
-        super().append(child)
+                f"The value \"{sender}\" is invalid for this container.")
+        super().append(sender)
 
     @typing.overload
     def __setitem__(
@@ -208,11 +208,11 @@ class ListBase(list[T], _Chainable, metaclass=abc.ABCMeta):
         self._commit_parent()
 
 
-class DictBase(dict[K, T], _Chainable):
+class DictBase(dict[K, T], _Observable):
     def __init__(self, *args, **kwargs):
         self._is_modified: bool = False
         self._key_to_standin: dict[K, T] = {}
-        self._parents: list[weakref.ReferenceType[_Chainable]] = []
+        self._parents: list[weakref.ReferenceType[_Observable]] = []
         init = self._transform_for_write(dict(*args, **kwargs))
         super().__init__(init)
 
@@ -242,29 +242,29 @@ class DictBase(dict[K, T], _Chainable):
 
     def _add_standin(self, key: typing.Any, child: typing.Any):
         self._key_to_standin[key] = child
-        if isinstance(child, _Chainable):
-            child._add_parent(self)
+        if isinstance(child, _Observable):
+            child._add_observer(self)
 
     @typing.override
-    def _add_parent(self, parent: typing.Any):
-        if not isinstance(parent, _Chainable):
+    def _add_observer(self, receiver: typing.Any):
+        if not isinstance(receiver, _Observable):
             return
         for e in self._parents:
-            if e() is parent:
+            if e() is receiver:
                 break
         else:
-            self._parents.append(weakref.ref(parent))
+            self._parents.append(weakref.ref(receiver))
 
     @typing.override
-    def _commit_child(self, child: typing.Any):
+    def _on_observed(self, sender: typing.Any):
         for k, v in list(self._key_to_standin.items()):
-            if v is not child:
+            if v is not sender:
                 continue
             self._key_to_standin.pop(k)
             if k in self.keys():
                 continue
-            assert self._is_key_value_writable(k, child)
-            super().__setitem__(k, child)
+            assert self._is_key_value_writable(k, sender)
+            super().__setitem__(k, sender)
 
     def _commit_parent(self):
         while self._parents:
@@ -272,9 +272,9 @@ class DictBase(dict[K, T], _Chainable):
             if ref is None:
                 continue
             parent = ref()
-            if parent is None or not isinstance(parent, _Chainable):
+            if parent is None or not isinstance(parent, _Observable):
                 continue
-            parent._commit_child(self)
+            parent._on_observed(self)
 
     def _is_key_deletable(self, key: typing.Any) -> bool:
         return True
