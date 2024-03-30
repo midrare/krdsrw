@@ -116,6 +116,51 @@ class TestListBase:
         o.insert(1, 4)
         assert o == [ 1, 4, 2, 5, 3, 6 ]
 
+    def test_remove(self):
+        o = ListBase()
+        with pytest.raises(ValueError):
+            o.remove(9)
+
+        o = ListBase([9])
+        o.remove(9)
+        assert o == []
+
+        o = ListBase([ 9, 1 ])
+        o.remove(9)
+        assert o == [1]
+
+        o = ListBase([ 1, 9 ])
+        o.remove(9)
+        assert o == [1]
+
+        o = ListBase([ 1, 9, 3 ])
+        o.remove(9)
+        assert o == [ 1, 3 ]
+
+        o = ListBase([ 9, 1, 2 ])
+        o.remove(9)
+        assert o == [ 1, 2 ]
+
+        o = ListBase([ 1, 2, 9 ])
+        o.remove(9)
+        assert o == [ 1, 2 ]
+
+        o = ListBase([ 9, 9, 9 ])
+        o.remove(9)
+        assert o == [ 9, 9 ]
+
+        o = ListBase([ 1, 2, 9, 9 ])
+        o.remove(9)
+        assert o == [ 1, 2, 9 ]
+
+        o = ListBase([ 9, 1, 2, 9 ])
+        o.remove(9)
+        assert o == [ 1, 2, 9 ]
+
+        o = ListBase([ 1, 9, 2, 9, 3 ])
+        o.remove(9)
+        assert o == [ 1, 2, 9, 3 ]
+
     def test_allowed(self):
         class CustomClass(ListBase[int]):
             @typing.override
