@@ -7,6 +7,7 @@ import weakref
 
 K = typing.TypeVar("K", bound=int | float | str)
 T = typing.TypeVar("T", bound=typing.Any)
+_VOID = object()
 
 
 class _Observable(metaclass=abc.ABCMeta):
@@ -443,7 +444,11 @@ class DictBase(dict[K, T], _Observable):
         return super().get(key_, default)  # type: ignore
 
     @typing.override
-    def pop(self, key: K, default: None | T = None) -> None | T:  # type: ignore
+    def pop(
+        self,
+        key: K,
+        default: None | typing.Any = _VOID,
+    ) -> T | typing.Any:  # type: ignore
         if not self._is_key_deletable(key):
             raise KeyError(f"The key \"{key}\" is required "\
             + "for this container and cannot be deleted.")
@@ -451,7 +456,10 @@ class DictBase(dict[K, T], _Observable):
         before = len(self)
 
         key_ = self._transform_key(key)
-        result = super().pop(key_, default)  # type: ignore
+        if default is not _VOID:
+            result = super().pop(key_, default)
+        else:
+            result = super().pop(key_)
 
         if len(self) != before:
             self._modified = True
