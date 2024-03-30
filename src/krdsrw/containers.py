@@ -45,6 +45,8 @@ class ListBase(list[T], _Observable, metaclass=abc.ABCMeta):
         or any(e is child for e in self):
             return
         self._standins.append(child)
+        if isinstance(child, _Observable):
+            child._add_observer(self)
 
     @typing.override
     def _add_observer(self, receiver: typing.Any):
