@@ -22,15 +22,23 @@ class TestListBase:
             def _is_allowed(self, value: int) -> bool:
                 return isinstance(value, int) and value % 2 == 0
 
+        o = CustomClass([ 2, 4, 6, 8 ])  # no error
+
         o = CustomClass([ 2, 4, 6, 8 ])
         o[1] = 12  # no error
+
+        o = CustomClass([ 2, 4, 6, 8 ])
         with pytest.raises(ValueError):
             o[1] = 7
 
         o = CustomClass()
         o.append(8)  # no error
+
+        o = CustomClass()
         with pytest.raises(ValueError):
             o.append('ABC')
+
+        o = CustomClass()
         with pytest.raises(ValueError):
             o.append(9)
 
