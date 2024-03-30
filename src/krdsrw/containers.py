@@ -27,7 +27,7 @@ class ListBase(list[T], _Observable, metaclass=abc.ABCMeta):
     def __init__(self, *args, **kwargs):
         self._modified: bool = False
         self._parents: list[weakref.ReferenceType[_Observable]] = []
-        self._standins: list[typing.Any] = []
+        self._postulates: list[typing.Any] = []
         super().__init__(map(self._transform, list(*args, **kwargs)))
 
     @property
@@ -40,11 +40,11 @@ class ListBase(list[T], _Observable, metaclass=abc.ABCMeta):
     def _transform(self, value: typing.Any) -> T:
         return value
 
-    def _add_standin(self, child: typing.Any):
-        if any(e is child for e in self._standins) \
+    def _add_postulate(self, child: typing.Any):
+        if any(e is child for e in self._postulates) \
         or any(e is child for e in self):
             return
-        self._standins.append(child)
+        self._postulates.append(child)
         if isinstance(child, _Observable):
             child._add_observer(self)
 
@@ -76,9 +76,9 @@ class ListBase(list[T], _Observable, metaclass=abc.ABCMeta):
             + "(should have been screened out before this point)"
 
         found = False
-        for i, e in reversed(list(enumerate(self._standins))):
+        for i, e in reversed(list(enumerate(self._postulates))):
             if e is sender:
-                self._standins.pop(i)
+                self._postulates.pop(i)
                 found = True
 
         if found:
@@ -213,14 +213,14 @@ class ListBase(list[T], _Observable, metaclass=abc.ABCMeta):
     @typing.override
     def remove(self, value: T):
         super().remove(value)
-        self._standins.remove(value)
+        self._postulates.remove(value)
         self._modified = True
         self._notify_observers()
 
     @typing.override
     def clear(self):
         super().clear()
-        self._standins.clear()
+        self._postulates.clear()
         self._modified = True
         self._notify_observers()
 
@@ -228,7 +228,7 @@ class ListBase(list[T], _Observable, metaclass=abc.ABCMeta):
 class DictBase(dict[K, T], _Observable):
     def __init__(self, *args, **kwargs):
         self._modified: bool = False
-        self._key_to_standin: dict[K, T] = {}
+        self._key_to_postulate: dict[K, T] = {}
         self._parents: list[weakref.ReferenceType[_Observable]] = []
         init = self._transform_for_write(dict(*args, **kwargs))
         super().__init__(init)
@@ -257,15 +257,15 @@ class DictBase(dict[K, T], _Observable):
     ) -> tuple[K, T]:
         return key, value
 
-    def _make_standin(self, key: typing.Any) -> None | T:
+    def _make_postulate(self, key: typing.Any) -> None | T:
         return None
 
-    def _add_standin(self, key: typing.Any, child: typing.Any):
+    def _add_postulate(self, key: typing.Any, child: typing.Any):
         assert key not in self.keys(), \
-            f"Cannot create stand-in for key-value ({key}, {child}) " \
+            f"Cannot create postulate for key-value ({key}, {child}) " \
             + "that already exists (should have been screened out " \
             + "before this point)"
-        self._key_to_standin[key] = child
+        self._key_to_postulate[key] = child
         if isinstance(child, _Observable):
             child._add_observer(self)
 
@@ -293,10 +293,10 @@ class DictBase(dict[K, T], _Observable):
     @typing.override
     def _on_observed(self, sender: typing.Any):
         found = False
-        for k, v in list(self._key_to_standin.items()):
+        for k, v in list(self._key_to_postulate.items()):
             if v is not sender:
                 continue
-            self._key_to_standin.pop(k)
+            self._key_to_postulate.pop(k)
             if k in self.keys():
                 continue
             assert self._is_key_value_writable(k, sender), \
@@ -397,12 +397,12 @@ class DictBase(dict[K, T], _Observable):
         if super().__contains__(key):
             return super().__getitem__(key_)  # type: ignore
 
-        if key_ in self._key_to_standin:
-            return self._key_to_standin[key]
+        if key_ in self._key_to_postulate:
+            return self._key_to_postulate[key]
 
-        value = self._make_standin(key_)
+        value = self._make_postulate(key_)
         if value is not None:
-            self._key_to_standin[key_] = value
+            self._key_to_postulate[key_] = value
             value._parents.append(weakref.ref(self))
             return value
 
@@ -476,9 +476,9 @@ class DictBase(dict[K, T], _Observable):
                 if (clr := getattr(value, 'clear', None)) and callable(clr):
                     clr()
 
-        if self._key_to_standin:
+        if self._key_to_postulate:
             is_modified = True
-            self._key_to_standin.clear()
+            self._key_to_postulate.clear()
 
         if is_modified:
             self._modified = True

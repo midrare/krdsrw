@@ -357,7 +357,8 @@ class TestDictBase:
 
     def test_chain_single_read(self):
         class CustomClass(DictBase[typing.Any, typing.Any]):
-            def _make_standin(self, key: typing.Any) -> None | typing.Any:
+            @typing.override
+            def _make_postulate(self, key: typing.Any) -> None | typing.Any:
                 return self.__class__()
 
         o = CustomClass()
@@ -366,7 +367,8 @@ class TestDictBase:
 
     def test_chain_single_write(self):
         class CustomClass(DictBase[typing.Any, typing.Any]):
-            def _make_standin(self, key: typing.Any) -> None | typing.Any:
+            @typing.override
+            def _make_postulate(self, key: typing.Any) -> None | typing.Any:
                 return self.__class__()
 
         o = CustomClass()
@@ -375,7 +377,8 @@ class TestDictBase:
 
     def test_chain_nested_lvl2_read(self):
         class CustomClass(DictBase[typing.Any, typing.Any]):
-            def _make_standin(self, key: typing.Any) -> None | typing.Any:
+            @typing.override
+            def _make_postulate(self, key: typing.Any) -> None | typing.Any:
                 return self.__class__()
 
         o = CustomClass()
@@ -384,7 +387,8 @@ class TestDictBase:
 
     def test_chain_nested_lvl2_write(self):
         class CustomClass(DictBase[typing.Any, typing.Any]):
-            def _make_standin(self, key: typing.Any) -> None | typing.Any:
+            @typing.override
+            def _make_postulate(self, key: typing.Any) -> None | typing.Any:
                 return self.__class__()
 
         o = CustomClass()
@@ -393,7 +397,8 @@ class TestDictBase:
 
     def test_chain_nested_lvl3_read(self):
         class CustomClass(DictBase[typing.Any, typing.Any]):
-            def _make_standin(self, key: typing.Any) -> None | typing.Any:
+            @typing.override
+            def _make_postulate(self, key: typing.Any) -> None | typing.Any:
                 return self.__class__()
 
         o = CustomClass()
@@ -402,7 +407,8 @@ class TestDictBase:
 
     def test_chain_nested_lvl3_write(self):
         class CustomClass(DictBase[typing.Any, typing.Any]):
-            def _make_standin(self, key: typing.Any) -> None | typing.Any:
+            @typing.override
+            def _make_postulate(self, key: typing.Any) -> None | typing.Any:
                 return self.__class__()
 
         o = CustomClass()
@@ -411,7 +417,8 @@ class TestDictBase:
 
     def test_chain_nested_lvl4_write(self):
         class CustomClass(DictBase[typing.Any, typing.Any]):
-            def _make_standin(self, key: typing.Any) -> None | typing.Any:
+            @typing.override
+            def _make_postulate(self, key: typing.Any) -> None | typing.Any:
                 return self.__class__()
 
         o = CustomClass()

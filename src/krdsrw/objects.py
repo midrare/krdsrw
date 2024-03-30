@@ -448,7 +448,7 @@ class IntMap(DictBase[str, typing.Any], Object):
         return self._to_alias(key), value
 
     @typing.override
-    def _make_standin(self, key: typing.Any) -> None | typing.Any:
+    def _make_postulate(self, key: typing.Any) -> None | typing.Any:
         idx = self._to_idx(key)
         fact = self._idx_to_spec.get(idx)
         if fact is None:
