@@ -134,11 +134,10 @@ class Spec(typing.Generic[T]):
         or (not inspect.isclass(o) and isinstance(o, self._cls)):
             return True
 
-        builtin = getattr(self._cls, 'builtin', None)
-
-        if builtin is not None and inspect.isclass(builtin) \
-        and ((inspect.isclass(o) and issubclass(o, builtin)) \
-        or (not inspect.isclass(o) and isinstance(o, builtin))):
-            return True
+        for t in [ bool, int, float, str, bytes, list, tuple, dict ]:
+            if issubclass(self._cls, t) \
+            and ((inspect.isclass(o) and issubclass(o, t)) \
+                or (not inspect.isclass(o) and isinstance(o, t))):
+                return True
 
         return False
