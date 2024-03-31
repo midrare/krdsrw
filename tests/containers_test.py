@@ -833,10 +833,10 @@ class TestDictBase:
     def test_or_operator(self):
         class CustomClass(DictBase[str, int]):
             @typing.override
-            def _is_key_value_writable(
+            def _is_value_writable(
                 self,
-                key: typing.Any,
                 value: typing.Any,
+                key: typing.Any,
             ) -> bool:
                 return isinstance(key, str) and isinstance(value, int)
 
@@ -856,10 +856,10 @@ class TestDictBase:
     def test_ior_operator(self):
         class CustomClass(DictBase[str, int]):
             @typing.override
-            def _is_key_value_writable(
+            def _is_value_writable(
                 self,
-                key: typing.Any,
                 value: typing.Any,
+                key: typing.Any,
             ) -> bool:
                 return isinstance(key, str) and isinstance(value, int)
 
@@ -1080,10 +1080,10 @@ class TestDictBase:
                 return isinstance(key, str) and len(key) <= 1
 
             @typing.override
-            def _is_key_value_writable(
+            def _is_value_writable(
                 self,
-                key: typing.Any,
                 value: typing.Any,
+                key: typing.Any,
             ) -> bool:
                 return isinstance(key, str) \
                 and len(key) <= 1 \
