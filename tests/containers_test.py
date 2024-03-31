@@ -1749,3 +1749,74 @@ class TestDictBase:
         o['a0']['b0'] = True
         o2['f0'] = True
         assert o == { 'a0': { 'b0': True } }
+
+    def test_chain_identities_are_persistent(self):
+        class Chain(DictBase[typing.Any, typing.Any]):
+            @typing.override
+            def _make_postulate(self, key: typing.Any) -> None | typing.Any:
+                return self.__class__()
+
+        o = Chain()
+        o2 = o['a0']
+        assert o['a0'] is o2
+
+        o = Chain()
+        o2 = o['a0']['b0']
+        assert o['a0']['b0'] is o2
+
+        o = Chain()
+        o2 = o['a0']['b0']['c0']
+        assert o['a0']['b0']['c0'] is o2
+
+        o = Chain()
+        o2 = o['a0']['b0']['c0']['d0']
+        assert o['a0']['b0']['c0']['d0'] is o2
+
+        o = Chain()
+        o2 = o['a0']['b0']['c0']['d0']['e0']
+        assert o['a0']['b0']['c0']['d0']['e0'] is o2
+
+        o = Chain()
+        o2 = o['a0']
+        o['a0']['b0']['c0']['d0']['e0'] = True
+        assert o['a0'] is o2
+
+        o = Chain()
+        o2 = o['a0']['b0']
+        o['a0']['b0']['c0']['d0']['e0'] = True
+        assert o['a0']['b0'] is o2
+
+        o = Chain()
+        o2 = o['a0']['b0']['c0']
+        o['a0']['b0']['c0']['d0']['e0'] = True
+        assert o['a0']['b0']['c0'] is o2
+
+        o = Chain()
+        o2 = o['a0']['b0']['c0']['d0']
+        o['a0']['b0']['c0']['d0']['e0'] = True
+        assert o['a0']['b0']['c0']['d0'] is o2
+
+        o = Chain()
+        o2 = o['a0']
+        o['a0']['b0']['c0']['d0']['e0']
+        assert o['a0'] is o2
+
+        o = Chain()
+        o2 = o['a0']['b0']
+        o['a0']['b0']['c0']['d0']['e0']
+        assert o['a0']['b0'] is o2
+
+        o = Chain()
+        o2 = o['a0']['b0']['c0']
+        o['a0']['b0']['c0']['d0']['e0']
+        assert o['a0']['b0']['c0'] is o2
+
+        o = Chain()
+        o2 = o['a0']['b0']['c0']['d0']
+        o['a0']['b0']['c0']['d0']['e0']
+        assert o['a0']['b0']['c0']['d0'] is o2
+
+        o = Chain()
+        o2 = o['a0']['b0']['c0']['d0']['e0']
+        o['a0']['b0']['c0']['d0']['e0']
+        assert o['a0']['b0']['c0']['d0']['e0'] is o2
