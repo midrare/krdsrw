@@ -26,13 +26,13 @@ from krdsrw.objects import read_object
 from krdsrw.objects import write_object
 
 TEMPEST_EPUB: typing.Final[
-    pathlib.Path] = pathlib.Path(__file__).parent / "The Tempest.epub"
+    pathlib.Path] = pathlib.Path(__file__).parent / "the-tempest.epub"
 TEMPEST_KFX: typing.Final[
-    pathlib.Path] = pathlib.Path(__file__).parent / "The Tempest.kfx"
+    pathlib.Path] = pathlib.Path(__file__).parent / "the-tempest.kfx"
 TEMPEST_YJF: typing.Final[
-    pathlib.Path] = pathlib.Path(__file__).parent / "The Tempest.yjf"
+    pathlib.Path] = pathlib.Path(__file__).parent / "the-tempest.yjf"
 TEMPEST_YJR: typing.Final[
-    pathlib.Path] = pathlib.Path(__file__).parent / "The Tempest.yjr"
+    pathlib.Path] = pathlib.Path(__file__).parent / "the-tempest.yjr"
 
 
 def test_peek_object_schema():
