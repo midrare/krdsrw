@@ -423,11 +423,11 @@ class DictBase(dict[K, T], _Observable):
             raise KeyError(f"Key \"{key}\" is invalid for this container.")
 
         key_ = self._transform_key(key)
-        if super().__contains__(key):
+        if super().__contains__(key_):
             return super().__getitem__(key_)  # type: ignore
 
         if key_ in self._key_to_postulate:
-            return self._key_to_postulate[key]
+            return self._key_to_postulate[key_]
 
         value = self._make_postulate(key_)
         if value is not None:
