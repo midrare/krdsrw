@@ -542,5 +542,10 @@ class DictBase(dict[K, T], _Observable):
         self,
         other: typing.Mapping[typing.Any, typing.Any],
     ) -> typing.Self:
-        self.update(dict(other))
+        o = self._transform_for_write(dict(other))
+        o = filter(lambda e: e[0] not in self, o.items())
+        if o:
+            super().update(o)
+            self._modified = True
+            self._notify_observers()
         return self
