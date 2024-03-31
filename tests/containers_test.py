@@ -1507,23 +1507,81 @@ class TestDictBase:
             o = CustomClass({ 'req_a': 1, 'req_b': 2, 'req_c': 3 })
             del o['req_a']
 
-    def test_modified_hook(self):
-        class CustomClass(DictBase[typing.Any, typing.Any]):
-            pass
-
-        o = CustomClass({ 'a': 1, 'b': 2, 'c': 3 })
+    def test_is_modified(self):
+        o = DictBase()
         assert not o.is_modified
 
-        o = CustomClass()
+        o = DictBase({ 'a': 1, 'b': 2, 'c': 3 })
+        assert not o.is_modified
+
+        o = DictBase()
+        o['x'] = -1
+        assert o.is_modified
+
+        o = DictBase({ 'a': 1, 'b': 2, 'c': 3 })
+        o['x'] = -1
+        assert o.is_modified
+
+        o = DictBase({ 'a': 1, 'b': 2, 'c': 3 })
+        o['b'] = -1
+        assert o.is_modified
+
+        o = DictBase({ 'a': 1, 'b': 2, 'c': 3 })
+        # write of identical value is not same object identity
+        # so it counts as a modification
+        o['a'] = 1
+        assert o.is_modified
+
+        o = DictBase({ 'a': 1 })
+        o |= { 'b': 2 }
+        assert o.is_modified
+
+        o = DictBase({ 'a': 1, 'b': 2, 'c': 3 })
+        del o['a']
+        assert o.is_modified
+
+        o = DictBase()
+        o.update({ 'x': -1, 'y': -2, 'z': -3 })
+        assert o.is_modified
+
+        o = DictBase({ 'a': 1, 'b': 2, 'c': 3 })
+        o.update({ 'x': -1, 'y': -2, 'z': -3 })
+        assert o.is_modified
+
+        o = DictBase({ 'a': 1, 'b': 2, 'c': 3 })
+        o.update({ 'a': -1, 'x': -2 })
+        assert o.is_modified
+
+        o = DictBase()
         o.setdefault('a', 9)
         assert o.is_modified
 
-        o = CustomClass({ 'a': 1, 'b': 2, 'c': 3 })
+        o = DictBase({ 'a': 1, 'b': 2, 'c': 3 })
         o.setdefault('a', 9)
         assert not o.is_modified
 
-        o = CustomClass()
-        o.update({ 'a': 123, 'b': 456 })
+        o = DictBase()
+        o.clear()
+        assert not o.is_modified
+
+        o = DictBase({ 'a': 1, 'b': 2, 'c': 3 })
+        o.clear()
+        assert o.is_modified
+
+        o = DictBase()
+        o.pop('a', 0)
+        assert not o.is_modified
+
+        o = DictBase({ 'a': 1, 'b': 2, 'c': 3 })
+        o.pop('a', 9)
+        assert o.is_modified
+
+        o = DictBase({ 'a': 1, 'b': 2, 'c': 3 })
+        o.pop('x', 9)
+        assert not o.is_modified
+
+        o = DictBase({ 'a': 1, 'b': 2, 'c': 3 })
+        o.popitem()
         assert o.is_modified
 
     def test_chain_single_read(self):
