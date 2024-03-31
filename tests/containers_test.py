@@ -1232,6 +1232,87 @@ class TestDictBase:
         o['x'] = 10
         assert o == { 'A': 1, 'B': 2, 'C': 3, 'X': 10 }
 
+        o = CustomClass({ 'a': 1, 'B': 2 })
+        assert o['a'] == 1
+
+        o = CustomClass({ 'a': 1, 'B': 2 })
+        assert o['A'] == 1
+
+        o = CustomClass({ 'a': 1, 'B': 2 })
+        assert o['b'] == 2
+
+        o = CustomClass({ 'a': 1, 'B': 2 })
+        assert o['B'] == 2
+
+        o = CustomClass({ 'a': 1, 'B': 2 })
+        del o['a']  # no error
+        assert o == { 'B': 2 }
+
+        o = CustomClass({ 'a': 1, 'B': 2 })
+        del o['A']  # no error
+        assert o == { 'B': 2 }
+
+        o = CustomClass({ 'a': 1, 'B': 2 })
+        del o['b']  # no error
+        assert o == { 'A': 1 }
+
+        o = CustomClass({ 'a': 1, 'B': 2 })
+        del o['B']  # no error
+        assert o == { 'A': 1 }
+
+        o = CustomClass({ 'a': 1, 'B': 2 })
+        with pytest.raises(KeyError):
+            del o['c']
+
+        o = CustomClass({ 'a': 1, 'B': 2 })
+        assert o.get('a') == 1
+
+        o = CustomClass({ 'a': 1, 'B': 2 })
+        assert o.get('A') == 1
+
+        o = CustomClass({ 'a': 1, 'B': 2 })
+        assert o.get('b') == 2
+
+        o = CustomClass({ 'a': 1, 'B': 2 })
+        assert o.get('B') == 2
+
+        o = CustomClass({ 'a': 1, 'B': 2 })
+        assert o.get('B') == 2
+
+        o = CustomClass({ 'a': 1, 'B': 2 })
+        assert o.get('c') is None
+
+        o = CustomClass({ 'a': 1, 'B': 2 })
+        assert o.pop('a') == 1
+
+        o = CustomClass({ 'a': 1, 'B': 2 })
+        assert o.pop('A') == 1
+
+        o = CustomClass({ 'a': 1, 'B': 2 })
+        assert o.pop('b') == 2
+
+        o = CustomClass({ 'a': 1, 'B': 2 })
+        assert o.pop('B') == 2
+
+        o = CustomClass({ 'a': 1, 'B': 2 })
+        assert o.pop('B') == 2
+
+        with pytest.raises(KeyError):
+            o = CustomClass({ 'a': 1, 'B': 2 })
+            o.pop('c')
+
+        o = CustomClass({ 'a': 1, 'B': 2 })
+        assert 'a' in o
+
+        o = CustomClass({ 'a': 1, 'B': 2 })
+        assert 'A' in o
+
+        o = CustomClass({ 'a': 1, 'B': 2 })
+        assert 'b' in o
+
+        o = CustomClass({ 'a': 1, 'B': 2 })
+        assert 'B' in o
+
     def test_transform_value(self):
         class CustomClass(DictBase[str, int]):
             @typing.override
