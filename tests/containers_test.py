@@ -1445,7 +1445,7 @@ class TestDictBase:
         o = CustomClass({ 'a': 1, 'b': 2, 'c': 3 })
         assert 'xx' not in o
 
-    def test_del_filter(self):
+    def test_is_deletable(self):
         class CustomClass(DictBase[typing.Any, typing.Any]):
             @typing.override
             def _is_key_deletable(self, key: typing.Any) -> typing.Any:
@@ -1459,16 +1459,9 @@ class TestDictBase:
             o = CustomClass()
             del o['req_a']
 
-        with pytest.raises(KeyError):
-            o = CustomClass({})
-            del o['a']
-
-        with pytest.raises(KeyError):
-            o = CustomClass({})
-            del o['req_a']
-
         o = CustomClass({ 'a': 1 })
-        del o['a']
+        del o['a']  # no error
+        assert o == {}
 
         with pytest.raises(KeyError):
             o = CustomClass({ 'req_a': 1 })
@@ -1479,7 +1472,8 @@ class TestDictBase:
             del o['req_a']
 
         o = CustomClass({ 'a': 1, 'b': 2, 'c': 3 })
-        del o['a']
+        del o['a']  # no error
+        assert o == { 'b': 2, 'c': 3 }
 
         with pytest.raises(KeyError):
             o = CustomClass({ 'a': 1, 'b': 2, 'c': 3 })
