@@ -271,12 +271,8 @@ class DictBase(dict[K, T], _Observable):
     def _transform_key(self, key: typing.Any) -> K:
         return key
 
-    def _transform_key_value(
-        self,
-        key: typing.Any,
-        value: typing.Any,
-    ) -> tuple[K, T]:
-        return key, value
+    def _transform_value(self, value: typing.Any, key: typing.Any) -> T:
+        return value
 
     def _make_postulate(self, key: typing.Any) -> None | T:
         return None
@@ -360,7 +356,8 @@ class DictBase(dict[K, T], _Observable):
                 + f"({key}, {default}) "\
                 + f"is invalid for this container.")
 
-        key_, default_ = self._transform_key_value(key, default)
+        default_ = self._transform_value(default, key)
+        key_ = self._transform_key(key)
         result = super().setdefault(key_, default_)
         self._modified = True
         self._notify_observers()
@@ -378,7 +375,8 @@ class DictBase(dict[K, T], _Observable):
                 + f"({key}, {value}) "\
                 + f"is invalid for this container.")
 
-            key_, value_ = self._transform_key_value(key, value)
+            value_ = self._transform_value(value, key)
+            key_ = self._transform_key(key)
             result[key_] = value_
         return result
 
@@ -450,7 +448,8 @@ class DictBase(dict[K, T], _Observable):
                 + f"({key}, {item}) "\
                 + f"is invalid for this container.")
 
-        key_, item_ = self._transform_key_value(key, item)
+        item_ = self._transform_value(item, key)
+        key_ = self._transform_key(key)
         super().__setitem__(key_, item_)  # type: ignore
         self._modified = True
         self._notify_observers()

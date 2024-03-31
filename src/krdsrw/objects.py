@@ -282,11 +282,11 @@ class Record(DictBase[str, T], Object):
         return key not in self._required_spec
 
     @typing.override
-    def _transform_key_value(
+    def _transform_value(
         self,
-        key: typing.Any,
         value: typing.Any,
-    ) -> tuple[str, T]:
+        key: typing.Any,
+    ) -> T:
         maker = self._required_spec.get(key) or self._optional_spec.get(key)
         if not maker:
             raise KeyError(f"No template for key \"{key}\".")
@@ -296,7 +296,7 @@ class Record(DictBase[str, T], Object):
         and not isinstance(value, Basic):
             value = maker.make(value)
 
-        return key, value  # type: ignore
+        return value  # type: ignore
 
     @property
     def required(self) -> dict[str, type[T]]:
@@ -448,18 +448,18 @@ class IntMap(DictBase[str, typing.Any], Object):
         return self._to_alias(key)
 
     @typing.override
-    def _transform_key_value(
+    def _transform_value(
         self,
-        key: typing.Any,
         value: typing.Any,
-    ) -> tuple[str, typing.Any]:
+        key: typing.Any,
+    ) -> typing.Any:
         maker = self._idx_to_spec[self._to_idx(key)]
         if issubclass(maker.cls_, Basic) \
         and isinstance(value, (bool, int, float, str, bytes)) \
         and not isinstance(value, Basic):
             value = maker.make(value)
 
-        return self._to_alias(key), value
+        return value
 
     @typing.override
     def _make_postulate(self, key: typing.Any) -> None | typing.Any:
@@ -538,11 +538,11 @@ class DynamicMap(DictBase[str, typing.Any], Object):
         return isinstance(key, str) and isinstance(value, Basic)
 
     @typing.override
-    def _transform_key_value(
+    def _transform_value(
         self,
-        key: typing.Any,
         value: typing.Any,
-    ) -> tuple[str, typing.Any]:
+        key: typing.Any,
+    ) -> typing.Any:
         if not isinstance(value, Basic):
             if isinstance(value, bool):
                 warnings.warn(
@@ -564,7 +564,8 @@ class DynamicMap(DictBase[str, typing.Any], Object):
                     f"Implicit type conversion "
                     + f"from \"{value}\" to Utf8Str({value})")
                 value = Utf8Str(value)
-        return super()._transform_key_value(key, value)
+
+        return value
 
     @typing.override
     def read(self, cursor: Cursor):
