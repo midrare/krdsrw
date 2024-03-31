@@ -431,8 +431,7 @@ class DictBase(dict[K, T], _Observable):
 
         value = self._make_postulate(key_)
         if value is not None:
-            self._key_to_postulate[key_] = value
-            value._parents.append(weakref.ref(self))
+            self._add_postulate(key_, value)
             return value
 
         raise KeyError(f"Key \"{key}\" not found.")
