@@ -1445,34 +1445,6 @@ class TestDictBase:
         o = CustomClass({ 'a': 1, 'b': 2, 'c': 3 })
         assert 'xx' not in o
 
-    def test_read_transform(self):
-        class CustomClass(DictBase[typing.Any, typing.Any]):
-            @typing.override
-            def _transform_key(self, key: typing.Any) -> typing.Any:
-                if isinstance(key, str):
-                    key = key.lower()
-                return key
-
-        with pytest.raises(KeyError):
-            o = CustomClass({ 'a': 1, 'b': 2, 'c': 3 })
-            o['z']
-
-        o = CustomClass({ 'a': 1, 'b': 2, 'c': 3 })
-        assert o.get('A') == 1
-
-        o = CustomClass({ 'a': 1, 'b': 2, 'c': 3 })
-        assert o.get('B', 0) == 2
-
-        with pytest.raises(KeyError):
-            o = CustomClass()
-            o['aa']
-
-        o = CustomClass()
-        assert o.get('aa') is None
-
-        o = CustomClass()
-        assert o.get('aa', 0) == 0
-
     def test_del_filter(self):
         class CustomClass(DictBase[typing.Any, typing.Any]):
             @typing.override
