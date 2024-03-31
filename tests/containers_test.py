@@ -1070,46 +1070,111 @@ class TestDictBase:
         o['x'] = -1
         assert o.popitem() == ('x', -1)
 
-    def test_write_filter(self):
+    def test_is_writable(self):
         class CustomClass(DictBase[str, int]):
+            @typing.override
+            def _is_key_writable(
+                self,
+                key: typing.Any,
+            ) -> bool:
+                return isinstance(key, str) and len(key) <= 1
+
             @typing.override
             def _is_key_value_writable(
                 self,
                 key: typing.Any,
                 value: typing.Any,
             ) -> bool:
-                return len(key) <= 1 and isinstance(value, int)
+                return isinstance(key, str) \
+                and len(key) <= 1 \
+                and isinstance(value, int)
 
-        CustomClass({ 'a': 1, 'b': 2, 'c': 3 })
+        o = CustomClass({ 'a': 1, 'b': 2, 'c': 3 })  # no error
+        assert o == { 'a': 1, 'b': 2, 'c': 3 }
 
         with pytest.raises(ValueError):
-            CustomClass({ 'a': b'AAA', 'b': b'BBB', 'c': b'CustomClassC'})
+            CustomClass({ 'a': b'AAA', 'b': b'BBB', 'c': b'CCC'})
 
-        with pytest.raises(ValueError):
+        with pytest.raises(KeyError):
             CustomClass({ 'aa': 1, 'bb': 2, 'cc': 3 })
+
+        with pytest.raises(KeyError):
+            CustomClass({ 'aa': b'AAA', 'bb': b'BBB', 'cc': b'CCC'})
 
         o = CustomClass()
         o.setdefault('a', 9)
         assert o == { 'a': 9 }
 
-        with pytest.raises(ValueError):
+        with pytest.raises(KeyError):
             o = CustomClass()
             o.setdefault('aa', 4)
 
         with pytest.raises(ValueError):
             o = CustomClass()
-            o.setdefault('a', b'ZZZ')  # pyright: ignore  # type: ignore
+            o.setdefault('a', b'ZZZ')  # type: ignore
+
+        with pytest.raises(KeyError):
+            o = CustomClass()
+            o.setdefault('aa', b'ZZZ')  # type: ignore
 
         o = CustomClass()
         o.update({ 'a': 123, 'b': 456 })
         assert o == { 'a': 123, 'b': 456 }
 
+        o = CustomClass()
+        with pytest.raises(ValueError):
+            o.update({ 'a': 12, 'b': 4.5 })  # type: ignore
+
+        o = CustomClass()
+        with pytest.raises(KeyError):
+            o.update({ 'aa': b'AAA', 'bb': b'BBB'})  # type: ignore
+
+        o = CustomClass()
+        o |= { 'a': 1, 'b': 2, 'c': 3 }  # no error
+        assert o == { 'a': 1, 'b': 2, 'c': 3 }
+
         with pytest.raises(ValueError):
             o = CustomClass()
-            o.update({
-                'a': 12,
-                'b': 4.5,  # pyright: ignore  # type: ignore
-            })
+            o |= { 'a': b'AAA', 'b': 2, 'c': 3 }
+
+        with pytest.raises(KeyError):
+            o = CustomClass()
+            o |= { 'aa': 1, 'b': 2, 'c': 3 }
+
+        with pytest.raises(KeyError):
+            o = CustomClass()
+            o |= { 'aa': b'AAA', 'b': 2, 'c': 3 }
+
+        o = CustomClass()
+        o['a'] = 1  # no error
+        assert o == { 'a': 1 }
+
+        with pytest.raises(ValueError):
+            o = CustomClass()
+            o['a'] = b'AAA'  # type: ignore
+
+        with pytest.raises(KeyError):
+            o = CustomClass()
+            o['aaa'] = 1
+
+        with pytest.raises(KeyError):
+            o = CustomClass()
+            o['aaa'] = b'AAA'  # type: ignore
+
+        o = CustomClass.fromkeys([ 'a', 'b', 'c'], 0)  # no error
+        assert o == { 'a': 0, 'b': 0, 'c': 0 }
+
+        with pytest.raises(KeyError):
+            o = CustomClass.fromkeys([ 'a', 'bb', 'c'], 0)
+
+        with pytest.raises(ValueError):
+            o = CustomClass.fromkeys([ 'a', 'b', 'c'], b'ZZZ')  # type: ignore
+
+        with pytest.raises(KeyError):
+            o = CustomClass.fromkeys([ 'aa', 'bb', 'c'], b'ZZZ')  # type: ignore
+
+        with pytest.raises(ValueError):
+            o = CustomClass.fromkeys([ 'a', 'bb', 'c'], b'ZZZ')  # type: ignore
 
     def test_write_transform(self):
         class CustomClass(DictBase[str, int]):
