@@ -1176,27 +1176,121 @@ class TestDictBase:
         with pytest.raises(ValueError):
             o = CustomClass.fromkeys([ 'a', 'bb', 'c'], b'ZZZ')  # type: ignore
 
-    def test_write_transform(self):
+    def test_transform_key(self):
         class CustomClass(DictBase[str, int]):
             @typing.override
-            def _transform_key_value(
-                self,
-                key: typing.Any,
-                value: typing.Any,
-            ) -> tuple[str, int]:
-                return key.capitalize(), value * 2
-
-        o = CustomClass()
-        assert o == {}
-
-        o = CustomClass({})
-        assert o == {}
-
-        o = CustomClass({ 'a': 1 })
-        assert o == { 'A': 2 }
+            def _transform_key(self, key: typing.Any) -> str:
+                return key.capitalize()
 
         o = CustomClass({ 'a': 1, 'b': 2, 'c': 3 })
-        assert o == { 'A': 2, 'B': 4, 'C': 6 }
+        assert o == { 'A': 1, 'B': 2, 'C': 3 }
+
+        o = CustomClass.fromkeys([ 'a', 'b', 'c'], 3)
+        assert o == { 'A': 3, 'B': 3, 'C': 3 }
+
+        o = CustomClass()
+        o.setdefault('a', 3)
+        assert o == { 'A': 3 }
+
+        o = CustomClass()
+        o.update({ 'a': 1, 'b': 2 })
+        assert o == { 'A': 1, 'B': 2 }
+
+        o = CustomClass()
+        o |= { 'a': 1, 'b': 2, 'c': 3 }
+        assert o == { 'A': 1, 'B': 2, 'C': 3 }
+
+        o = CustomClass()
+        o['a'] = 3
+        assert o == { 'A': 3 }
+
+        o = CustomClass({ 'a': 1, 'b': 2, 'c': 3 })
+        o.setdefault('a', 9)
+        assert o == { 'A': 1, 'B': 2, 'C': 3 }
+
+        o = CustomClass({ 'a': 1, 'b': 2, 'c': 3 })
+        o.setdefault('x', 9)
+        assert o == { 'A': 1, 'B': 2, 'C': 3, 'X': 9 }
+
+        o = CustomClass({ 'a': 1, 'b': 2, 'c': 3 })
+        o.update({ 'a': 5, 'b': 6 })
+        assert o == { 'A': 5, 'B': 6, 'C': 3 }
+
+        o = CustomClass({ 'a': 1, 'b': 2, 'c': 3 })
+        o |= { 'a': 4, 'b': 5, 'c': 6 }
+        assert o == { 'A': 1, 'B': 2, 'C': 3 }
+
+        o = CustomClass({ 'a': 1, 'b': 2, 'c': 3 })
+        o |= { 'a': 4, 'd': 7, 'c': 6, 'e': 8 }
+        assert o == { 'A': 1, 'B': 2, 'C': 3, 'D': 7, 'E': 8 }
+
+        o = CustomClass({ 'a': 1, 'b': 2, 'c': 3 })
+        o['a'] = 10
+        assert o == { 'A': 10, 'B': 2, 'C': 3 }
+
+        o = CustomClass({ 'a': 1, 'b': 2, 'c': 3 })
+        o['x'] = 10
+        assert o == { 'A': 1, 'B': 2, 'C': 3, 'X': 10 }
+
+    def test_transform_value(self):
+        class CustomClass(DictBase[str, int]):
+            @typing.override
+            def _transform_value(
+                self,
+                value: typing.Any,
+                key: None | typing.Any = None,
+            ) -> int:
+                return value**2
+
+        o = CustomClass({ 'a': 1, 'b': 2, 'c': 3 })
+        assert o == { 'a': 1, 'b': 4, 'c': 9 }
+
+        o = CustomClass.fromkeys([ 'a', 'b', 'c'], 3)
+        assert o == { 'a': 9, 'b': 9, 'c': 9 }
+
+        o = CustomClass()
+        o.setdefault('a', 3)
+        assert o == { 'a': 9 }
+
+        o = CustomClass()
+        o.update({ 'a': 1, 'b': 2 })
+        assert o == { 'a': 1, 'b': 4 }
+
+        o = CustomClass()
+        o |= { 'a': 1, 'b': 2, 'c': 3 }
+        assert o == { 'a': 1, 'b': 4, 'c': 9 }
+
+        o = CustomClass()
+        o['a'] = 3
+        assert o == { 'a': 9 }
+
+        o = CustomClass({ 'a': 1, 'b': 2, 'c': 3 })
+        o.setdefault('a', 9)
+        assert o == { 'a': 1, 'b': 4, 'c': 9 }
+
+        o = CustomClass({ 'a': 1, 'b': 2, 'c': 3 })
+        o.setdefault('x', 9)
+        assert o == { 'a': 1, 'b': 4, 'c': 9, 'x': 81 }
+
+        o = CustomClass({ 'a': 1, 'b': 2, 'c': 3 })
+        o.update({ 'a': 5, 'b': 6 })
+        assert o == { 'a': 25, 'b': 36, 'c': 9 }
+
+        o = CustomClass({ 'a': 1, 'b': 2, 'c': 3 })
+        o |= { 'a': 4, 'b': 5, 'c': 6 }
+        assert o == { 'a': 1, 'b': 4, 'c': 9 }
+
+        o = CustomClass({ 'a': 1, 'b': 2, 'c': 3 })
+        o |= { 'a': 4, 'd': 7, 'c': 6, 'e': 8 }
+        assert o == { 'a': 1, 'b': 4, 'c': 9, 'd': 49, 'e': 64 }
+
+        o = CustomClass({ 'a': 1, 'b': 2, 'c': 3 })
+        o['a'] = 10
+        assert o == { 'a': 100, 'b': 4, 'c': 9 }
+
+        o = CustomClass({ 'a': 1, 'b': 2, 'c': 3 })
+        o['x'] = 10
+        assert o == { 'a': 1, 'b': 4, 'c': 9, 'x': 100 }
 
     def test_read_filter(self):
         class CustomClass(DictBase[typing.Any, typing.Any]):
