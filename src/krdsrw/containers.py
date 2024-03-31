@@ -255,15 +255,21 @@ class DictBase(dict[K, T], _Observable):
     def _is_key_readable(self, key: typing.Any) -> bool:
         return True
 
-    def _transform_key(self, key: typing.Any) -> K:
-        return key
-
-    def _is_key_value_writable(
-            self, key: typing.Any, value: typing.Any) -> bool:
-        return True
-
     def _is_key_deletable(self, key: typing.Any) -> bool:
         return True
+
+    def _is_key_writable(self, key: typing.Any) -> bool:
+        return True
+
+    def _is_key_value_writable(
+        self,
+        key: typing.Any,
+        value: typing.Any,
+    ) -> bool:
+        return True
+
+    def _transform_key(self, key: typing.Any) -> K:
+        return key
 
     def _transform_key_value(
         self,
@@ -314,6 +320,9 @@ class DictBase(dict[K, T], _Observable):
             self._key_to_postulate.pop(k)
             if k in self.keys():
                 continue
+            assert self._is_key_writable(k), \
+                f"Key \"{k}\" is not writable " \
+                + "(should have been screened out before this point)."
             assert self._is_key_value_writable(k, sender), \
                 f"Key-value pair ({k}, {sender}) is not writable " \
                 + "(should have been screened out before this point)."
@@ -342,6 +351,10 @@ class DictBase(dict[K, T], _Observable):
             if super().__contains__(key_):
                 return super().setdefault(key_, default)  # type: ignore
 
+        if not self._is_key_writable(key):
+            raise KeyError(f"The key \"{key}\" is " \
+                + "not writable for this container.")
+
         if not self._is_key_value_writable(key, default):
             raise ValueError(f"The key-value pair "\
                 + f"({key}, {default}) "\
@@ -357,6 +370,9 @@ class DictBase(dict[K, T], _Observable):
     def _transform_for_write(self, other: dict) -> dict[K, T]:
         result = {}  # deliberate plain dict
         for key, value in other.items():
+            if not self._is_key_writable(key):
+                raise KeyError(f"The key \"{key}\" is " \
+                    + "not writable for this container.")
             if not self._is_key_value_writable(key, value):
                 raise ValueError(f"The key-value pair "\
                 + f"({key}, {value}) "\
@@ -425,6 +441,10 @@ class DictBase(dict[K, T], _Observable):
 
     @typing.override
     def __setitem__(self, key: K, item: int | float | str | T):
+        if not self._is_key_writable(key):
+            raise KeyError(f"The key \"{key}\" is " \
+                + "not writable for this container.")
+
         if not self._is_key_value_writable(key, item):
             raise ValueError(f"The key-value pair "\
                 + f"({key}, {item}) "\
