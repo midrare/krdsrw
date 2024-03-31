@@ -1584,92 +1584,168 @@ class TestDictBase:
         o.popitem()
         assert o.is_modified
 
-    def test_chain_single_read(self):
+    def test_postulate(self):
         class CustomClass(DictBase[typing.Any, typing.Any]):
+            @typing.override
+            def _make_postulate(self, key: typing.Any) -> None | typing.Any:
+                return True
+
+        o = CustomClass()
+        assert o['a0'] is True
+
+        o = CustomClass()
+        o['a0']  # no error
+        assert o == {}
+
+        o = CustomClass()
+        o['a0']  # no error
+        assert not o
+
+    def test_chain_nested(self):
+        class Chain(DictBase[typing.Any, typing.Any]):
             @typing.override
             def _make_postulate(self, key: typing.Any) -> None | typing.Any:
                 return self.__class__()
 
-        o = CustomClass()
+        o = Chain()
+        o['a0'] = 'lorem'
+        assert o == { 'a0': 'lorem'}
+
+        o = Chain()
+        o['a0'] = 'lorem'
+        o['a1']['b0'] = 'ipsum'
+        assert o == { 'a0': 'lorem', 'a1': { 'b0': 'ipsum'} }
+
+        o = Chain()
+        o['a0'] = 'lorem'
+        o['a1']['b0'] = 'ipsum'
+        o['a1']['b1']['c0'] = 'dolor'
+        assert o == {
+            'a0': 'lorem',
+            'a1': {
+                'b0': 'ipsum',
+                'b1': {
+                    'c0': 'dolor'
+                }
+            }
+        }
+
+        o = Chain()
+        o['a0'] = 'lorem'
+        o['a1']['b0'] = 'ipsum'
+        o['a1']['b1']['c0'] = 'dolor'
+        o['a1']['b1']['c1']['d0'] = 'sit'
+        assert o == {
+            'a0': 'lorem',
+            'a1': {
+                'b0': 'ipsum',
+                'b1': {
+                    'c0': 'dolor',
+                    'c1': {
+                        'd0': 'sit'
+                    }
+                }
+            }
+        }
+
+        o = Chain()
+        o['a0'] = 'lorem'
+        o['a1']['b0'] = 'ipsum'
+        o['a1']['b1']['c0'] = 'dolor'
+        o['a1']['b1']['c1']['d0'] = 'sit'
+        o['a1']['b1']['c1']['d1']['e0'] = 'amet'
+        assert o == {
+            'a0': 'lorem',
+            'a1': {
+                'b0': 'ipsum',
+                'b1': {
+                    'c0': 'dolor',
+                    'c1': {
+                        'd0': 'sit',
+                        'd1': {
+                            'e0': "amet"
+                        }
+                    }
+                }
+            }
+        }
+
+    def test_chain_links_are_retained(self):
+        class Chain(DictBase[typing.Any, typing.Any]):
+            @typing.override
+            def _make_postulate(self, key: typing.Any) -> None | typing.Any:
+                return self.__class__()
+
+        o = Chain()
+        o['a0'] = 'lorem'
+        assert o == { 'a0': "lorem"}
+
+        o = Chain()
+        o['a0']['b0'] = 'lorem'
+        assert o == { 'a0': { 'b0': "lorem"} }
+
+        o = Chain()
+        o['a0']['b0']['c0'] = 'lorem'
+        assert o == { 'a0': { 'b0': { 'c0': "lorem"} } }
+
+        o = Chain()
+        o['a0']['b0']['c0']['d0'] = 'lorem'
+        assert o == { 'a0': { 'b0': { 'c0': { 'd0': "lorem"} } } }
+
+        o = Chain()
+        o['a0']['b0']['c0']['d0']['e0'] = 'lorem'
+        assert o == { 'a0': { 'b0': { 'c0': { 'd0': { 'e0': "lorem"} } } } }
+
+    def test_chain_is_empty_after_read(self):
+        class Chain(DictBase[typing.Any, typing.Any]):
+            @typing.override
+            def _make_postulate(self, key: typing.Any) -> None | typing.Any:
+                return self.__class__()
+
+        o = Chain()
         o['a0']
         assert o == {}
 
-    def test_chain_single_write(self):
-        class CustomClass(DictBase[typing.Any, typing.Any]):
-            @typing.override
-            def _make_postulate(self, key: typing.Any) -> None | typing.Any:
-                return self.__class__()
-
-        o = CustomClass()
-        o['a0'] = 'hello'
-        assert o == { 'a0': 'hello'}
-
-    def test_chain_nested_lvl2_read(self):
-        class CustomClass(DictBase[typing.Any, typing.Any]):
-            @typing.override
-            def _make_postulate(self, key: typing.Any) -> None | typing.Any:
-                return self.__class__()
-
-        o = CustomClass()
+        o = Chain()
         o['a0']['b0']
         assert o == {}
 
-    def test_chain_nested_lvl2_write(self):
-        class CustomClass(DictBase[typing.Any, typing.Any]):
-            @typing.override
-            def _make_postulate(self, key: typing.Any) -> None | typing.Any:
-                return self.__class__()
-
-        o = CustomClass()
-        o['a0']['b0'] = 'hello'
-        assert o == { 'a0': { 'b0': 'hello'} }
-
-    def test_chain_nested_lvl3_read(self):
-        class CustomClass(DictBase[typing.Any, typing.Any]):
-            @typing.override
-            def _make_postulate(self, key: typing.Any) -> None | typing.Any:
-                return self.__class__()
-
-        o = CustomClass()
+        o = Chain()
         o['a0']['b0']['c0']
         assert o == {}
 
-    def test_chain_nested_lvl3_write(self):
-        class CustomClass(DictBase[typing.Any, typing.Any]):
+        o = Chain()
+        o['a0']['b0']['c0']['d0']
+        assert o == {}
+
+        o = Chain()
+        o['a0']['b0']['c0']['d0']['e0']
+        assert o == {}
+
+    def test_chain_explicit_write_is_prioritized(self):
+        class Chain(DictBase[typing.Any, typing.Any]):
             @typing.override
             def _make_postulate(self, key: typing.Any) -> None | typing.Any:
                 return self.__class__()
 
-        o = CustomClass()
-        o['a0']['b0']['c0'] = 'hello'
-        assert o == { 'a0': { 'b0': { 'c0': 'hello'} } }
+        o = Chain()
+        o['a0']['b0']['c0']['d0']['e0']
+        o['a0'] = True
+        assert o == { 'a0': True }
 
-    def test_chain_nested_lvl4_write(self):
-        class CustomClass(DictBase[typing.Any, typing.Any]):
-            @typing.override
-            def _make_postulate(self, key: typing.Any) -> None | typing.Any:
-                return self.__class__()
+        o = Chain()
+        o2 = o['a0']['b0']['c0']['d0']['e0']
+        o['a0'] = True
+        o2['f0'] = True
+        assert o == { 'a0': True }
 
-        o = CustomClass()
-        o['a0']['b0']['c0'] = 'hello'
-        o['a0']['b0']['c1'] = 'world'
-        o['a0']['b1'] = 'lorem'
-        o['a0']['b2'] = 'ipsum'
-        o['a0']['b3']['c2']['d0']
-        o['a0']['b3']['c2']['d1'] = True
+        o = Chain()
+        o['a0']['b0']['c0']['d0']['e0']
+        o['a0']['b0'] = True
+        assert o == { 'a0': { 'b0': True } }
 
-        assert o == {
-            'a0': {
-                'b0': {
-                    'c0': 'hello',
-                    'c1': 'world',
-                },
-                'b1': 'lorem',
-                'b2': 'ipsum',
-                'b3': {
-                    'c2': {
-                        'd1': True,
-                    }
-                }
-            },
-        }
+        o = Chain()
+        o2 = o['a0']['b0']['c0']['d0']['e0']
+        o['a0']['b0'] = True
+        o2['f0'] = True
+        assert o == { 'a0': { 'b0': True } }
