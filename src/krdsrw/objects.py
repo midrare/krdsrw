@@ -266,8 +266,11 @@ class Record(DictBase[str, T], Object):
         return bool(maker)
 
     @typing.override
-    def _is_key_value_writable(
-            self, key: typing.Any, value: typing.Any) -> bool:
+    def _is_value_writable(
+        self,
+        value: typing.Any,
+        key: typing.Any,
+    ) -> bool:
         if not isinstance(key, str):
             return False
         maker = self._required_spec.get(key) or self._optional_spec.get(key)
@@ -428,8 +431,11 @@ class IntMap(DictBase[str, typing.Any], Object):
                 + list(self._idx_to_alias.values())
 
     @typing.override
-    def _is_key_value_writable(
-            self, key: typing.Any, value: typing.Any) -> bool:
+    def _is_value_writable(
+        self,
+        value: typing.Any,
+        key: typing.Any,
+    ) -> bool:
         if key not in list(self._idx_to_spec.keys()) \
                 + list(self._idx_to_name.keys()) \
                 + list(self._idx_to_alias.keys()) \
@@ -533,8 +539,11 @@ class DynamicMap(DictBase[str, typing.Any], Object):
         return isinstance(key, str)
 
     @typing.override
-    def _is_key_value_writable(
-            self, key: typing.Any, value: typing.Any) -> bool:
+    def _is_value_writable(
+        self,
+        value: typing.Any,
+        key: typing.Any,
+    ) -> bool:
         return isinstance(key, str) and isinstance(value, Basic)
 
     @typing.override
@@ -1116,8 +1125,11 @@ class DataStore(DictBase, Object):
         return key in self.keys() or schemas.get_spec_by_name(key) is not None
 
     @typing.override
-    def _is_key_value_writable(
-            self, key: typing.Any, value: typing.Any) -> bool:
+    def _is_value_writable(
+        self,
+        value: typing.Any,
+        key: typing.Any,
+    ) -> bool:
         return key in self.keys() or schemas.get_spec_by_name(key) is not None
 
     @typing.override

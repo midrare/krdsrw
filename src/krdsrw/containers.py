@@ -261,11 +261,7 @@ class DictBase(dict[K, T], _Observable):
     def _is_key_writable(self, key: typing.Any) -> bool:
         return True
 
-    def _is_key_value_writable(
-        self,
-        key: typing.Any,
-        value: typing.Any,
-    ) -> bool:
+    def _is_value_writable(self, value: typing.Any, key: typing.Any) -> bool:
         return True
 
     def _transform_key(self, key: typing.Any) -> K:
@@ -316,10 +312,13 @@ class DictBase(dict[K, T], _Observable):
             self._key_to_postulate.pop(k)
             if k in self.keys():
                 continue
+            assert self._is_key_readable(k), \
+                f"Key \"{k}\" is not readable " \
+                + "(should have been screened out before this point)."
             assert self._is_key_writable(k), \
                 f"Key \"{k}\" is not writable " \
                 + "(should have been screened out before this point)."
-            assert self._is_key_value_writable(k, sender), \
+            assert self._is_value_writable(sender, k), \
                 f"Key-value pair ({k}, {sender}) is not writable " \
                 + "(should have been screened out before this point)."
             super().__setitem__(k, sender)
@@ -347,11 +346,16 @@ class DictBase(dict[K, T], _Observable):
             if super().__contains__(key_):
                 return super().setdefault(key_, default)  # type: ignore
 
+        if not self._is_key_readable(key):
+            raise KeyError(f"The key \"{key}\" is " \
+                + "not readable (in addition to writable) " \
+                + "for this container.")
+
         if not self._is_key_writable(key):
             raise KeyError(f"The key \"{key}\" is " \
                 + "not writable for this container.")
 
-        if not self._is_key_value_writable(key, default):
+        if not self._is_value_writable(default, key):
             raise ValueError(f"The key-value pair "\
                 + f"({key}, {default}) "\
                 + f"is invalid for this container.")
@@ -367,10 +371,14 @@ class DictBase(dict[K, T], _Observable):
     def _transform_for_write(self, other: dict) -> dict[K, T]:
         result = {}  # deliberate plain dict
         for key, value in other.items():
+            if not self._is_key_readable(key):
+                raise KeyError(f"The key \"{key}\" is " \
+                    + "not readable (in addition to writable) " \
+                    + "for this container.")
             if not self._is_key_writable(key):
                 raise KeyError(f"The key \"{key}\" is " \
                     + "not writable for this container.")
-            if not self._is_key_value_writable(key, value):
+            if not self._is_value_writable(value, key):
                 raise ValueError(f"The key-value pair "\
                 + f"({key}, {value}) "\
                 + f"is invalid for this container.")
@@ -438,11 +446,15 @@ class DictBase(dict[K, T], _Observable):
 
     @typing.override
     def __setitem__(self, key: K, item: int | float | str | T):
+        if not self._is_key_readable(key):
+            raise KeyError(f"The key \"{key}\" is " \
+                + "not readable (in addition to writable) " \
+                + "for this container.")
         if not self._is_key_writable(key):
             raise KeyError(f"The key \"{key}\" is " \
                 + "not writable for this container.")
 
-        if not self._is_key_value_writable(key, item):
+        if not self._is_value_writable(item, key):
             raise ValueError(f"The key-value pair "\
                 + f"({key}, {item}) "\
                 + f"is invalid for this container.")
@@ -456,7 +468,8 @@ class DictBase(dict[K, T], _Observable):
     @typing.override
     def get(self, key: K, default: None | T = None) -> T:  # type: ignore
         if not self._is_key_readable(key):
-            raise KeyError(f"Key \"{key}\" is invalid for this container.")
+            # raise KeyError(f"Key \"{key}\" is invalid for this container.")
+            return default  # type: ignore
 
         key_ = self._transform_key(key)
         return super().get(key_, default)  # type: ignore
@@ -467,21 +480,25 @@ class DictBase(dict[K, T], _Observable):
         key: K,
         default: None | typing.Any = _VOID,
     ) -> T | typing.Any:  # type: ignore
+        if not self._is_key_readable(key) and default is not _VOID:
+            return default
+
+        key_ = self._transform_key(key)
+        if not super().__contains__(key_):
+            if default is _VOID:
+                raise KeyError(f"Key \"{key}\" not found.")
+            return default
+
+        if not self._is_key_readable(key):
+            raise KeyError(f"The key \"{key}\" is invalid for this container.")
+
         if not self._is_key_deletable(key):
             raise KeyError(f"The key \"{key}\" is required "\
             + "for this container and cannot be deleted.")
 
-        before = len(self)
-
-        key_ = self._transform_key(key)
-        if default is not _VOID:
-            result = super().pop(key_, default)
-        else:
-            result = super().pop(key_)
-
-        if len(self) != before:
-            self._modified = True
-            self._notify_observers()
+        result = super().pop(key_)
+        self._modified = True
+        self._notify_observers()
 
         return result
 
