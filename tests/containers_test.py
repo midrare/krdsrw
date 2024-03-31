@@ -1373,33 +1373,77 @@ class TestDictBase:
         o['x'] = 10
         assert o == { 'a': 1, 'b': 4, 'c': 9, 'x': 100 }
 
-    def test_read_filter(self):
+    def test_is_readable(self):
         class CustomClass(DictBase[typing.Any, typing.Any]):
             @typing.override
             def _is_key_readable(self, key: typing.Any) -> bool:
                 return isinstance(key, str) and len(key) <= 1
 
+        o = CustomClass({ 'a': 1, 'b': 2, 'c': 3 })
+        assert o['a'] == 1
+
+        o = CustomClass({ 'a': 1, 'b': 2, 'c': 3 })
         with pytest.raises(KeyError):
-            o = CustomClass()
-            o['a']
+            o['bb']
 
-        o = CustomClass()
-        assert o.get('a') is None
-
-        o = CustomClass()
-        assert o.get('a', 0) == 0
-
+        o = CustomClass({ 'a': 1, 'b': 2, 'c': 3 })
         with pytest.raises(KeyError):
-            o = CustomClass()
-            o['aa']
+            o['x']
 
+        o = CustomClass({ 'a': 1, 'b': 2, 'c': 3 })
         with pytest.raises(KeyError):
-            o = CustomClass()
-            o.get('aa')
+            o['xx']
 
+        o = CustomClass({ 'a': 1, 'b': 2, 'c': 3 })
+        assert o.get('a') == 1
+
+        o = CustomClass({ 'a': 1, 'b': 2, 'c': 3 })
+        assert o.get('bb') is None
+
+        o = CustomClass({ 'a': 1, 'b': 2, 'c': 3 })
+        assert o.get('x') is None
+
+        o = CustomClass({ 'a': 1, 'b': 2, 'c': 3 })
+        assert o.get('xx') is None
+
+        o = CustomClass({ 'a': 1, 'b': 2, 'c': 3 })
+        assert o.pop('a') == 1
+
+        o = CustomClass({ 'a': 1, 'b': 2, 'c': 3 })
         with pytest.raises(KeyError):
-            o = CustomClass()
-            o.get('aa', 0)
+            assert o.pop('bb')
+
+        o = CustomClass({ 'a': 1, 'b': 2, 'c': 3 })
+        with pytest.raises(KeyError):
+            assert o.pop('x')
+
+        o = CustomClass({ 'a': 1, 'b': 2, 'c': 3 })
+        with pytest.raises(KeyError):
+            assert o.pop('xx')
+
+        o = CustomClass({ 'a': 1, 'b': 2, 'c': 3 })
+        assert o.pop('a', None) == 1
+
+        o = CustomClass({ 'a': 1, 'b': 2, 'c': 3 })
+        assert o.pop('bb', None) is None
+
+        o = CustomClass({ 'a': 1, 'b': 2, 'c': 3 })
+        assert o.pop('x', None) is None
+
+        o = CustomClass({ 'a': 1, 'b': 2, 'c': 3 })
+        assert o.pop('xx', None) is None
+
+        o = CustomClass({ 'a': 1, 'b': 2, 'c': 3 })
+        assert 'a' in o
+
+        o = CustomClass({ 'a': 1, 'b': 2, 'c': 3 })
+        assert 'bb' not in o
+
+        o = CustomClass({ 'a': 1, 'b': 2, 'c': 3 })
+        assert 'x' not in o
+
+        o = CustomClass({ 'a': 1, 'b': 2, 'c': 3 })
+        assert 'xx' not in o
 
     def test_read_transform(self):
         class CustomClass(DictBase[typing.Any, typing.Any]):
