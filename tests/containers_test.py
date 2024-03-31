@@ -1313,6 +1313,30 @@ class TestDictBase:
         o = CustomClass({ 'a': 1, 'B': 2 })
         assert 'B' in o
 
+        with pytest.raises(KeyError):
+            o = CustomClass()
+            del o['a']
+
+        o = CustomClass({ 'a': 1 })
+        del o['a']  # no error
+        assert o == {}
+
+        o = CustomClass({ 'a': 1 })
+        del o['A']  # no error
+        assert o == {}
+
+        o = CustomClass({ 'a': 1 })
+        del o['A']  # no error
+        assert o == {}
+
+        o = CustomClass({ 'a': 1, 'b': 2, 'c': 3 })
+        del o['a']  # no error
+        assert o == { 'B': 2, 'C': 3 }
+
+        o = CustomClass({ 'a': 1, 'b': 2, 'c': 3 })
+        del o['A']  # no error
+        assert o == { 'B': 2, 'C': 3 }
+
     def test_transform_value(self):
         class CustomClass(DictBase[str, int]):
             @typing.override
@@ -1482,50 +1506,6 @@ class TestDictBase:
         with pytest.raises(KeyError):
             o = CustomClass({ 'req_a': 1, 'req_b': 2, 'req_c': 3 })
             del o['req_a']
-
-    def test_del_transform(self):
-        class CustomClass(DictBase[typing.Any, typing.Any]):
-            @typing.override
-            def _transform_key(self, key: typing.Any) -> typing.Any:
-                if isinstance(key, str):
-                    key = key.lower()
-                return key
-
-        with pytest.raises(KeyError):
-            o = CustomClass()
-            del o['a']
-
-        with pytest.raises(KeyError):
-            o = CustomClass()
-            del o['A']
-
-        with pytest.raises(KeyError):
-            o = CustomClass({})
-            del o['a']
-
-        with pytest.raises(KeyError):
-            o = CustomClass({})
-            del o['A']
-
-        o = CustomClass({ 'a': 1 })
-        del o['a']
-        assert o == {}
-
-        o = CustomClass({ 'a': 1 })
-        del o['A']
-        assert o == {}
-
-        o = CustomClass({ 'a': 1 })
-        del o['A']
-        assert o == {}
-
-        o = CustomClass({ 'a': 1, 'b': 2, 'c': 3 })
-        del o['a']
-        assert o == { 'b': 2, 'c': 3 }
-
-        o = CustomClass({ 'a': 1, 'b': 2, 'c': 3 })
-        del o['A']
-        assert o == { 'b': 2, 'c': 3 }
 
     def test_modified_hook(self):
         class CustomClass(DictBase[typing.Any, typing.Any]):
