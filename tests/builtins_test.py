@@ -22,6 +22,25 @@ class TestListBase:
         o = ListBase([ 1, 2, 3 ])
         assert o == [ 1, 2, 3 ]
 
+    def test_bool_operator(self):
+        o = ListBase()
+        assert not o
+
+        o = ListBase([])
+        assert not o
+
+        o = ListBase([ 1, 2, 3 ])
+        assert o
+
+        o = ListBase()
+        assert bool(o) is False
+
+        o = ListBase([])
+        assert bool(o) is False
+
+        o = ListBase([ 1, 2, 3 ])
+        assert bool(o) is True
+
     def test_append(self):
         o = ListBase()
         o.append(4)
@@ -803,6 +822,25 @@ class TestDictBase:
 
         o = DictBase({ 'a': 1, 'b': 2, 'c': 3 })
         assert o == { 'a': 1, 'b': 2, 'c': 3 }
+
+    def test_bool_operator(self):
+        o = DictBase()
+        assert not o
+
+        o = DictBase({})
+        assert not o
+
+        o = DictBase({ 'a': 1, 'b': 2, 'c': 3 })
+        assert o
+
+        o = DictBase()
+        assert bool(o) is False
+
+        o = DictBase({})
+        assert bool(o) is False
+
+        o = DictBase({ 'a': 1, 'b': 2, 'c': 3 })
+        assert bool(o) is True
 
     def test_getitem_operator(self):
         o = DictBase()
