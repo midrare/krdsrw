@@ -6,6 +6,7 @@ import typing
 from .basics import read_utf8str
 from .basics import write_utf8str
 from .cursor import Cursor
+from .cursor import Serializable
 from .error import UnexpectedBytesError
 from .error import UnexpectedStructureError
 
@@ -76,7 +77,6 @@ class Spec(typing.Generic[T]):
         return list(self._indexes)
 
     def read(self, cursor: Cursor, name: None | str = None) -> T:
-        from .objects import Object
         o = None
 
         if name:
@@ -94,9 +94,9 @@ class Spec(typing.Generic[T]):
 
         if hasattr(self._cls, 'create'):
             o = self._cls.create(cursor, *self._init_args, **self._init_kwargs)
-        elif issubclass(self._cls, Object):
+        elif issubclass(self._cls, Serializable):
             o = self._cls(*self._init_args, **self._init_kwargs)
-            o.read(cursor)
+            o._read(cursor)
 
         if name and not cursor.eat(self._OBJECT_END):
             raise UnexpectedBytesError(
@@ -117,7 +117,7 @@ class Spec(typing.Generic[T]):
         if name:
             cursor.write(self._OBJECT_BEGIN)
             write_utf8str(cursor, name, False)
-        o.write(cursor)
+        o._write(cursor)
         if name:
             cursor.write(self._OBJECT_END)
 

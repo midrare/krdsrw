@@ -18,7 +18,6 @@ from krdsrw.objects import Array
 from krdsrw.objects import DataStore
 from krdsrw.objects import DynamicMap
 from krdsrw.objects import IntMap
-from krdsrw.objects import Object
 from krdsrw.objects import Record
 from krdsrw.objects import peek_object_schema
 from krdsrw.objects import peek_object_type
@@ -119,12 +118,6 @@ def test_write_object():
         + b'\x01\xFF\xFF\xFF\xFF\x03\x01\x00\x00\x03\x01\xFF'
 
 
-class TestObject:
-    def test_create(self):
-        with pytest.raises(TypeError):
-            Object()  # type: ignore
-
-
 class TestArray:
     def test_init(self):
         spc = Array.spec(Spec(Int))
@@ -186,7 +179,7 @@ class TestArray:
         csr = Cursor(
             b'\x01\x00\x00\x00\x03' + b'\x01\x00\x00\x00\x0a'
             + b'\x01\x00\x00\x00\x0b' + b'\x01\x00\x00\x00\x0c')
-        o.read(csr)
+        o._read(csr)
         assert o == [ 0x0a, 0x0b, 0x0c ]
 
     def test_write(self):
@@ -194,7 +187,7 @@ class TestArray:
         o = spc.make()
         o.extend([ 0x0a, 0x0b, 0x0c ])
         csr = Cursor()
-        o.write(csr)
+        o._write(csr)
         assert csr.dump() == b'\x01\x00\x00\x00\x03' \
             + b'\x01\x00\x00\x00\x0a' \
             + b'\x01\x00\x00\x00\x0b' \
@@ -280,7 +273,7 @@ class TestRecord:
         o = spc.make({ 'a': 123, 'b': 4.56, 'c': 7.89, 'd': 'xyz'})
 
         csr = Cursor()
-        o.write(csr)
+        o._write(csr)
 
         assert csr.dump() == \
             b'\x01\x00\x00\x00\x7b\x06\x40\x91' \
@@ -341,30 +334,30 @@ class TestDataStore:
     def test_read(self):
         csr = Cursor(TEMPEST_YJR.read_bytes())
         root = DataStore()
-        root.read(csr)
+        root._read(csr)
 
     def test_read_write(self):
         orig_data = TEMPEST_YJR.read_bytes()
 
         csr = Cursor(orig_data)
         root = DataStore()
-        root.read(csr)
+        root._read(csr)
 
         csr = Cursor()
-        root.write(csr)
+        root._write(csr)
 
         assert csr.dump() == orig_data
 
     def test_annotation_cache_object_len(self):
         csr = Cursor(TEMPEST_YJR.read_bytes())
         root = DataStore()
-        root.read(csr)
+        root._read(csr)
         assert len(root["annotation.cache.object"]) == 3
 
     def test_bookmark(self):
         csr = Cursor(TEMPEST_YJR.read_bytes())
         root = DataStore()
-        root.read(csr)
+        root._read(csr)
 
         o = root["annotation.cache.object"]["bookmarks"][0]
         assert o["start_pos"].chunk_eid == 5525

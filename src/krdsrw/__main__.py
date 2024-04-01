@@ -36,7 +36,7 @@ def main(argv: None | list[str] = None) -> int:
         csr.load(args.in_file.read())
 
         root = objects.DataStore()
-        root.read(csr)
+        root._read(csr)
 
         ser = json.dumps(root, default=lambda o: o.__json__(), indent=2)
 

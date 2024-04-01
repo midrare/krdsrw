@@ -9,7 +9,6 @@ from .objects import LastPageRead
 from .objects import Position
 from .objects import IntMap
 from .objects import TimeZoneOffset
-from .cursor import Cursor
 from .error import UnexpectedBytesError
 from .error import UnexpectedStructureError
 from .basics import Byte
@@ -21,7 +20,6 @@ from .basics import Long
 from .basics import Float
 from .basics import Double
 from .basics import Utf8Str
-from .objects import Object
 
 from .objects import PageReadPos
 from .objects import APNXKey
@@ -45,7 +43,6 @@ from .objects import AnnotationCacheObject
 from .objects import WhisperstoreMigrationStatus
 
 __all__ = [
-    "Cursor",
     "Array",
     "DateTime",
     "DynamicMap",
@@ -68,7 +65,6 @@ __all__ = [
     "Float",
     "Double",
     "Utf8Str",
-    "Object",
     "schemas",
     "PageReadPos",
     "APNXKey",

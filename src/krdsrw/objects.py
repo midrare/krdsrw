@@ -1,5 +1,4 @@
 from __future__ import annotations
-import abc
 import base64
 import copy
 import json
@@ -11,6 +10,7 @@ from . import schemas
 from .containers import ListBase
 from .containers import DictBase
 from .cursor import Cursor
+from .cursor import Serializable
 from .error import UnexpectedBytesError
 from .error import UnexpectedStructureError
 from .specs import Spec
@@ -84,23 +84,13 @@ def write_object(csr: Cursor, o: typing.Any, name: str):
     assert name, 'expected non-empty name'
     csr.write(_OBJECT_BEGIN_INDICATOR)
     write_utf8str(csr, name, False)
-    o.write(csr)
+    o._write(csr)
     csr.write(_OBJECT_END_INDICATOR)
-
-
-class Object(metaclass=abc.ABCMeta):
-    @abc.abstractmethod
-    def read(self, cursor: Cursor):
-        raise NotImplementedError("Must be implemented by the subclass.")
-
-    @abc.abstractmethod
-    def write(self, cursor: Cursor):
-        raise NotImplementedError("Must be implemented by the subclass.")
 
 
 K = typing.TypeVar("K", bound=int | float | str)
 T = typing.TypeVar("T", bound=Byte | Char | Bool | Short | Int | Long \
-    | Float | Double | Utf8Str | Object)
+    | Float | Double | Utf8Str | Serializable)
 
 
 def _read_basic(cursor: Cursor) \
@@ -112,7 +102,7 @@ def _read_basic(cursor: Cursor) \
     return None
 
 
-class Array(ListBase[T], Object):
+class Array(ListBase[T], Serializable):
     _ELMT_SPEC: typing.Final[str] = '_schema_array_elmt_spec'
     _ELMT_NAME: typing.Final[str] = '_schema_array_elmt_name'
 
@@ -138,7 +128,7 @@ class Array(ListBase[T], Object):
         )
 
     @typing.override
-    def read(self, cursor: Cursor):
+    def _read(self, cursor: Cursor):
         self.clear()
         size = read_int(cursor)
         for _ in range(size):
@@ -146,7 +136,7 @@ class Array(ListBase[T], Object):
             self.append(e)
 
     @typing.override
-    def write(self, cursor: Cursor):
+    def _write(self, cursor: Cursor):
         write_int(cursor, len(self))
         for e in self:
             self._elmt_spec.write(cursor, e, self._elmt_name)
@@ -185,7 +175,7 @@ class Array(ListBase[T], Object):
         return self._elmt_spec.make(value)
 
 
-class Record(DictBase[str, T], Object):
+class Record(DictBase[str, T], Serializable):
     # Record can contain basics and other containers
     # keys are just arbitrary aliases for convenience. values are
     # hardcoded and knowing what value is where is determined by
@@ -310,7 +300,7 @@ class Record(DictBase[str, T], Object):
         return { k: v.cls_ for k, v in self._optional_spec.items() }
 
     @typing.override
-    def read(self, cursor: Cursor):
+    def _read(self, cursor: Cursor):
         self.clear()
 
         for alias, spec in self._required_spec.items():
@@ -347,7 +337,7 @@ class Record(DictBase[str, T], Object):
             return None
 
     @typing.override
-    def write(self, cursor: Cursor):
+    def _write(self, cursor: Cursor):
         for alias, spec in self._required_spec.items():
             assert isinstance(self[alias], spec.cls_), 'Invalid state'
             name = self._required_name.get(alias)
@@ -383,7 +373,7 @@ class Record(DictBase[str, T], Object):
 
 
 # can contain Bool, Char, Byte, Short, Int, Long, Float, Double, Utf8Str, Object
-class IntMap(DictBase[str, typing.Any], Object):
+class IntMap(DictBase[str, typing.Any], Serializable):
     _IDX_ALIAS_NAME_SPEC: typing.Final[str] \
         = '_schema_intmap_idx_alias_name_spec'
 
@@ -500,7 +490,7 @@ class IntMap(DictBase[str, typing.Any], Object):
             f"Index \"{idx}\" has no associated human-readable alias.")
 
     @typing.override
-    def read(self, cursor: Cursor):
+    def _read(self, cursor: Cursor):
         self.clear()
         size = read_int(cursor)
         for _ in range(size):
@@ -515,7 +505,7 @@ class IntMap(DictBase[str, typing.Any], Object):
             self[alias] = self._idx_to_spec[idxnum].read(cursor, name)
 
     @typing.override
-    def write(self, cursor: Cursor):
+    def _write(self, cursor: Cursor):
         write_int(cursor, len(self))
 
         for alias, value in self.items():
@@ -526,7 +516,7 @@ class IntMap(DictBase[str, typing.Any], Object):
 
 
 # can contain Bool, Char, Byte, Short, Int, Long, Float, Double, Utf8Str
-class DynamicMap(DictBase[str, typing.Any], Object):
+class DynamicMap(DictBase[str, typing.Any], Serializable):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -577,7 +567,7 @@ class DynamicMap(DictBase[str, typing.Any], Object):
         return value
 
     @typing.override
-    def read(self, cursor: Cursor):
+    def _read(self, cursor: Cursor):
         self.clear()
         size = read_int(cursor)
         for _ in range(size):
@@ -587,15 +577,15 @@ class DynamicMap(DictBase[str, typing.Any], Object):
             self[key] = value
 
     @typing.override
-    def write(self, cursor: Cursor):
+    def _write(self, cursor: Cursor):
         write_int(cursor, len(self))
         for key, value in self.items():
             assert isinstance(key, str)
             write_utf8str(cursor, key)
-            value.write(cursor)
+            value._write(cursor)
 
 
-class DateTime(Object):
+class DateTime(Serializable):
     def __init__(self):
         super().__init__()
         self._value: int = -1  # -1 is null
@@ -611,11 +601,11 @@ class DateTime(Object):
         self._value = max(-1, value)
 
     @typing.override
-    def read(self, cursor: Cursor):
+    def _read(self, cursor: Cursor):
         self._value = read_long(cursor)
 
     @typing.override
-    def write(self, cursor: Cursor):
+    def _write(self, cursor: Cursor):
         write_long(cursor, max(-1, self._value))
 
     def __eq__(self, other: typing.Any) -> bool:
@@ -633,7 +623,7 @@ class DateTime(Object):
         return { "epoch_ms": self._value }
 
 
-class Json(Object):
+class Json(Serializable):
     def __init__(self):
         super().__init__()
         self._value: None | bool | int | float | str | list | dict = None
@@ -651,12 +641,12 @@ class Json(Object):
         self._value = value
 
     @typing.override
-    def read(self, cursor: Cursor):
+    def _read(self, cursor: Cursor):
         s = read_utf8str(cursor)
         self._value = json.loads(s) if s is not None and s else None
 
     @typing.override
-    def write(self, cursor: Cursor):
+    def _write(self, cursor: Cursor):
         s = json.dumps(self._value) if self._value is not None else ""
         write_utf8str(cursor, s)
 
@@ -675,7 +665,7 @@ class Json(Object):
         return self._value
 
 
-class LastPageRead(Object):  # aka LPR. this is kindle reading pos info
+class LastPageRead(Serializable):  # aka LPR. this is kindle reading pos info
     EXTENDED_LPR_VERSION: typing.Final[int] = 2
 
     def __init__(self):
@@ -709,7 +699,7 @@ class LastPageRead(Object):  # aka LPR. this is kindle reading pos info
         self._timestamp = value
 
     @typing.override
-    def read(self, cursor: Cursor):
+    def _read(self, cursor: Cursor):
         self._pos.char_pos = -1
         self._pos.chunk_eid = -1
         self._pos.chunk_pos = -1
@@ -719,28 +709,28 @@ class LastPageRead(Object):  # aka LPR. this is kindle reading pos info
         type_byte = cursor.peek()
         if type_byte == Utf8Str.magic_byte:
             # old LPR version'
-            self._pos.read(cursor)
+            self._pos._read(cursor)
         elif type_byte == Byte.magic_byte:
             # new LPR version
             self._lpr_version = read_byte(cursor)
-            self._pos.read(cursor)
+            self._pos._read(cursor)
             self._timestamp = int(read_long(cursor))
         else:
             raise UnexpectedBytesError(
                 cursor.tell(), [Utf8Str.magic_byte, Byte.magic_byte], type_byte)
 
     @typing.override
-    def write(self, cursor: Cursor):
+    def _write(self, cursor: Cursor):
         # XXX may cause problems if kindle expects the original LPR format
         #   version when datastore file is re-written
         if self._timestamp is None or self._timestamp < 0:
             # old LPR version
-            self._pos.write(cursor)
+            self._pos._write(cursor)
         else:
             # new LPR version
             lpr_version = max(self.EXTENDED_LPR_VERSION, self._lpr_version)
             write_byte(cursor, lpr_version)
-            self._pos.write(cursor)
+            self._pos._write(cursor)
             write_long(cursor, self._timestamp)
 
     def __eq__(self, other: typing.Any) -> bool:
@@ -774,7 +764,7 @@ class LastPageRead(Object):  # aka LPR. this is kindle reading pos info
         }
 
 
-class Position(Object):
+class Position(Serializable):
     PREFIX_VERSION1: typing.Final[int] = 0x01
 
     def __init__(self):
@@ -814,7 +804,7 @@ class Position(Object):
         self._value = value
 
     @typing.override
-    def read(self, cursor: Cursor):
+    def _read(self, cursor: Cursor):
         s = read_utf8str(cursor)
         split = s.split(":", 2)
         if len(split) > 1:
@@ -832,7 +822,7 @@ class Position(Object):
             self._value = int(s)
 
     @typing.override
-    def write(self, cursor: Cursor):
+    def _write(self, cursor: Cursor):
         s = ""
         if self._chunk_eid >= 0 and self._chunk_pos >= 0:
             b_version = self.PREFIX_VERSION1.to_bytes(1, "little", signed=False)
@@ -875,7 +865,7 @@ class Position(Object):
         return f"{self.__class__.__name__}{{{str(d)}}}"
 
 
-class TimeZoneOffset(Object):
+class TimeZoneOffset(Serializable):
     def __init__(self):
         super().__init__()
         self._value: int = -1  # -1 is null
@@ -891,11 +881,11 @@ class TimeZoneOffset(Object):
         self._value = value
 
     @typing.override
-    def read(self, cursor: Cursor):
+    def _read(self, cursor: Cursor):
         self._value = read_long(cursor)
 
     @typing.override
-    def write(self, cursor: Cursor):
+    def _write(self, cursor: Cursor):
         write_long(cursor, max(-1, self._value))
 
     def __eq__(self, other: typing.Any) -> bool:
@@ -1102,7 +1092,7 @@ WhisperstoreMigrationStatus = typing.TypedDict(
 
 
 # can contain Bool, Char, Byte, Short, Int, Long, Float, Double, Utf8Str, Object
-class DataStore(DictBase, Object):
+class DataStore(DictBase, Serializable):
     MAGIC_STR: typing.Final[bytes] = b"\x00\x00\x00\x00\x00\x1A\xB1\x26"
     FIXED_MYSTERY_NUM: typing.Final[int] = (
         1  # present after the signature; unknown what this number means
@@ -1158,7 +1148,8 @@ class DataStore(DictBase, Object):
             )
         cursor.unsave()
 
-    def read(self, cursor: Cursor):
+    @typing.override
+    def _read(self, cursor: Cursor):
         self.clear()
         self._eat_signature_or_error(cursor)
         self._eat_fixed_mystery_num_or_error(cursor)
@@ -1169,7 +1160,8 @@ class DataStore(DictBase, Object):
             assert name, 'Object has blank name.'
             self[name] = value
 
-    def write(self, cursor: Cursor):
+    @typing.override
+    def _write(self, cursor: Cursor):
         cursor.write(self.MAGIC_STR)
         write_long(cursor, self.FIXED_MYSTERY_NUM)
         write_int(cursor, len(self))
@@ -1180,7 +1172,7 @@ class DataStore(DictBase, Object):
         return f"{self.__class__.__name__}{dict(self)}"
 
 
-ALL_OBJECT_TYPES: typing.Final[tuple[type[Object], ...]] = (
+ALL_OBJECT_TYPES: typing.Final[tuple[type, ...]] = (
     Array,
     Record,
     IntMap,

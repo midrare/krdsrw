@@ -13,7 +13,6 @@ from krdsrw.specs import Index
 from krdsrw.specs import Field
 from krdsrw.objects import Array
 from krdsrw.objects import DynamicMap
-from krdsrw.objects import Object
 from krdsrw.objects import Record
 from krdsrw.objects import peek_object_schema
 from krdsrw.objects import peek_object_type
@@ -35,7 +34,7 @@ class TestSpec:
         spc = Spec(Int)
         o = spc.make(13371337)
         csr = Cursor()
-        o.write(csr)
+        o._write(csr)
         assert csr.dump() == b'\x01\x00\xcc\x07\xc9'
 
     def test_is_basic(self):

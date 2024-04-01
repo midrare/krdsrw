@@ -196,7 +196,7 @@ class Basic(metaclass=abc.ABCMeta):
         raise NotImplementedError("Must be implemented by the subclass.")
 
     @abc.abstractmethod
-    def write(self, cursor: Cursor, magic_byte: bool = True):
+    def _write(self, cursor: Cursor, magic_byte: bool = True):
         raise NotImplementedError("Must be implemented by the subclass.")
 
     @classmethod
@@ -238,7 +238,7 @@ class Byte(_Byte, Basic):
         return cls(cls._read_unpack(cursor, '>b', magic_byte_))
 
     @typing.override
-    def write(self, cursor: Cursor, magic_byte: bool = True):
+    def _write(self, cursor: Cursor, magic_byte: bool = True):
         magic_byte_ = self.magic_byte if magic_byte else None
         self._write_pack(cursor, self, '>b', magic_byte_)
 
@@ -260,7 +260,7 @@ class Char(_Char, Basic):
         return cls(cls._read_unpack(cursor, '>B', magic_byte_))
 
     @typing.override
-    def write(self, cursor: Cursor, magic_byte: bool = True):
+    def _write(self, cursor: Cursor, magic_byte: bool = True):
         magic_byte_ = self.magic_byte if magic_byte else None
         self._write_pack(cursor, self, '>B', magic_byte_)
 
@@ -282,7 +282,7 @@ class Bool(_Bool, Basic):
         return cls(cls._read_unpack(cursor, '>?', magic_byte_))
 
     @typing.override
-    def write(self, cursor: Cursor, magic_byte: bool = True):
+    def _write(self, cursor: Cursor, magic_byte: bool = True):
         magic_byte_ = self.magic_byte if magic_byte else None
         self._write_pack(cursor, int(self), '>?', magic_byte_)
 
@@ -304,7 +304,7 @@ class Short(_Short, Basic):
         return cls(cls._read_unpack(cursor, '>h', magic_byte_))
 
     @typing.override
-    def write(self, cursor: Cursor, magic_byte: bool = True):
+    def _write(self, cursor: Cursor, magic_byte: bool = True):
         magic_byte_ = self.magic_byte if magic_byte else None
         self._write_pack(cursor, self, '>h', magic_byte_)
 
@@ -326,7 +326,7 @@ class Int(_Int, Basic):
         return cls(cls._read_unpack(cursor, '>l', magic_byte_))
 
     @typing.override
-    def write(self, cursor: Cursor, magic_byte: bool = True):
+    def _write(self, cursor: Cursor, magic_byte: bool = True):
         magic_byte_ = self.magic_byte if magic_byte else None
         self._write_pack(cursor, self, '>l', magic_byte_)
 
@@ -348,7 +348,7 @@ class Long(_Long, Basic):
         return cls(cls._read_unpack(cursor, '>q', magic_byte_))
 
     @typing.override
-    def write(self, cursor: Cursor, magic_byte: bool = True):
+    def _write(self, cursor: Cursor, magic_byte: bool = True):
         magic_byte_ = self.magic_byte if magic_byte else None
         self._write_pack(cursor, self, '>q', magic_byte_)
 
@@ -370,7 +370,7 @@ class Float(_Float, Basic):
         return cls(cls._read_unpack(cursor, '>f', magic_byte_))
 
     @typing.override
-    def write(self, cursor: Cursor, magic_byte: bool = True):
+    def _write(self, cursor: Cursor, magic_byte: bool = True):
         magic_byte_ = self.magic_byte if magic_byte else None
         self._write_pack(cursor, self, '>f', magic_byte_)
 
@@ -392,7 +392,7 @@ class Double(_Double, Basic):
         return cls(cls._read_unpack(cursor, '>d', magic_byte_))
 
     @typing.override
-    def write(self, cursor: Cursor, magic_byte: bool = True):
+    def _write(self, cursor: Cursor, magic_byte: bool = True):
         magic_byte_ = self.magic_byte if magic_byte else None
         self._write_pack(cursor, self, '>d', magic_byte_)
 
@@ -453,7 +453,7 @@ class Utf8Str(_Utf8Str, Basic):
         return cls(value, prefer_null=prefer_null)
 
     @typing.override
-    def write(self, cursor: Cursor, magic_byte: bool = True):
+    def _write(self, cursor: Cursor, magic_byte: bool = True):
         if magic_byte:
             cursor.write(self.magic_byte)
 

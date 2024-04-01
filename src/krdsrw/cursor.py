@@ -1,4 +1,5 @@
 from __future__ import annotations
+import abc
 import collections.abc
 import io
 import typing
@@ -186,3 +187,13 @@ class Cursor:
     def restore(self):
         pos = self._saved_positions.pop()
         self._data.seek(pos, io.SEEK_SET)
+
+
+class Serializable(metaclass=abc.ABCMeta):
+    @abc.abstractmethod
+    def _read(self, cursor: Cursor):
+        raise NotImplementedError("Must be implemented by the subclass.")
+
+    @abc.abstractmethod
+    def _write(self, cursor: Cursor):
+        raise NotImplementedError("Must be implemented by the subclass.")
