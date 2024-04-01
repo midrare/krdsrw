@@ -92,8 +92,8 @@ class Spec(typing.Generic[T]):
                     f"Expected object name \"{name}\""
                     + f" but got \"{name_}\".")
 
-        if hasattr(self._cls, 'create'):
-            o = self._cls.create(cursor, *self._init_args, **self._init_kwargs)
+        if hasattr(self._cls, '_create'):
+            o = self._cls._create(cursor, *self._init_args, **self._init_kwargs)
         elif issubclass(self._cls, Serializable):
             o = self._cls(*self._init_args, **self._init_kwargs)
             o._read(cursor)

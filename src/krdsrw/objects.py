@@ -97,7 +97,7 @@ def _read_basic(cursor: Cursor) \
 -> None|Bool|Char|Byte|Short|Int|Long|Float|Double|Utf8Str:
     for t in [ Bool, Byte, Char, Short, Int, Long, Float, Double, Utf8Str ]:
         if cursor._peek_raw_byte() == t.magic_byte:
-            return t.create(cursor)
+            return t._create(cursor)
 
     return None
 

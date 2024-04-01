@@ -192,7 +192,7 @@ class Basic(metaclass=abc.ABCMeta):
 
     @classmethod
     @abc.abstractmethod
-    def create(cls, cursor: Cursor, magic_byte: bool = True) -> typing.Self:
+    def _create(cls, cursor: Cursor, magic_byte: bool = True) -> typing.Self:
         raise NotImplementedError("Must be implemented by the subclass.")
 
     @abc.abstractmethod
@@ -233,7 +233,7 @@ class Byte(ByteBase, Basic):
 
     @typing.override
     @classmethod
-    def create(cls, cursor: Cursor, magic_byte: bool = True) -> typing.Self:
+    def _create(cls, cursor: Cursor, magic_byte: bool = True) -> typing.Self:
         magic_byte_ = cls.magic_byte if magic_byte else None
         return cls(cls._read_unpack(cursor, '>b', magic_byte_))
 
@@ -255,7 +255,7 @@ class Char(CharBase, Basic):
 
     @typing.override
     @classmethod
-    def create(cls, cursor: Cursor, magic_byte: bool = True) -> typing.Self:
+    def _create(cls, cursor: Cursor, magic_byte: bool = True) -> typing.Self:
         magic_byte_ = cls.magic_byte if magic_byte else None
         return cls(cls._read_unpack(cursor, '>B', magic_byte_))
 
@@ -277,7 +277,7 @@ class Bool(BoolBase, Basic):
 
     @typing.override
     @classmethod
-    def create(cls, cursor: Cursor, magic_byte: bool = True) -> typing.Self:
+    def _create(cls, cursor: Cursor, magic_byte: bool = True) -> typing.Self:
         magic_byte_ = cls.magic_byte if magic_byte else None
         return cls(cls._read_unpack(cursor, '>?', magic_byte_))
 
@@ -299,7 +299,7 @@ class Short(ShortBase, Basic):
 
     @typing.override
     @classmethod
-    def create(cls, cursor: Cursor, magic_byte: bool = True) -> typing.Self:
+    def _create(cls, cursor: Cursor, magic_byte: bool = True) -> typing.Self:
         magic_byte_ = cls.magic_byte if magic_byte else None
         return cls(cls._read_unpack(cursor, '>h', magic_byte_))
 
@@ -321,7 +321,7 @@ class Int(IntBase, Basic):
 
     @typing.override
     @classmethod
-    def create(cls, cursor: Cursor, magic_byte: bool = True) -> typing.Self:
+    def _create(cls, cursor: Cursor, magic_byte: bool = True) -> typing.Self:
         magic_byte_ = cls.magic_byte if magic_byte else None
         return cls(cls._read_unpack(cursor, '>l', magic_byte_))
 
@@ -343,7 +343,7 @@ class Long(LongBase, Basic):
 
     @typing.override
     @classmethod
-    def create(cls, cursor: Cursor, magic_byte: bool = True) -> typing.Self:
+    def _create(cls, cursor: Cursor, magic_byte: bool = True) -> typing.Self:
         magic_byte_ = cls.magic_byte if magic_byte else None
         return cls(cls._read_unpack(cursor, '>q', magic_byte_))
 
@@ -365,7 +365,7 @@ class Float(FloatBase, Basic):
 
     @typing.override
     @classmethod
-    def create(cls, cursor: Cursor, magic_byte: bool = True) -> typing.Self:
+    def _create(cls, cursor: Cursor, magic_byte: bool = True) -> typing.Self:
         magic_byte_ = cls.magic_byte if magic_byte else None
         return cls(cls._read_unpack(cursor, '>f', magic_byte_))
 
@@ -387,7 +387,7 @@ class Double(DoubleBase, Basic):
 
     @typing.override
     @classmethod
-    def create(cls, cursor: Cursor, magic_byte: bool = True) -> typing.Self:
+    def _create(cls, cursor: Cursor, magic_byte: bool = True) -> typing.Self:
         magic_byte_ = cls.magic_byte if magic_byte else None
         return cls(cls._read_unpack(cursor, '>d', magic_byte_))
 
@@ -431,7 +431,7 @@ class Utf8Str(Utf8StrBase, Basic):
 
     @typing.override
     @classmethod
-    def create(cls, cursor: Cursor, magic_byte: bool = True) -> typing.Self:
+    def _create(cls, cursor: Cursor, magic_byte: bool = True) -> typing.Self:
         if magic_byte and not cursor.eat(cls.magic_byte):
             raise UnexpectedBytesError(
                 cursor.tell(), cls.magic_byte, cursor.peek())
