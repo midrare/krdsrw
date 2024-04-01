@@ -2,8 +2,8 @@ import typing
 
 import pytest
 
-from krdsrw.containers import DictBase
-from krdsrw.containers import ListBase
+from krdsrw.builtins import DictBase
+from krdsrw.builtins import ListBase
 
 
 class TestListBase:

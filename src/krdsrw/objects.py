@@ -7,8 +7,8 @@ import warnings
 
 from . import schemas
 
-from .containers import ListBase
-from .containers import DictBase
+from .builtins import ListBase
+from .builtins import DictBase
 from .cursor import Cursor
 from .cursor import Serializable
 from .error import UnexpectedBytesError
