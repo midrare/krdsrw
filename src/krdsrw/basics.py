@@ -2,15 +2,15 @@ import abc
 import struct
 import typing
 
-from .builtins import _Bool
-from .builtins import _Byte
-from .builtins import _Char
-from .builtins import _Short
-from .builtins import _Int
-from .builtins import _Long
-from .builtins import _Float
-from .builtins import _Double
-from .builtins import _Utf8Str
+from .builtins import BoolBase
+from .builtins import ByteBase
+from .builtins import CharBase
+from .builtins import ShortBase
+from .builtins import IntBase
+from .builtins import LongBase
+from .builtins import FloatBase
+from .builtins import DoubleBase
+from .builtins import Utf8StrBase
 from .cursor import Cursor
 from .error import UnexpectedBytesError
 from .error import UnexpectedStructureError
@@ -225,7 +225,7 @@ class Basic(metaclass=abc.ABCMeta):
         raise NotImplementedError("Must be implemented by the subclass.")
 
 
-class Byte(_Byte, Basic):
+class Byte(ByteBase, Basic):
     # signed byte
     builtin: type[int | float | str] = int
     size: int = struct.calcsize('>b')
@@ -247,7 +247,7 @@ class Byte(_Byte, Basic):
         return struct.pack('>b', self)
 
 
-class Char(_Char, Basic):
+class Char(CharBase, Basic):
     # unsigned (?) char
     builtin: type[int | float | str] = int
     size: int = struct.calcsize('>B')
@@ -269,7 +269,7 @@ class Char(_Char, Basic):
         return struct.pack('>B', self)
 
 
-class Bool(_Bool, Basic):
+class Bool(BoolBase, Basic):
     # 1-byte bool 0=false, 1=true
     builtin: type[int | float | str] = int
     size: int = struct.calcsize('>?')
@@ -291,7 +291,7 @@ class Bool(_Bool, Basic):
         return struct.pack('>?', self)
 
 
-class Short(_Short, Basic):
+class Short(ShortBase, Basic):
     # 2 byte signed integer
     builtin: type[int | float | str] = int
     size: int = struct.calcsize('>h')
@@ -313,7 +313,7 @@ class Short(_Short, Basic):
         return struct.pack('>h', self)
 
 
-class Int(_Int, Basic):
+class Int(IntBase, Basic):
     # 4-byte signed integer
     builtin: type[int | float | str] = int
     size: int = struct.calcsize('>l')
@@ -335,7 +335,7 @@ class Int(_Int, Basic):
         return struct.pack('>l', self)
 
 
-class Long(_Long, Basic):
+class Long(LongBase, Basic):
     # 8-byte signed integer
     builtin: type[int | float | str] = int
     size: int = struct.calcsize('>q')
@@ -357,7 +357,7 @@ class Long(_Long, Basic):
         return struct.pack('>q', self)
 
 
-class Float(_Float, Basic):
+class Float(FloatBase, Basic):
     # 4-byte float
     builtin: type[int | float | str] = float
     size: int = struct.calcsize('>f')
@@ -379,7 +379,7 @@ class Float(_Float, Basic):
         return struct.pack('>f', self)
 
 
-class Double(_Double, Basic):
+class Double(DoubleBase, Basic):
     # 8-byte float
     builtin: type[int | float | str] = float
     size: int = struct.calcsize('>d')
@@ -401,7 +401,7 @@ class Double(_Double, Basic):
         return struct.pack('>d', self)
 
 
-class Utf8Str(_Utf8Str, Basic):
+class Utf8Str(Utf8StrBase, Basic):
     # 1-byte bool true if str is empty
     # then 2-byte str length (may be 0)
     # then UTF-8 str bytes of aforementioned length (empty if bool is True)

@@ -24,7 +24,7 @@ class _Observable(metaclass=abc.ABCMeta):
         raise NotImplementedError("Must be implemented by subclass.")
 
 
-class _Byte(int):
+class ByteBase(int):
     _builtin: typing.Final[type] = int
 
     @typing.override
@@ -198,7 +198,7 @@ class _Byte(int):
         return int(self) != 0
 
 
-class _Char(int):
+class CharBase(int):
     _builtin: typing.Final[type] = int
 
     @typing.override
@@ -372,7 +372,7 @@ class _Char(int):
         return int(self) != 0
 
 
-class _Bool(int):
+class BoolBase(int):
     _builtin: typing.Final[type] = int
 
     @typing.override
@@ -545,7 +545,7 @@ class _Bool(int):
         return int(self) != 0
 
 
-class _Short(int):
+class ShortBase(int):
     _builtin: typing.Final[type] = int
 
     @typing.override
@@ -715,7 +715,7 @@ class _Short(int):
         return int(self) != 0
 
 
-class _Int(int):
+class IntBase(int):
     _builtin: typing.Final[type] = int
 
     @typing.override
@@ -885,7 +885,7 @@ class _Int(int):
         return int(self) != 0
 
 
-class _Long(int):
+class LongBase(int):
     _builtin: typing.Final[type] = int
 
     @typing.override
@@ -1055,7 +1055,7 @@ class _Long(int):
         return int(self) != 0
 
 
-class _Float(float):
+class FloatBase(float):
     _builtin: typing.Final[type] = float
 
     @typing.override
@@ -1166,7 +1166,7 @@ class _Float(float):
         return float(self) != 0.0
 
 
-class _Double(float):
+class DoubleBase(float):
     _builtin: typing.Final[type] = float
 
     @typing.override
@@ -1277,7 +1277,7 @@ class _Double(float):
         return float(self) != 0.0
 
 
-class _Utf8Str(str):
+class Utf8StrBase(str):
     _builtin: typing.Final[type] = str
 
     @typing.override
