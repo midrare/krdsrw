@@ -221,7 +221,7 @@ class Basic(metaclass=abc.ABCMeta):
         cursor.write(struct.pack(fmt, o))
 
     @abc.abstractmethod
-    def to_bytes(self) -> bytes:
+    def __bytes__(self) -> bytes:
         raise NotImplementedError("Must be implemented by the subclass.")
 
 
@@ -243,7 +243,7 @@ class Byte(_Byte, Basic):
         self._write_pack(cursor, self, '>b', magic_byte_)
 
     @typing.override
-    def to_bytes(self, *_unused, **_unused2) -> bytes:
+    def __bytes__(self) -> bytes:
         return struct.pack('>b', self)
 
 
@@ -265,7 +265,7 @@ class Char(_Char, Basic):
         self._write_pack(cursor, self, '>B', magic_byte_)
 
     @typing.override
-    def to_bytes(self, *_unused, **_unused2) -> bytes:
+    def __bytes__(self) -> bytes:
         return struct.pack('>B', self)
 
 
@@ -287,7 +287,7 @@ class Bool(_Bool, Basic):
         self._write_pack(cursor, int(self), '>?', magic_byte_)
 
     @typing.override
-    def to_bytes(self, *_unused, **_unused2) -> bytes:
+    def __bytes__(self) -> bytes:
         return struct.pack('>?', self)
 
 
@@ -309,7 +309,7 @@ class Short(_Short, Basic):
         self._write_pack(cursor, self, '>h', magic_byte_)
 
     @typing.override
-    def to_bytes(self, *_unused, **_unused2) -> bytes:
+    def __bytes__(self) -> bytes:
         return struct.pack('>h', self)
 
 
@@ -331,7 +331,7 @@ class Int(_Int, Basic):
         self._write_pack(cursor, self, '>l', magic_byte_)
 
     @typing.override
-    def to_bytes(self, *_unused, **_unused2) -> bytes:
+    def __bytes__(self) -> bytes:
         return struct.pack('>l', self)
 
 
@@ -353,7 +353,7 @@ class Long(_Long, Basic):
         self._write_pack(cursor, self, '>q', magic_byte_)
 
     @typing.override
-    def to_bytes(self, *_unused, **_unused2) -> bytes:
+    def __bytes__(self) -> bytes:
         return struct.pack('>q', self)
 
 
@@ -375,7 +375,7 @@ class Float(_Float, Basic):
         self._write_pack(cursor, self, '>f', magic_byte_)
 
     @typing.override
-    def to_bytes(self) -> bytes:
+    def __bytes__(self) -> bytes:
         return struct.pack('>f', self)
 
 
@@ -397,7 +397,7 @@ class Double(_Double, Basic):
         self._write_pack(cursor, self, '>d', magic_byte_)
 
     @typing.override
-    def to_bytes(self) -> bytes:
+    def __bytes__(self) -> bytes:
         return struct.pack('>d', self)
 
 
@@ -468,7 +468,7 @@ class Utf8Str(_Utf8Str, Basic):
             cursor.write(encoded)
 
     @typing.override
-    def to_bytes(self) -> bytes:
+    def __bytes__(self) -> bytes:
         return self.encode("utf-8")
 
     @typing.override
