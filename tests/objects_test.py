@@ -175,11 +175,10 @@ class TestArray:
 
     def test_read(self):
         spc = Array.spec(Spec(Int))
-        o = spc.make()
         csr = Cursor(
             b'\x01\x00\x00\x00\x03' + b'\x01\x00\x00\x00\x0a'
             + b'\x01\x00\x00\x00\x0b' + b'\x01\x00\x00\x00\x0c')
-        o._read(csr)
+        o = spc.read(csr)
         assert o == [ 0x0a, 0x0b, 0x0c ]
 
     def test_write(self):
@@ -317,7 +316,6 @@ class TestIntMap:
         o['apple'].make_and_append(111)
         o['banana'].make_and_append(222)
         o['pear'].make_and_append(333)
-        print(o)
 
 
 def test_dynamic_map_put_key():
@@ -333,15 +331,13 @@ class TestDataStore:
 
     def test_read(self):
         csr = Cursor(TEMPEST_YJR.read_bytes())
-        root = DataStore()
-        root._read(csr)
+        root = DataStore._create(csr)
 
     def test_read_write(self):
         orig_data = TEMPEST_YJR.read_bytes()
 
         csr = Cursor(orig_data)
-        root = DataStore()
-        root._read(csr)
+        root = DataStore._create(csr)
 
         csr = Cursor()
         root._write(csr)
@@ -350,14 +346,12 @@ class TestDataStore:
 
     def test_annotation_cache_object_len(self):
         csr = Cursor(TEMPEST_YJR.read_bytes())
-        root = DataStore()
-        root._read(csr)
+        root = DataStore._create(csr)
         assert len(root["annotation.cache.object"]) == 3
 
     def test_bookmark(self):
         csr = Cursor(TEMPEST_YJR.read_bytes())
-        root = DataStore()
-        root._read(csr)
+        root = DataStore._create(csr)
 
         o = root["annotation.cache.object"]["bookmarks"][0]
         assert o["start_pos"].chunk_eid == 5525
