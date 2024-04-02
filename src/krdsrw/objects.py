@@ -596,42 +596,47 @@ class DynamicMap(DictBase[str, typing.Any], Serializable):
             value._write(cursor)
 
 
-class DateTime(Serializable):
-    def __init__(self):
-        super().__init__()
-        self._value: int = -1  # -1 is null
-
-    @property
-    def epoch_ms(self) -> int:
-        return self._value
-
-    @epoch_ms.setter
-    def epoch_ms(self, value: int):
-        if not isinstance(value, int):
-            raise TypeError(f"Value must be an {int.__name__}")
-        self._value = max(-1, value)
+class DateTime(IntBase, Serializable):
+    @typing.override
+    def __new__(cls, *args, **kwargs) -> typing.Self:
+        init = []
+        if len(args) + len(kwargs) <= 0:
+            init = [-1]
+        return super().__new__(cls, *init, *args, **kwargs)
 
     @typing.override
-    def _read(self, cursor: Cursor):
-        self._value = read_long(cursor)
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}{{{int(self)}ms}}"
+
+    @typing.override
+    def __str__(self) -> str:
+        return f"{self.__class__.__name__}{{{int(self)}ms}}"
+
+    @typing.override
+    def __bool__(self) -> bool:
+        return int(self) >= 0
+
+    @classmethod
+    @typing.override
+    def _create(cls, cursor: Cursor, *args, **kwargs) -> typing.Self:
+        return cls(read_long(cursor), *args, **kwargs)
 
     @typing.override
     def _write(self, cursor: Cursor):
-        write_long(cursor, max(-1, self._value))
+        write_long(cursor, max(-1, int(self)))
+
+    def __bytes__(self) -> bytes:
+        csr = Cursor()
+        self._write(csr)
+        return csr.dump()
 
     def __eq__(self, other: typing.Any) -> bool:
-        if isinstance(other, self.__class__):
-            return self._value == other._value
-        return super().__eq__(other)
-
-    def __str__(self) -> str:
-        return f"{self.__class__.__name__}{{{self._value}}}"
-
-    def __repr__(self) -> str:
-        return f"{self.__class__.__name__}{{{self._value}}}"
+        if isinstance(other, int):
+            return int(self) == int(other)
+        return False
 
     def __json__(self) -> None | bool | int | float | str | tuple | list | dict:
-        return { "epoch_ms": self._value }
+        return int(self)
 
 
 class Json(Serializable):
