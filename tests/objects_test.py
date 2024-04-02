@@ -187,6 +187,37 @@ class TestJson:
         o = Json({ 'a': 1, 'b': 2, 'c': 3 })  # no error
         assert o == { 'a': 1, 'b': 2, 'c': 3 }
 
+    def test_read_null(self):
+        csr = Cursor(b'\x03\x01')
+        o = Json._create(csr)
+        assert not o
+        assert isinstance(o, Json) and not isinstance(
+            o, (bool, int, float, str, bytes, tuple, list, dict))
+
+    def test_read(self):
+        csr = Cursor(
+            b'\x03\x00\x00\xeF\x5B\x22\x61\x22'\
+            + b'\x2C\x20\x22\x62\x22\x2C\x20\x22' \
+            + b'\x63\x22\x5D')
+        o = Json._create(csr)
+        assert isinstance(o, list) and isinstance(o, Json)
+        assert o == [ 'a', 'b', 'c']
+
+    def test_write_null(self):
+        csr = Cursor()
+        o = Json()
+        o._write(csr)
+        assert csr.dump() in [ b'\x03\x01', b'\x03\x00\x00\x00']
+
+    def test_write(self):
+        csr = Cursor()
+        o = Json([ 'a', 'b', 'c'])
+        o._write(csr)
+        assert csr.dump() == (
+            b'\x03\x00\x00\x0F\x5B\x22\x61\x22'\
+            + b'\x2C\x20\x22\x62\x22\x2C\x20\x22' \
+            + b'\x63\x22\x5D')
+
 
 class TestArray:
     def test_init(self):
