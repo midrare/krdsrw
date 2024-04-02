@@ -18,6 +18,7 @@ from krdsrw.objects import Array
 from krdsrw.objects import DataStore
 from krdsrw.objects import DynamicMap
 from krdsrw.objects import IntMap
+from krdsrw.objects import Json
 from krdsrw.objects import Record
 from krdsrw.objects import peek_object_schema
 from krdsrw.objects import peek_object_type
@@ -116,6 +117,75 @@ def test_write_object():
         + b'\x01\x00\x00\x00\x3F\x01\x00\x00\x00\x50\x01\x00\x00\x00\x00\x01' \
         + b'\x00\x00\x00\x50\x01\x00\x00\x00\x00\x01\x00\x00\x00\x01\x03\x01' \
         + b'\x01\xFF\xFF\xFF\xFF\x03\x01\x00\x00\x03\x01\xFF'
+
+
+class TestJson:
+    def test_instantiate(self):
+        o = Json()  # no error
+        assert o is not None
+
+        o = Json(True)  # no error
+        assert isinstance(o, int) and isinstance(o, Json)
+        assert o
+        assert o == True
+
+        o = Json(False)  # no error
+        assert isinstance(o, int) and isinstance(o, Json)
+        assert not o
+        assert o == False
+
+        o = Json(0)  # no error
+        assert isinstance(o, int) and isinstance(o, Json)
+
+        o = Json(1.0)  # no error
+        assert isinstance(o, float) and isinstance(o, Json)
+
+        o = Json('hello')  # no error
+        assert isinstance(o, str) and isinstance(o, Json)
+
+        o = Json(b'abc')  # no error
+        assert isinstance(o, bytes) and isinstance(o, Json)
+
+        o = Json(('a', 'b', 'c'))  # no error
+        assert isinstance(o, tuple) and isinstance(o, Json)
+
+        o = Json([ 'a', 'b', 'c'])  # no error
+        assert isinstance(o, list) and isinstance(o, Json)
+
+        o = Json({ 'a': 1, 'b': 2, 'c': 3 })  # no error
+        assert isinstance(o, dict) and isinstance(o, Json)
+
+    def test_eq_operator(self):
+        o = Json()  # no error
+        assert bool(o) is False
+        assert not o
+
+        o = Json(True)  # no error
+        assert o
+
+        o = Json(False)  # no error
+        assert not o
+
+        o = Json(0)  # no error
+        assert o == 0
+
+        o = Json(1.0)  # no error
+        assert o == 1.0
+
+        o = Json('hello')  # no error
+        assert o == 'hello'
+
+        o = Json(b'abc')  # no error
+        assert o == b'abc'
+
+        o = Json(('a', 'b', 'c'))  # no error
+        assert o == ('a', 'b', 'c')
+
+        o = Json([ 'a', 'b', 'c'])  # no error
+        assert o == [ 'a', 'b', 'c']
+
+        o = Json({ 'a': 1, 'b': 2, 'c': 3 })  # no error
+        assert o == { 'a': 1, 'b': 2, 'c': 3 }
 
 
 class TestArray:

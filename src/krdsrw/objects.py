@@ -640,45 +640,141 @@ class DateTime(IntBase, Serializable):
 
 
 class Json(Serializable):
-    def __init__(self):
-        super().__init__()
-        self._value: None | bool | int | float | str | list | dict = None
+    @typing.override
+    def __new__(cls, *args, **kwargs) -> typing.Self:
+        if list(args) == [None]:
+            args = []
 
-    @property
-    def value(self) -> None | bool | int | float | str | list | dict:
-        return self._value
+        if args:
+            for cls_ in [ bool, int, float, str, bytes, list, tuple, dict ]:
+                if isinstance(args[0], cls_):
+                    subcls = cls._subclass(cls_)
+                    return subcls.__new__(subcls, *args, **kwargs)
 
-    @value.setter
-    def value(self, value: None | bool | int | float | str | list | dict):
-        allowed = (bool, int, float, str, list, dict)
-        if value is not None and not isinstance(value, allowed):
-            class_names = ', '.join([c.__name__ for c in allowed])
-            raise TypeError(f"value is must be one of {class_names}")
-        self._value = value
+        return super().__new__(cls, *args, **kwargs)
 
     @typing.override
-    def _read(self, cursor: Cursor):
-        s = read_utf8str(cursor)
-        self._value = json.loads(s) if s is not None and s else None
+    def __init__(self, *args, **kwargs):
+        if list(args) == [None]:
+            args = []
+        super().__init__(*args, **kwargs)
+
+    def __str__(self) -> str:
+        return f"{self.__class__.__name__}{{}}"
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}{{}}"
+
+    @classmethod
+    def _subclass(cls, t: type) -> type[typing.Self]:
+        return {
+            bool: _JsonBool,
+            int: _JsonInt,
+            float: _JsonFloat,
+            str: _JsonStr,
+            bytes: _JsonBytes,
+            tuple: _JsonTuple,
+            list: _JsonList,
+            dict: _JsonDict,
+        }[t]
+
+    @typing.override
+    @classmethod
+    def _create(cls, cursor: Cursor, *args, **kwargs) -> typing.Self:
+        jsnstr = read_utf8str(cursor)
+        value = json.loads(jsnstr) if jsnstr else None
+        return cls(value, *args, **kwargs)
 
     @typing.override
     def _write(self, cursor: Cursor):
-        s = json.dumps(self._value) if self._value is not None else ""
-        write_utf8str(cursor, s)
+        jsnstr = json.dumps(self, cls=_JsonEncoder)
+        if jsnstr == 'null':
+            jsnstr = ''
+        write_utf8str(cursor, jsnstr)
 
-    def __eq__(self, other: typing.Any) -> bool:
-        if isinstance(other, self.__class__):
-            return self._value == other._value
-        return super().__eq__(other)
+    def __bytes__(self) -> bytes:
+        csr = Cursor()
+        self._write(csr)
+        return csr.dump()
 
-    def __str__(self) -> str:
-        return f"{self.__class__.__name__}{{{str(self._value)}}}"
+    def __bool__(self) -> bool:
+        return False
 
-    def __repr__(self) -> str:
-        return f"{self.__class__.__name__}{{{str(self._value)}}}"
+    def __json__(
+            self
+    ) -> None | bool | int | float | str | bytes | tuple | list | dict:
+        return None
 
-    def __json__(self) -> None | bool | int | float | str | tuple | list | dict:
-        return self._value
+
+class _JsonBool(int, Json):  # type: ignore
+    def __init__(self, *args, **kwargs):
+        super().__init__()
+
+    def __bool__(self) -> bool:
+        return int(self) != 0
+
+    def __json__(self) -> bool:
+        return int(self) != 0
+
+
+class _JsonInt(int, Json):  # type: ignore
+    def __init__(self, *args, **kwargs):
+        super().__init__()
+
+
+class _JsonFloat(float, Json):  # type: ignore
+    def __init__(self, *args, **kwargs):
+        super().__init__()
+
+
+class _JsonStr(str, Json):  # type: ignore
+    def __init__(self, *args, **kwargs):
+        super().__init__()
+
+
+class _JsonBytes(bytes, Json):  # type: ignore
+    def __init__(self, *args, **kwargs):
+        super().__init__()
+
+
+class _JsonTuple(tuple, Json):  # type: ignore
+    def __init__(self, *args, **kwargs):
+        super().__init__()
+
+
+class _JsonList(list, Json):  # type: ignore
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+
+class _JsonDict(dict, Json):  # type: ignore
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+
+class _JsonEncoder(json.JSONEncoder):
+    @typing.override
+    def default(self, o: typing.Any) -> typing.Any:
+        f = getattr(o, '__json__', None)
+        if f and callable(f):
+            return f()
+        return super().default(o)
+
+    @typing.override
+    def encode(self, o: typing.Any) -> str:
+        if isinstance(o, _JsonBool):
+            o = bool(o)
+        return super().encode(o)
+
+    @typing.override
+    def iterencode(
+        self,
+        o: typing.Any,
+        _one_shot: bool = False,
+    ) -> typing.Iterator[str]:
+        if isinstance(o, _JsonBool):
+            o = bool(o)
+        return super().iterencode(o, _one_shot)
 
 
 class LastPageRead(Serializable):  # aka LPR. this is kindle reading pos info
