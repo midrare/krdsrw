@@ -1,4 +1,5 @@
 from __future__ import annotations
+import abc
 import base64
 import copy
 import json
@@ -7,6 +8,7 @@ import warnings
 
 from . import schemas
 
+from .builtins import IntBase
 from .builtins import ListBase
 from .builtins import DictBase
 from .cursor import Cursor
@@ -128,12 +130,14 @@ class Array(ListBase[T], Serializable):
         )
 
     @typing.override
-    def _read(self, cursor: Cursor):
-        self.clear()
+    @classmethod
+    def _create(cls, cursor: Cursor, *args, **kwargs) -> typing.Self:
+        result = cls(*args, **kwargs)
         size = read_int(cursor)
         for _ in range(size):
-            e = self._elmt_spec.read(cursor, self._elmt_name)
-            self.append(e)
+            e = result._elmt_spec.read(cursor, result._elmt_name)
+            result.append(e)
+        return result
 
     @typing.override
     def _write(self, cursor: Cursor):
@@ -300,24 +304,27 @@ class Record(DictBase[str, T], Serializable):
         return { k: v.cls_ for k, v in self._optional_spec.items() }
 
     @typing.override
-    def _read(self, cursor: Cursor):
-        self.clear()
+    @classmethod
+    def _create(cls, cursor: Cursor, *args, **kwargs) -> typing.Self:
+        result = cls(*args, **kwargs)
 
-        for alias, spec in self._required_spec.items():
-            name = self._required_name.get(alias)
-            val = self._read_next(cursor, spec, name)
+        for alias, spec in result._required_spec.items():
+            name = result._required_name.get(alias)
+            val = result._read_next(cursor, spec, name)
             if val is None:
                 raise UnexpectedStructureError(
                     f'Value for field "{alias}" but was not found',
                     pos=cursor.tell())
-            self[alias] = val
+            result[alias] = val
 
-        for alias, spec in self._optional_spec.items():
-            name = self._optional_name.get(alias)
-            val = self._read_next(cursor, spec, name)
+        for alias, spec in result._optional_spec.items():
+            name = result._optional_name.get(alias)
+            val = result._read_next(cursor, spec, name)
             if val is None:
                 break
-            self[alias] = val
+            result[alias] = val
+
+        return result
 
     def _read_next(
             self,
@@ -490,19 +497,21 @@ class IntMap(DictBase[str, typing.Any], Serializable):
             f"Index \"{idx}\" has no associated human-readable alias.")
 
     @typing.override
-    def _read(self, cursor: Cursor):
-        self.clear()
+    @classmethod
+    def _create(cls, cursor: Cursor, *args, **kwargs) -> typing.Self:
+        result = cls(*args, **kwargs)
         size = read_int(cursor)
         for _ in range(size):
             idxnum = read_int(cursor)
 
-            if idxnum not in list(self._idx_to_spec.keys()) \
-                    + list(self._idx_to_alias.keys()):
+            if idxnum not in list(result._idx_to_spec.keys()) \
+                    + list(result._idx_to_alias.keys()):
                 raise UnexpectedStructureError(
                     f"Object index number {idxnum} not recognized")
-            name = self._idx_to_name[idxnum]
-            alias = self._idx_to_alias[idxnum]
-            self[alias] = self._idx_to_spec[idxnum].read(cursor, name)
+            name = result._idx_to_name[idxnum]
+            alias = result._idx_to_alias[idxnum]
+            result[alias] = result._idx_to_spec[idxnum].read(cursor, name)
+        return result
 
     @typing.override
     def _write(self, cursor: Cursor):
@@ -567,14 +576,16 @@ class DynamicMap(DictBase[str, typing.Any], Serializable):
         return value
 
     @typing.override
-    def _read(self, cursor: Cursor):
-        self.clear()
+    @classmethod
+    def _create(cls, cursor: Cursor, *args, **kwargs) -> typing.Self:
+        result = cls(*args, **kwargs)
         size = read_int(cursor)
         for _ in range(size):
             key = read_utf8str(cursor)
             value = _read_basic(cursor)
             assert value is not None, 'Value not found'
-            self[key] = value
+            result[key] = value
+        return result
 
     @typing.override
     def _write(self, cursor: Cursor):
@@ -699,25 +710,29 @@ class LastPageRead(Serializable):  # aka LPR. this is kindle reading pos info
         self._timestamp = value
 
     @typing.override
-    def _read(self, cursor: Cursor):
-        self._pos.char_pos = -1
-        self._pos.chunk_eid = -1
-        self._pos.chunk_pos = -1
-        self._timestamp = -1
-        self._lpr_version = -1
+    @classmethod
+    def _create(cls, cursor: Cursor, *args, **kwargs) -> typing.Self:
+        result = cls(*args, **kwargs)
+        result._pos.char_pos = -1
+        result._pos.chunk_eid = -1
+        result._pos.chunk_pos = -1
+        result._timestamp = -1
+        result._lpr_version = -1
 
         type_byte = cursor.peek()
         if type_byte == Utf8Str.magic_byte:
             # old LPR version'
-            self._pos._read(cursor)
+            result._pos._read(cursor)
         elif type_byte == Byte.magic_byte:
             # new LPR version
-            self._lpr_version = read_byte(cursor)
-            self._pos._read(cursor)
-            self._timestamp = int(read_long(cursor))
+            result._lpr_version = read_byte(cursor)
+            result._pos._read(cursor)
+            result._timestamp = int(read_long(cursor))
         else:
             raise UnexpectedBytesError(
                 cursor.tell(), [Utf8Str.magic_byte, Byte.magic_byte], type_byte)
+
+        return result
 
     @typing.override
     def _write(self, cursor: Cursor):
@@ -804,22 +819,25 @@ class Position(Serializable):
         self._value = value
 
     @typing.override
-    def _read(self, cursor: Cursor):
+    @classmethod
+    def _create(cls, cursor: Cursor, *args, **kwargs) -> typing.Self:
+        result = cls(*args, **kwargs)
         s = read_utf8str(cursor)
         split = s.split(":", 2)
         if len(split) > 1:
             b = base64.b64decode(split[0])
             version = b[0]
-            if version == self.PREFIX_VERSION1:
-                self._chunk_eid = int.from_bytes(b[1:5], "little")
-                self._chunk_pos = int.from_bytes(b[5:9], "little")
+            if version == result.PREFIX_VERSION1:
+                result._chunk_eid = int.from_bytes(b[1:5], "little")
+                result._chunk_pos = int.from_bytes(b[5:9], "little")
             else:
                 # TODO throw a proper exception
                 raise Exception(
                     "Unrecognized position version 0x%02x" % version)
-            self._value = int(split[1])
+            result._value = int(split[1])
         else:
-            self._value = int(s)
+            result._value = int(s)
+        return result
 
     @typing.override
     def _write(self, cursor: Cursor):
@@ -881,8 +899,9 @@ class TimeZoneOffset(Serializable):
         self._value = value
 
     @typing.override
-    def _read(self, cursor: Cursor):
-        self._value = read_long(cursor)
+    @classmethod
+    def _create(cls, cursor: Cursor, *args, **kwargs) -> typing.Self:
+        return cls(read_long(cursor), *args, **kwargs)
 
     @typing.override
     def _write(self, cursor: Cursor):
@@ -1149,16 +1168,18 @@ class DataStore(DictBase, Serializable):
         cursor.unsave()
 
     @typing.override
-    def _read(self, cursor: Cursor):
-        self.clear()
-        self._eat_signature_or_error(cursor)
-        self._eat_fixed_mystery_num_or_error(cursor)
+    @classmethod
+    def _create(cls, cursor: Cursor, *args, **kwargs) -> typing.Self:
+        result = cls(*args, **kwargs)
+        result._eat_signature_or_error(cursor)
+        result._eat_fixed_mystery_num_or_error(cursor)
 
         size = read_int(cursor)
         for _ in range(size):
             value, name = read_object(cursor)
             assert name, 'Object has blank name.'
-            self[name] = value
+            result[name] = value
+        return result
 
     @typing.override
     def _write(self, cursor: Cursor):

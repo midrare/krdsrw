@@ -77,7 +77,7 @@ class Spec(typing.Generic[T]):
         return list(self._indexes)
 
     def read(self, cursor: Cursor, name: None | str = None) -> T:
-        o = None
+        result = None
 
         if name:
             if not cursor.eat(self._OBJECT_BEGIN):
@@ -92,18 +92,18 @@ class Spec(typing.Generic[T]):
                     f"Expected object name \"{name}\""
                     + f" but got \"{name_}\".")
 
-        if hasattr(self._cls, '_create'):
-            o = self._cls._create(cursor, *self._init_args, **self._init_kwargs)
-        elif issubclass(self._cls, Serializable):
-            o = self._cls(*self._init_args, **self._init_kwargs)
-            o._read(cursor)
+        result = self._cls._create(
+            cursor,
+            *self._init_args,
+            **self._init_kwargs,
+        )
 
         if name and not cursor.eat(self._OBJECT_END):
             raise UnexpectedBytesError(
                 cursor.tell(), self._OBJECT_END, cursor.peek())
 
-        assert o is not None, 'Failed to create object'
-        return o  # type: ignore
+        assert result is not None, 'Failed to create object'
+        return result  # type: ignore
 
     def make(self, *args, **kwargs) -> T:
         return self._cls(

@@ -190,8 +190,9 @@ class Cursor:
 
 
 class Serializable(metaclass=abc.ABCMeta):
+    @classmethod
     @abc.abstractmethod
-    def _read(self, cursor: Cursor):
+    def _create(cls, cursor: Cursor, *args, **kwargs) -> typing.Self:
         raise NotImplementedError("Must be implemented by the subclass.")
 
     @abc.abstractmethod
