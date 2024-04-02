@@ -62,8 +62,8 @@ def test_read_object():
     assert o['end_pos'].chunk_eid == 3199
     assert o['end_pos'].chunk_pos == 28
     assert o['end_pos'].char_pos == 15330
-    assert o['creation_time'].epoch_ms == 1700855241409
-    assert o['last_modification_time'].epoch_ms == 1700855241409
+    assert o['creation_time'] == 1700855241409
+    assert o['last_modification_time'] == 1700855241409
     assert o['template'] == "0￼0"
 
 
@@ -366,5 +366,5 @@ class TestDataStore:
         assert o["end_pos"].chunk_eid == 5525
         assert o["end_pos"].chunk_pos == 0
         assert o["end_pos"].char_pos == 76032
-        assert o["creation_time"].epoch_ms == 1701332599082
-        assert o["last_modification_time"].epoch_ms == 1701332599082
+        assert o["creation_time"] == 1701332599082
+        assert o["last_modification_time"] == 1701332599082
