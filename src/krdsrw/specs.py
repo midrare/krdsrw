@@ -107,10 +107,10 @@ class Spec(typing.Generic[T]):
 
     def make(self, *args, **kwargs) -> T:
         return self._cls(
-            *self._init_args,
             *args,
-            **self._init_kwargs,
+            *self._init_args,
             **kwargs,
+            **self._init_kwargs,
         )
 
     def write(self, cursor: Cursor, o: T, name: None | str = None):
