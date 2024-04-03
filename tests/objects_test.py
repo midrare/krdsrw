@@ -318,7 +318,7 @@ class TestArray:
 
 
 class TestRecord:
-    def test_create(self):
+    def test_instantiate(self):
         spc = Record.spec({
             'a': Spec(Int),
             'b': Spec(Float)
@@ -327,7 +327,12 @@ class TestRecord:
             'd': Spec(Utf8Str)
         })
 
-        spc.make({ 'a': 123, 'b': 4.56, 'c': 7.89, 'd': 'hello'})
+        o = spc.make({
+            'a': 123,
+            'b': 4.56,
+            'c': 7.89,
+            'd': 'hello',
+        })  # no error
 
     def test_required_optional(self):
         spc = Record.spec({
