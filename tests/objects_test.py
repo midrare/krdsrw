@@ -419,11 +419,12 @@ class TestIntMap:
         o['pear'].make_and_append(333)
 
 
-def test_dynamic_map_put_key():
-    o = DynamicMap()
-    o['a'] = Int(0x0a)
-    with pytest.raises(ValueError):
-        o['a'] = 0x0a  # type: ignore
+class TestDynamicMap:
+    def test_put_key(self):
+        o = DynamicMap()
+        o['a'] = Int(0x0a)
+        with pytest.raises(ValueError):
+            o['a'] = 0x0a  # type: ignore
 
 
 class TestDataStore:
