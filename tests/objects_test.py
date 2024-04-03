@@ -334,6 +334,8 @@ class TestRecord:
             'd': 'hello',
         })  # no error
 
+        assert o and isinstance(o, Record)
+
     def test_required_optional(self):
         spc = Record.spec({
             'a': Spec(Int),
