@@ -364,9 +364,7 @@ class Record(DictBase[str, T], Serializable):
             return (
                 self._required_spec == other._required  # type: ignore
                 and self._optional_spec == other._optional  # type: ignore
-                and dict(self) \
-                == dict(other)
-            )
+                and dict(self) == dict(other))
         return super().__eq__(other)
 
     @typing.override
