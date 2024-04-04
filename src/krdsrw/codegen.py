@@ -24,7 +24,7 @@ from .objects import Json
 from .objects import IntMap
 from .objects import DataStore
 from .objects import Position
-from .objects import LastPageRead
+from .objects import LPR
 from .objects import PageReadPos
 from .specs import Field
 from .specs import Index
@@ -310,7 +310,7 @@ def _main(argv: list[str]) -> int:
             Field('next.in.series.info.data', Json),
             Field('price.info.data', Json),
             Field('erl', Position),
-            Field('lpr', LastPageRead),
+            Field('lpr', LPR),
             Field('fpr', PageReadPos),
             Field('updated_lpr', PageReadPos),
             # Field('apnx.key', APNXKey),

@@ -5,7 +5,7 @@ from .objects import DateTime
 from .objects import DynamicMap
 from .objects import Record
 from .objects import Json
-from .objects import LastPageRead
+from .objects import LPR
 from .objects import Position
 from .objects import IntMap
 from .objects import TimeZoneOffset
@@ -48,7 +48,7 @@ __all__ = [
     "DynamicMap",
     "Record",
     "Json",
-    "LastPageRead",
+    "LPR",
     "Position",
     "IntMap",
     "DataStore",

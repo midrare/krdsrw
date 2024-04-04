@@ -215,7 +215,7 @@ def _name_to_factory() -> dict[str, None | Spec]:
         from .objects import Array
         from .objects import Record
         from .objects import Json
-        from .objects import LastPageRead
+        from .objects import LPR
         from .objects import Position
         from .objects import TimeZoneOffset
 
@@ -262,7 +262,7 @@ def _name_to_factory() -> dict[str, None | Spec]:
             "erl":
             Spec(Position),
             "lpr":
-            Spec(LastPageRead),
+            Spec(LPR),
             "fpr":
             Record.spec({
                 "pos": Spec(Position),

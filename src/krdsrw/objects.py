@@ -179,16 +179,18 @@ class Array(ListBase[T], Serializable):
         return self._elmt_spec.make(value)
 
 
-class Record(DictBase[str, T], Serializable):
-    # Record can contain basics and other containers
-    # keys are just arbitrary aliases for convenience. values are
-    # hardcoded and knowing what value is where is determined by
-    # the order of their appearance
-
-    _REQUIRED: typing.Final[str] = '_schema_record_required'
-    _OPTIONAL: typing.Final[str] = '_schema_record_optional'
-
+class _OptionalDict(DictBase[str, T], metaclass=abc.ABCMeta):
     def __init__(self, *args, **kwargs):
+        def explode(o: typing.Any, num: int) -> tuple[typing.Any, ...]:
+            result = []
+            if isinstance(o, (tuple, list)):
+                result.extend(o)
+                result.extend(None for i in range(num - len(o)))
+            else:
+                result.append(o)
+                result.extend(None for i in range(num - 1))
+            return tuple(result)
+
         def get_spec(v):
             if isinstance(v, (tuple, list)):
                 return next(e for e in v if isinstance(e, Spec))
@@ -203,48 +205,33 @@ class Record(DictBase[str, T], Serializable):
                 return v
             return ''
 
-        required = kwargs.pop(self._REQUIRED)
-        optional = kwargs.pop(self._OPTIONAL, None) or {}
+        self._required_spec: typing.Final[dict[str, Spec[T]]] = {}
+        self._required_name: typing.Final[dict[str, str]] = {}
 
-        self._required_spec: typing.Final[dict[str, Spec[T]]] \
-            = {k: get_spec(v) for k, v in required.items()}
-        self._optional_spec: typing.Final[dict[str, Spec[T]]] \
-            = {k: get_spec(v) for k, v in (optional or {}).items()}
-        self._required_name: typing.Final[dict[str, str]] \
-            = {k: get_name(v) for k, v in required.items()}
-        self._optional_name: typing.Final[dict[str, str]] \
-            = {k: get_name(v) for k, v in (optional or {}).items()}
+        self._optional_spec: typing.Final[dict[str, Spec[T]]] = {}
+        self._optional_name: typing.Final[dict[str, str]] = {}
+
+        for key, values in self._required().items():
+            self._required_spec[key] = get_spec(values)
+            self._required_name[key] = get_name(values)
+
+        for key, values in self._optional().items():
+            self._optional_spec[key] = get_spec(values)
+            self._optional_name[key] = get_name(values)
 
         init = dict(*args, **kwargs)
-        for k, v in self._required_spec.items():
-            if k not in init:
-                init[k] = v.make()
+        for key, values in self._required_spec.items():
+            if key not in init:
+                init[key] = values.make()
 
         # call parent constructor last so that hooks will work
         super().__init__(init)
 
-    @classmethod
-    def spec(
-        cls,
-        required: dict[str, Spec[T] | tuple[Spec[T], str]],
-        optional: None | dict[str, Spec[T] | tuple[Spec[T], str]] = None,
-    ) -> Spec[typing.Self]:
-        return Spec(
-            cls,
-            kwargs={
-                cls._REQUIRED: copy.deepcopy(required),
-                cls._OPTIONAL: copy.deepcopy(optional),
-            },
-            indexes=[
-                Field(
-                    k,
-                    v[0] if isinstance(v, (tuple, list)) else v,
-                    is_deletable=False) for k, v in required.items()
-            ] + [
-                Field(k, v[0] if isinstance(v, (tuple, list)) else v)
-                for k, v in (optional or {}).items()
-            ],
-        )
+    def _required(self) -> dict[str, Spec[T]]:
+        return {}
+
+    def _optional(self) -> dict[str, Spec[T]]:
+        return {}
 
     @typing.override
     def _is_key_readable(self, key: typing.Any) -> bool:
@@ -295,13 +282,54 @@ class Record(DictBase[str, T], Serializable):
 
         return value  # type: ignore
 
-    @property
-    def required(self) -> dict[str, type[T]]:
-        return { k: v.cls_ for k, v in self._required_spec.items() }
+    @typing.override
+    def _make_postulate(self, key: typing.Any) -> None | T:
+        spc = self._required().get(key) or self._optional().get(key)
+        if spc is None:
+            return None
+        return spc.make()
 
-    @property
-    def optional(self) -> dict[str, type[T]]:
-        return { k: v.cls_ for k, v in self._optional_spec.items() }
+    @typing.override
+    def __eq__(self, other: typing.Any) -> bool:
+        if isinstance(other, self.__class__):
+            return (
+                self._required_spec == other._required  # type: ignore
+                and self._optional_spec == other._optional  # type: ignore
+                and dict(self) == dict(other))
+        return super().__eq__(other)
+
+    @typing.override
+    def __str__(self) -> str:
+        d = { k: v for k, v in self.items() if v is not None }
+        return f"{self.__class__.__name__}{d}"
+
+    @typing.override
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}{dict(self)}"
+
+
+class Record(_OptionalDict, Serializable):
+    # Record can contain basics and other containers
+    # keys are just arbitrary aliases for convenience. values are
+    # hardcoded and knowing what value is where is determined by
+    # the order of their appearance
+
+    _REQUIRED: typing.Final[str] = '_schema_record_required'
+    _OPTIONAL: typing.Final[str] = '_schema_record_optional'
+
+    @typing.override
+    def __init__(self, *args, **kwargs):
+        self._required_items = kwargs.pop(self._REQUIRED, None) or {}
+        self._optional_items = kwargs.pop(self._OPTIONAL, None) or {}
+        super().__init__(*args, **kwargs)
+
+    @typing.override
+    def _required(self) -> dict[str, Spec[type]]:
+        return self._required_items
+
+    @typing.override
+    def _optional(self) -> dict[str, Spec[type]]:
+        return self._optional_items
 
     @typing.override
     @classmethod
@@ -358,23 +386,36 @@ class Record(DictBase[str, T], Serializable):
             name = self._optional_name.get(alias)
             spec.write(cursor, value, name)
 
-    @typing.override
-    def __eq__(self, other: typing.Any) -> bool:
-        if isinstance(other, self.__class__):
-            return (
-                self._required_spec == other._required  # type: ignore
-                and self._optional_spec == other._optional  # type: ignore
-                and dict(self) == dict(other))
-        return super().__eq__(other)
+    @property
+    def required(self) -> dict[str, type]:
+        return { k: v.cls_ for k, v in self._required_spec.items() }
 
-    @typing.override
-    def __str__(self) -> str:
-        d = { k: v for k, v in self.items() if v is not None }
-        return f"{self.__class__.__name__}{d}"
+    @property
+    def optional(self) -> dict[str, type]:
+        return { k: v.cls_ for k, v in self._optional_spec.items() }
 
-    @typing.override
-    def __repr__(self) -> str:
-        return f"{self.__class__.__name__}{dict(self)}"
+    @classmethod
+    def spec(
+        cls,
+        required: dict[str, Spec[T] | tuple[Spec[T], str]],
+        optional: None | dict[str, Spec[T] | tuple[Spec[T], str]] = None,
+    ) -> Spec[_OptionalDict]:
+        return Spec(
+            cls,
+            kwargs={
+                cls._REQUIRED: copy.deepcopy(required),
+                cls._OPTIONAL: copy.deepcopy(optional),
+            },
+            indexes=[
+                Field(
+                    k,
+                    v[0] if isinstance(v, (tuple, list)) else v,
+                    is_deletable=False) for k, v in required.items()
+            ] + [
+                Field(k, v[0] if isinstance(v, (tuple, list)) else v)
+                for k, v in (optional or {}).items()
+            ],
+        )
 
 
 # can contain Bool, Char, Byte, Short, Int, Long, Float, Double, Utf8Str, Object
@@ -775,147 +816,26 @@ class _JsonEncoder(json.JSONEncoder):
         return super().iterencode(o, _one_shot)
 
 
-class LastPageRead(Serializable):  # aka LPR. this is kindle reading pos info
-    EXTENDED_LPR_VERSION: typing.Final[int] = 2
+class Position(_OptionalDict, Serializable):
+    _MAGIC_CHUNK_V1: typing.Final[int] = 0x01
+    _REQUIRED: typing.Final[dict[str, Spec[typing.Any]]] = {
+        'char_pos': Spec(Int),
+    }
+    _OPTIONAL: typing.Final[dict[str, Spec[typing.Any]]] = {
+        'chunk_eid': Spec(Int),
+        'chunk_pos': Spec(Int),
+    }
 
-    def __init__(self):
-        super().__init__()
-        self._pos: Position = Position()
-        self._timestamp: int = -1
-        self._lpr_version: int = -1
-
-    @property
-    def pos(self) -> Position:
-        return self._pos
-
-    @property
-    def lpr_version(self) -> int:
-        return self._lpr_version
-
-    @lpr_version.setter
-    def lpr_version(self, value: int):
-        if not isinstance(value, int):
-            raise TypeError(f"value is not of type {int.__name__}")
-        self._lpr_version = value
-
-    @property
-    def timestamp(self) -> int:
-        return self._timestamp
-
-    @timestamp.setter
-    def timestamp(self, value: int):
-        if not isinstance(value, int):
-            raise TypeError(f"value is not of type {int.__name__}")
-        self._timestamp = value
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
     @typing.override
-    @classmethod
-    def _create(cls, cursor: Cursor, *args, **kwargs) -> typing.Self:
-        result = cls(*args, **kwargs)
-        result._pos.char_pos = -1
-        result._pos.chunk_eid = -1
-        result._pos.chunk_pos = -1
-        result._timestamp = -1
-        result._lpr_version = -1
-
-        type_byte = cursor.peek()
-        if type_byte == Utf8Str.magic_byte:
-            # old LPR version'
-            result._pos._read(cursor)
-        elif type_byte == Byte.magic_byte:
-            # new LPR version
-            result._lpr_version = read_byte(cursor)
-            result._pos._read(cursor)
-            result._timestamp = int(read_long(cursor))
-        else:
-            raise UnexpectedBytesError(
-                cursor.tell(), [Utf8Str.magic_byte, Byte.magic_byte], type_byte)
-
-        return result
+    def _required(self) -> dict[str, Spec[typing.Any]]:
+        return self._REQUIRED
 
     @typing.override
-    def _write(self, cursor: Cursor):
-        # XXX may cause problems if kindle expects the original LPR format
-        #   version when datastore file is re-written
-        if self._timestamp is None or self._timestamp < 0:
-            # old LPR version
-            self._pos._write(cursor)
-        else:
-            # new LPR version
-            lpr_version = max(self.EXTENDED_LPR_VERSION, self._lpr_version)
-            write_byte(cursor, lpr_version)
-            self._pos._write(cursor)
-            write_long(cursor, self._timestamp)
-
-    def __eq__(self, other: typing.Any) -> bool:
-        if isinstance(other, self.__class__):
-            return (
-                self._pos == other._pos and self._timestamp == other.timestamp
-                and self._lpr_version == other._lpr_version)
-        return super().__eq__(other)
-
-    def __str__(self) -> str:
-        d = {
-            "lpr_version": self._lpr_version,
-            "timestamp": self._timestamp,
-            "pos": self._pos,
-        }
-        return f"{self.__class__.__name__}{{{str(d)}}}"
-
-    def __repr__(self) -> str:
-        d = {
-            "lpr_version": self._lpr_version,
-            "timestamp": self._timestamp,
-            "pos": self._pos,
-        }
-        return f"{self.__class__.__name__}{{{str(d)}}}"
-
-    def __json__(self) -> None | bool | int | float | str | tuple | list | dict:
-        return {
-            "lpr_version": max(1, self._lpr_version),
-            "timestamp": self._timestamp,
-            "pos": self._pos,
-        }
-
-
-class Position(Serializable):
-    PREFIX_VERSION1: typing.Final[int] = 0x01
-
-    def __init__(self):
-        super().__init__()
-        self._chunk_eid: int = -1
-        self._chunk_pos: int = -1
-        self._value: int = -1
-
-    @property
-    def chunk_eid(self) -> int:
-        return self._chunk_eid
-
-    @chunk_eid.setter
-    def chunk_eid(self, value: int):
-        if not isinstance(value, int):
-            raise TypeError(f"value is not of type {int.__name__}")
-        self._chunk_eid = value
-
-    @property
-    def chunk_pos(self) -> int:
-        return self._chunk_pos
-
-    @chunk_pos.setter
-    def chunk_pos(self, value: int):
-        if not isinstance(value, int):
-            raise TypeError(f"value is not of type {int.__name__}")
-        self._chunk_pos = value
-
-    @property
-    def char_pos(self) -> int:
-        return self._value
-
-    @char_pos.setter
-    def char_pos(self, value: int):
-        if not isinstance(value, int):
-            raise TypeError(f"value is not of type {int.__name__}")
-        self._value = value
+    def _optional(self) -> dict[str, Spec[typing.Any]]:
+        return self._OPTIONAL
 
     @typing.override
     @classmethod
@@ -926,76 +846,97 @@ class Position(Serializable):
         if len(split) > 1:
             b = base64.b64decode(split[0])
             version = b[0]
-            if version == result.PREFIX_VERSION1:
-                result._chunk_eid = int.from_bytes(b[1:5], "little")
-                result._chunk_pos = int.from_bytes(b[5:9], "little")
+            if version == result._MAGIC_CHUNK_V1:
+                result['chunk_eid'] = int.from_bytes(b[1:5], "little")
+                result['chunk_pos'] = int.from_bytes(b[5:9], "little")
             else:
                 # TODO throw a proper exception
                 raise Exception(
                     "Unrecognized position version 0x%02x" % version)
-            result._value = int(split[1])
+            result['char_pos'] = int(split[1])
         else:
-            result._value = int(s)
+            result['char_pos'] = int(s)
         return result
 
     @typing.override
     def _write(self, cursor: Cursor):
         s = ""
-        if self._chunk_eid >= 0 and self._chunk_pos >= 0:
-            b_version = self.PREFIX_VERSION1.to_bytes(1, "little", signed=False)
-            b_eid = self._chunk_eid.to_bytes(4, "little", signed=False)
-            b_pos = self._chunk_pos.to_bytes(4, "little", signed=False)
+        if self['chunk_eid'] >= 0 and self['chunk_pos'] >= 0:
+            b_version = self._MAGIC_CHUNK_V1.to_bytes(1, "little", signed=False)
+            b_eid = self['chunk_eid'].to_bytes(4, "little", signed=False)
+            b_pos = self['chunk_pos'].to_bytes(4, "little", signed=False)
             s += base64.b64encode(b_version + b_eid + b_pos).decode("ascii")
             s += ":"
         s += str(
-            self._value if self._value is not None and self._value >= 0 else -1)
+            int(self['char_pos'])
+            if self['char_pos'] is not None and self['char_pos'] >= 0 else -1)
         write_utf8str(cursor, s)
 
-    def __json__(self) -> None | bool | int | float | str | tuple | list | dict:
-        return {
-            "chunk_eid": self._chunk_eid,
-            "chunk_pos": self._chunk_pos,
-            "char_pos": self._value,
-        }
 
-    def __eq__(self, other: typing.Any) -> bool:
-        if isinstance(other, self.__class__):
-            return self._value == other._value \
-            and self._chunk_eid == other._chunk_eid \
-            and self._chunk_pos == other._chunk_pos
-        return super().__eq__(other)
+class LPR(_OptionalDict, Serializable):  # aka LPR
+    _MAGIC_V2: typing.Final[int] = 2
+    _REQUIRED: typing.Final[dict[str, Spec[typing.Any]]] = {
+        'pos': Spec(Position),
+    }
+    _OPTIONAL: typing.Final[dict[str, Spec[typing.Any]]] = {
+        'timestamp': Spec(Int),
+        'lpr_version': Spec(Int),
+    }
 
-    def __str__(self) -> str:
-        d = {
-            "chunk_eid": self._chunk_eid,
-            "chunk_pos": self._chunk_pos,
-            "char_pos": self._value,
-        }
-        return f"{self.__class__.__name__}{{{str(d)}}}"
+    @typing.override
+    def _required(self) -> dict[str, Spec[typing.Any]]:
+        return self._REQUIRED
 
-    def __repr__(self) -> str:
-        d = {
-            "chunk_eid": self._chunk_eid,
-            "chunk_pos": self._chunk_pos,
-            "char_pos": self._value,
-        }
-        return f"{self.__class__.__name__}{{{str(d)}}}"
+    @typing.override
+    def _optional(self) -> dict[str, Spec[typing.Any]]:
+        return self._OPTIONAL
+
+    @typing.override
+    @classmethod
+    def _create(cls, cursor: Cursor, *args, **kwargs) -> typing.Self:
+        init = {}
+
+        type_byte = cursor.peek()
+        if type_byte == Utf8Str.magic_byte:
+            # old LPR version'
+            init['pos'] = Position._create(cursor)
+        elif type_byte == Byte.magic_byte:
+            # new LPR version
+            init['lpr_version'] = read_byte(cursor)
+            init['pos'] = Position._create(cursor)
+            init['timestamp'] = int(read_long(cursor))
+        else:
+            raise UnexpectedBytesError(
+                cursor.tell(), [Utf8Str.magic_byte, Byte.magic_byte], type_byte)
+
+        return cls(*args, **init, **kwargs)
+
+    @typing.override
+    def _write(self, cursor: Cursor):
+        # XXX may cause problems if kindle expects the original LPR format
+        #   version when datastore file is re-written
+        if self['timestamp'] < 0:
+            # old LPR version
+            self['pos']._write(cursor)
+        else:
+            # new LPR version
+            lpr_version = max(self._MAGIC_V2, self['lpr_version'])
+            write_byte(cursor, lpr_version)
+            self['pos']._write(cursor)
+            write_long(cursor, self['timestamp'])
 
 
-class TimeZoneOffset(Serializable):
-    def __init__(self):
+class TimeZoneOffset(IntBase, Serializable):
+    @typing.override
+    def __new__(cls, *args, **kwargs) -> typing.Self:
+        init = []
+        if len(args) + len(kwargs) <= 0:
+            init = [-1]
+        return super().__new__(cls, *init, *args, **kwargs)
+
+    @typing.override
+    def __init__(self, *args, **kwargs):
         super().__init__()
-        self._value: int = -1  # -1 is null
-
-    @property
-    def value(self) -> int:
-        return self._value
-
-    @value.setter
-    def value(self, value: int):
-        if not isinstance(value, int):
-            raise TypeError(f"value must be an {int.__name__}")
-        self._value = value
 
     @typing.override
     @classmethod
@@ -1004,24 +945,33 @@ class TimeZoneOffset(Serializable):
 
     @typing.override
     def _write(self, cursor: Cursor):
-        write_long(cursor, max(-1, self._value))
+        write_long(cursor, max(-1, self))
 
+    @typing.override
     def __eq__(self, other: typing.Any) -> bool:
         if isinstance(other, self.__class__):
-            return self._value == other._value
-
+            return int(self) == int(other)
         return super().__eq__(other)
 
+    @typing.override
     def __str__(self) -> str:
-        d = { "offset": self._value }
-        return f"{self.__class__.__name__}{{{str(d)}}}"
+        return f"{self.__class__.__name__}{{{int(self)}}}"
 
+    @typing.override
     def __repr__(self) -> str:
-        d = { "offset": self._value }
-        return f"{self.__class__.__name__}{{{str(d)}}}"
+        return f"{self.__class__.__name__}{{{int(self)}}}"
+
+    @typing.override
+    def __bool__(self) -> bool:
+        return self >= 0
+
+    def __bytes__(self) -> bytes:
+        csr = Cursor()
+        self._write(csr)
+        return csr.dump()
 
     def __json__(self) -> None | bool | int | float | str | tuple | list | dict:
-        return { "offset": self._value }
+        return int(self)
 
 
 # fpr, updated_lpr
@@ -1299,7 +1249,7 @@ ALL_OBJECT_TYPES: typing.Final[tuple[type, ...]] = (
     DynamicMap,
     DateTime,
     Json,
-    LastPageRead,
+    LPR,
     Position,
     TimeZoneOffset,
     DataStore,

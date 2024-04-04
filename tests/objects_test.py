@@ -15,6 +15,7 @@ from krdsrw.specs import Spec
 from krdsrw.specs import Index
 from krdsrw.specs import Field
 from krdsrw.objects import Array
+from krdsrw.objects import LPR
 from krdsrw.objects import DataStore
 from krdsrw.objects import DynamicMap
 from krdsrw.objects import IntMap
@@ -22,6 +23,7 @@ from krdsrw.objects import Json
 from krdsrw.objects import Record
 from krdsrw.objects import peek_object_schema
 from krdsrw.objects import peek_object_type
+from krdsrw.objects import Position
 from krdsrw.objects import read_object
 from krdsrw.objects import write_object
 
@@ -57,12 +59,12 @@ def test_read_object():
         + b'\x00\x00\x05\x30\xEF\xBF\xBC\x30\xFF')
     o, n = read_object(csr, 'annotation.personal.highlight')
     assert n == 'annotation.personal.highlight'
-    assert o['start_pos'].chunk_eid == 2788
-    assert o['start_pos'].chunk_pos == 38
-    assert o['start_pos'].char_pos == 15288
-    assert o['end_pos'].chunk_eid == 3199
-    assert o['end_pos'].chunk_pos == 28
-    assert o['end_pos'].char_pos == 15330
+    assert o['start_pos']['chunk_eid'] == 2788
+    assert o['start_pos']['chunk_pos'] == 38
+    assert o['start_pos']['char_pos'] == 15288
+    assert o['end_pos']['chunk_eid'] == 3199
+    assert o['end_pos']['chunk_pos'] == 28
+    assert o['end_pos']['char_pos'] == 15330
     assert o['creation_time'] == 1700855241409
     assert o['last_modification_time'] == 1700855241409
     assert o['template'] == "0￼0"
@@ -434,6 +436,62 @@ class TestDynamicMap:
             o['a'] = 0x0a  # type: ignore
 
 
+class TestPosition:
+    def test_instantiate(self):
+        o = Position()  # no error
+        assert o is not None
+
+        o = Position({ 'char_pos': 12345 })  # no error
+        assert o is not None
+
+    def test_read_v1(self):
+        csr = Cursor(b'\x03\x00\x00\x05\x31\x32\x33\x34\x35')
+        o = Position._create(csr)  # no error
+        assert o == { 'char_pos': 12345 }
+
+    def test_read_chunk_v1(self):
+        csr = Cursor(
+            b'\x03\x00\x00\x11\x41\x64\x49\x45' \
+            + b'\x41\x41\x41\x75\x46\x67\x41\x41' \
+            + b'\x3A\x35\x30\x35\x30')
+        o = Position._create(csr)  # no error
+        assert o == {
+            'char_pos': 5050,
+            'chunk_eid': 1234,
+            'chunk_pos': 5678,
+        }
+
+    def test_write_v1(self):
+        csr = Cursor()
+        o = Position({ 'char_pos': 12345 })
+        o._write(csr)
+        assert csr.dump() == b'\x03\x00\x00\x05\x31\x32\x33\x34\x35'
+
+    def test_write_chunk_v1(self):
+        csr = Cursor()
+        o = Position({
+            'char_pos': 5050,
+            'chunk_eid': 1234,
+            'chunk_pos': 5678,
+        })
+        o._write(csr)
+        assert csr.dump() == \
+            (b'\x03\x00\x00\x11\x41\x64\x49\x45' \
+            + b'\x41\x41\x41\x75\x46\x67\x41\x41' \
+            + b'\x3A\x35\x30\x35\x30')
+
+
+class TestLPR:
+    def test_instantiate(self):
+        o = LPR()  # no error
+        assert o is not None
+
+    def test_read_v1(self):
+        csr = Cursor(b'\x03\x00\x00\x05\x31\x32\x33\x34\x35')
+        o = LPR._create(csr)  # no error
+        assert o == { 'pos': { 'char_pos': 12345 } }
+
+
 class TestDataStore:
     def test_init(self):
         root = DataStore()
@@ -463,11 +521,11 @@ class TestDataStore:
         root = DataStore._create(csr)
 
         o = root["annotation.cache.object"]["bookmarks"][0]
-        assert o["start_pos"].chunk_eid == 5525
-        assert o["start_pos"].chunk_pos == 0
-        assert o["start_pos"].char_pos == 76032
-        assert o["end_pos"].chunk_eid == 5525
-        assert o["end_pos"].chunk_pos == 0
-        assert o["end_pos"].char_pos == 76032
+        assert o["start_pos"]['chunk_eid'] == 5525
+        assert o["start_pos"]['chunk_pos'] == 0
+        assert o["start_pos"]['char_pos'] == 76032
+        assert o["end_pos"]['chunk_eid'] == 5525
+        assert o["end_pos"]['chunk_pos'] == 0
+        assert o["end_pos"]['char_pos'] == 76032
         assert o["creation_time"] == 1701332599082
         assert o["last_modification_time"] == 1701332599082
