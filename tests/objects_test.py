@@ -347,10 +347,21 @@ class TestRecord:
             'd': Spec(Utf8Str)
         })
 
-        o = spc.make({ 'a': 123, 'b': 4.56, 'c': 7.89, 'd': 'hello'})
+        with pytest.raises(KeyError):
+            o = spc.make({ 'a': 123, 'b': 4.56, 'c': 7.89, 'd': 'hello'})
+            del o['a']  # no error
 
-        assert o.required == { 'a': Int, 'b': Float }
-        assert o.optional == { 'c': Double, 'd': Utf8Str }
+        with pytest.raises(KeyError):
+            o = spc.make({ 'a': 123, 'b': 4.56, 'c': 7.89, 'd': 'hello'})
+            del o['b']  # no error
+
+        o = spc.make({ 'a': 123, 'b': 4.56, 'c': 7.89, 'd': 'hello'})
+        del o['c']  # no error
+        assert 'c' not in o
+
+        o = spc.make({ 'a': 123, 'b': 4.56, 'c': 7.89, 'd': 'hello'})
+        del o['d']  # no error
+        assert 'd' not in o
 
     def test_read(self):
         spc = Record.spec({
