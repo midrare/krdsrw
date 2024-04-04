@@ -280,8 +280,8 @@ class Record(_TypedDict, Serializable, metaclass=abc.ABCMeta):
     @classmethod
     def spec(
         cls,
-        required: dict[str, Spec[T] | tuple[Spec[T], str]],
-        optional: None | dict[str, Spec[T] | tuple[Spec[T], str]] = None,
+        required: dict[str, Spec | tuple[Spec, str]],
+        optional: None | dict[str, Spec | tuple[Spec, str]] = None,
     ) -> Spec[_TypedDict]:
         def explode(o, len_: int) -> list:
             result = []
