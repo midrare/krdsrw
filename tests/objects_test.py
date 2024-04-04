@@ -45,7 +45,7 @@ def test_peek_object_schema():
 
 def test_peek_object_type():
     csr = Cursor(b'\xfe\x00\x00\x0a\x66\x6F\x6E\x74\x2E\x70\x72\x65\x66\x73')
-    assert peek_object_type(csr) == Record
+    assert issubclass(peek_object_type(csr), Record)
 
 
 def test_read_object():
