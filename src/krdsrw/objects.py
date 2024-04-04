@@ -180,13 +180,18 @@ class _TypedDict(DictBase[str, T], metaclass=abc.ABCMeta):
     class _TypedField(typing.NamedTuple):
         spec: Spec[typing.Any]
         name: None | str = None
+        default: None | tuple[typing.Any, ...] = None
         required: bool = True
 
     def __init__(self, *args, **kwargs):
         init = dict(*args, **kwargs)
         for key, field in self._key_to_field.items():
-            if key not in init:
-                init[key] = field.spec.make()
+            if field.required and key not in init:
+                if field.default is None:
+                    init[key] = field.spec.make()
+                else:
+                    assert isinstance(field.default, (tuple, list))
+                    init[key] = field.spec.make(*field.default)
 
         # call parent constructor last so that hooks will work
         super().__init__(init)
@@ -250,6 +255,8 @@ class _TypedDict(DictBase[str, T], metaclass=abc.ABCMeta):
         field = self._key_to_field.get(key)
         if field is None:
             return None
+        if field.default is not None:
+            return field.spec.make(*field.default)
         return field.spec.make()
 
     @typing.override
@@ -296,11 +303,11 @@ class Record(_TypedDict, Serializable, metaclass=abc.ABCMeta):
 
         for alias, _packed in required.items():
             spec, name = explode(_packed, 2)
-            fields[alias] = _TypedDict._TypedField(spec, name, True)
+            fields[alias] = _TypedDict._TypedField(spec, name, None, True)
 
         for alias, _packed in (optional or {}).items():
             spec, name = explode(_packed, 2)
-            fields[alias] = _TypedDict._TypedField(spec, name, False)
+            fields[alias] = _TypedDict._TypedField(spec, name, None, False)
 
         class Record(cls):
             @property
@@ -320,10 +327,10 @@ class Record(_TypedDict, Serializable, metaclass=abc.ABCMeta):
     def _create(cls, cursor: Cursor, *args, **kwargs) -> typing.Self:
         result = cls(*args, **kwargs)
 
-        for alias, (spec, name, required) in result._key_to_field.items():
-            val = result._read_next(cursor, spec, name)
+        for alias, field in result._key_to_field.items():
+            val = result._read_next(cursor, field.spec, field.name)
             if val is None:
-                if required:
+                if field.required:
                     raise UnexpectedStructureError(
                         f'Value for field "{alias}" but was not found',
                         pos=cursor.tell())
@@ -352,13 +359,13 @@ class Record(_TypedDict, Serializable, metaclass=abc.ABCMeta):
 
     @typing.override
     def _write(self, cursor: Cursor):
-        for alias, (spec, name, required) in self._key_to_field.items():
-            assert (not required and alias not in self) \
-            or isinstance(self[alias], spec.cls_), 'Invalid state'
+        for alias, field in self._key_to_field.items():
+            assert (not field.required and alias not in self) \
+            or isinstance(self[alias], field.spec.cls_), 'Invalid state'
             if not alias in self:
-                assert not required, 'required field not present'
+                assert not field.required, 'required field not present'
                 break
-            spec.write(cursor, self[alias], name)
+            field.spec.write(cursor, self[alias], field.name)
 
 
 # can contain Bool, Char, Byte, Short, Int, Long, Float, Double, Utf8Str, Object
@@ -383,7 +390,7 @@ class IntMap(_TypedDict, Serializable):
     ) -> Spec[typing.Self]:
         fields = {}
         for alias, name, spec in alias_name_spec:
-            fields[alias] = _TypedDict._TypedField(spec, name, False)
+            fields[alias] = _TypedDict._TypedField(spec, name, None, False)
 
         class IntMap(cls):
             @property
@@ -686,9 +693,9 @@ class _JsonEncoder(json.JSONEncoder):
 class Position(_TypedDict, Serializable):
     _MAGIC_CHUNK_V1: typing.Final[int] = 0x01
     _FIELDS: typing.Final[dict[str, _TypedDict._TypedField]] = {
-        'char_pos': _TypedDict._TypedField(Spec(Int), None, True),
-        'chunk_eid': _TypedDict._TypedField(Spec(Int), None, False),
-        'chunk_pos': _TypedDict._TypedField(Spec(Int), None, False),
+        'char_pos': _TypedDict._TypedField(Spec(Int), None, None, True),
+        'chunk_eid': _TypedDict._TypedField(Spec(Int), None, None, False),
+        'chunk_pos': _TypedDict._TypedField(Spec(Int), None, None, False),
     }
 
     @property
@@ -735,9 +742,9 @@ class Position(_TypedDict, Serializable):
 class LPR(_TypedDict, Serializable):  # aka LPR
     _MAGIC_V2: typing.Final[int] = 2
     _FIELDS: typing.Final[dict[str, _TypedDict._TypedField]] = {
-        'pos': _TypedDict._TypedField(Spec(Position), None, True),
-        'timestamp': _TypedDict._TypedField(Spec(Int), None, False),
-        'lpr_version': _TypedDict._TypedField(Spec(Int), None, False),
+        'pos': _TypedDict._TypedField(Spec(Position), None, None, True),
+        'timestamp': _TypedDict._TypedField(Spec(Int), None, None, False),
+        'lpr_version': _TypedDict._TypedField(Spec(Int), None, None, False),
     }
 
     @property

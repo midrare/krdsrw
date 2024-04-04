@@ -24,6 +24,7 @@ from krdsrw.objects import Record
 from krdsrw.objects import peek_object_schema
 from krdsrw.objects import peek_object_type
 from krdsrw.objects import Position
+from krdsrw.objects import _TypedDict
 from krdsrw.objects import read_object
 from krdsrw.objects import write_object
 
@@ -317,6 +318,30 @@ class TestArray:
         o = arr.make_and_append(1337)
         assert o == 1337
         assert arr == [1337]
+
+
+class TestTypedDict:
+    def test_instantiate(self):
+        class Custom(_TypedDict):
+            @property
+            @typing.override
+            def _key_to_field(self) -> dict[str, _TypedDict._TypedField]:
+                return {
+                    'a': _TypedDict._TypedField(Spec(Bool), None, None, True),
+                    'b': _TypedDict._TypedField(Spec(Int), None, None, True),
+                    'c':
+                    _TypedDict._TypedField(Spec(Utf8Str), None, None, True),
+                    'x': _TypedDict._TypedField(Spec(Bool), None, None, False),
+                    'y': _TypedDict._TypedField(Spec(Int), None, None, False),
+                    'z':
+                    _TypedDict._TypedField(Spec(Utf8Str), None, None, False),
+                }
+
+        o = Custom()  # no error
+        assert o is not None
+
+        o = Custom()  # no error
+        assert o == { 'a': False, 'b': 0, 'c': ''}
 
 
 class TestRecord:
