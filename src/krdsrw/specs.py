@@ -76,21 +76,21 @@ class Spec(typing.Generic[T]):
     def indexes(self) -> list[Index | Field]:
         return list(self._indexes)
 
-    def read(self, cursor: Cursor, name: None | str = None) -> T:
+    def read(self, cursor: Cursor, schema: None | str = None) -> T:
         result = None
 
-        if name:
+        if schema:
             if not cursor.eat(self._OBJECT_BEGIN):
                 raise UnexpectedBytesError(
                     cursor.tell(), self._OBJECT_BEGIN, cursor.peek())
 
-            name_ = read_utf8str(cursor, False)
-            if not name_:
-                raise UnexpectedStructureError('Object has blank name.')
-            if name_ != name:
+            schema_ = read_utf8str(cursor, False)
+            if not schema_:
+                raise UnexpectedStructureError('Object has blank schema.')
+            if schema_ != schema:
                 raise UnexpectedStructureError(
-                    f"Expected object name \"{name}\""
-                    + f" but got \"{name_}\".")
+                    f"Expected object schema \"{schema}\""
+                    + f" but got \"{schema_}\".")
 
         result = self._cls._create(
             cursor,
@@ -98,7 +98,7 @@ class Spec(typing.Generic[T]):
             **self._init_kwargs,
         )
 
-        if name and not cursor.eat(self._OBJECT_END):
+        if schema and not cursor.eat(self._OBJECT_END):
             raise UnexpectedBytesError(
                 cursor.tell(), self._OBJECT_END, cursor.peek())
 
@@ -113,12 +113,12 @@ class Spec(typing.Generic[T]):
             **self._init_kwargs,
         )
 
-    def write(self, cursor: Cursor, o: T, name: None | str = None):
-        if name:
+    def write(self, cursor: Cursor, o: T, schema: None | str = None):
+        if schema:
             cursor.write(self._OBJECT_BEGIN)
-            write_utf8str(cursor, name, False)
+            write_utf8str(cursor, schema, False)
         o._write(cursor)
-        if name:
+        if schema:
             cursor.write(self._OBJECT_END)
 
     @typing.override

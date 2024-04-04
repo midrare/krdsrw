@@ -30,7 +30,7 @@ _timer_average_calculator_factory: None | Spec = None
 _timer_average_calculator_distribution_normal_factory: None | Spec = None
 _timer_average_calculator_calculator_outliers_factory: None | Spec = None
 
-_name_to_factory_map: dict[str, None | Spec] = {}
+_schema_to_factory: dict[str, None | Spec] = {}
 
 
 def _timer_average_calculator_outliers() -> Spec:
@@ -207,9 +207,9 @@ def _annotation_personal_element() -> Spec:
     return _annotation_personal_element_factory
 
 
-def _name_to_factory() -> dict[str, None | Spec]:
-    global _name_to_factory_map
-    if not _name_to_factory_map:
+def _get_schema_to_factory() -> dict[str, None | Spec]:
+    global _schema_to_factory
+    if not _schema_to_factory:
         from .objects import DateTime
         from .objects import DynamicMap
         from .objects import Array
@@ -220,7 +220,7 @@ def _name_to_factory() -> dict[str, None | Spec]:
         from .objects import TimeZoneOffset
 
         # NOTE if you update this schema map update the type hint maker too
-        _name_to_factory_map = {
+        _schema_to_factory = {
             "clock.data.store":
             NotImplemented,
             "dictionary":
@@ -372,8 +372,8 @@ def _name_to_factory() -> dict[str, None | Spec]:
             "timer.average.calculator.outliers":
             _timer_average_calculator_outliers(),
         }
-    return _name_to_factory_map
+    return _schema_to_factory
 
 
-def get_spec_by_name(name: str) -> None | Spec:
-    return _name_to_factory().get(name)
+def get_factory_by_schema(schema: str) -> None | Spec:
+    return _get_schema_to_factory().get(schema)

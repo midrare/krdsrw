@@ -301,10 +301,10 @@ class TestArray:
         o = spc.make()
         assert o.elmt_cls == Int
 
-    def test_elmt_name(self):
+    def test_elmt_schema(self):
         spc = Array.spec(Spec(Int), 'abc')
         o = spc.make()
-        assert o.elmt_name == 'abc'
+        assert o.elmt_schema == 'abc'
 
     def test_make_element(self):
         spc = Array.spec(Spec(Int))

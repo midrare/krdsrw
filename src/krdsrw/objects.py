@@ -57,7 +57,7 @@ def peek_object_type(csr: Cursor, magic_byte: bool = True) -> None | type:
 
     if not magic_byte or csr.eat(_OBJECT_BEGIN_INDICATOR):
         schema = read_utf8str(csr, False)
-        fct = schemas.get_spec_by_name(schema)
+        fct = schemas.get_factory_by_schema(schema)
         assert fct, f'Unsupported schema \"{schema}\".'
         cls_ = fct.cls_
 
@@ -65,27 +65,29 @@ def peek_object_type(csr: Cursor, magic_byte: bool = True) -> None | type:
     return cls_
 
 
-def read_object(csr: Cursor, name: None | str = None) -> tuple[typing.Any, str]:
-    assert name is None or name, 'expected either null or non-empty name'
+def read_object(csr: Cursor,
+                schema: None | str = None) -> tuple[typing.Any, str]:
+    assert schema is None or schema, 'expected either null or non-empty schema'
     from . import schemas
 
-    name_ = peek_object_schema(csr)
-    if not name_:
-        raise UnexpectedStructureError('Failed to read name for object.')
-    if name is not None and name_ != name:
+    schema_ = peek_object_schema(csr)
+    if not schema_:
+        raise UnexpectedStructureError('Failed to read schema for object.')
+    if schema is not None and schema_ != schema:
         raise UnexpectedStructureError(
-            f'Object name "{name_}" does not match expected name "{name}"')
-    maker = schemas.get_spec_by_name(name_)
+            f'Object schema "{schema_}" does not match expected schema "{schema}"'
+        )
+    maker = schemas.get_factory_by_schema(schema_)
     if not maker:
-        raise UnexpectedStructureError(f'Unsupported schema \"{name_}\".')
-    o = maker.read(csr, name_)
-    return o, name_
+        raise UnexpectedStructureError(f'Unsupported schema \"{schema_}\".')
+    o = maker.read(csr, schema_)
+    return o, schema_
 
 
-def write_object(csr: Cursor, o: typing.Any, name: str):
-    assert name, 'expected non-empty name'
+def write_object(csr: Cursor, o: typing.Any, schema: str):
+    assert schema, 'expected non-empty schema'
     csr.write(_OBJECT_BEGIN_INDICATOR)
-    write_utf8str(csr, name, False)
+    write_utf8str(csr, schema, False)
     o._write(csr)
     csr.write(_OBJECT_END_INDICATOR)
 
@@ -107,7 +109,9 @@ def _read_basic(cursor: Cursor) \
 class Array(ListBase[T], Serializable, metaclass=abc.ABCMeta):
     # Array can contain Basic and other containers
     @classmethod
-    def spec(cls, elmt: Spec[T], name: None | str = None) -> Spec[typing.Self]:
+    def spec(cls,
+             elmt: Spec[T],
+             schema: None | str = None) -> Spec[typing.Self]:
         class Array(cls):
             @property
             @typing.override
@@ -116,8 +120,8 @@ class Array(ListBase[T], Serializable, metaclass=abc.ABCMeta):
 
             @property
             @typing.override
-            def elmt_name(self) -> None | str:
-                return name
+            def elmt_schema(self) -> None | str:
+                return schema
 
         return Spec(Array)  # type: ignore
 
@@ -131,7 +135,7 @@ class Array(ListBase[T], Serializable, metaclass=abc.ABCMeta):
         return self.elmt_spec.cls_
 
     @property
-    def elmt_name(self) -> None | str:
+    def elmt_schema(self) -> None | str:
         return None
 
     @typing.override
@@ -140,7 +144,7 @@ class Array(ListBase[T], Serializable, metaclass=abc.ABCMeta):
         result = cls(*args, **kwargs)
         size = read_int(cursor)
         for _ in range(size):
-            e = result.elmt_spec.read(cursor, result.elmt_name)
+            e = result.elmt_spec.read(cursor, result.elmt_schema)
             result.append(e)
         return result
 
@@ -148,7 +152,7 @@ class Array(ListBase[T], Serializable, metaclass=abc.ABCMeta):
     def _write(self, cursor: Cursor):
         write_int(cursor, len(self))
         for e in self:
-            self.elmt_spec.write(cursor, e, self.elmt_name)
+            self.elmt_spec.write(cursor, e, self.elmt_schema)
 
     def make_element(self, *args, **kwargs) -> T:
         if issubclass(self.elmt_spec.cls_, Basic) and (args or kwargs):
@@ -179,7 +183,7 @@ class Array(ListBase[T], Serializable, metaclass=abc.ABCMeta):
 class _TypedDict(DictBase[str, T], metaclass=abc.ABCMeta):
     class _TypedField(typing.NamedTuple):
         spec: Spec[typing.Any]
-        name: None | str = None
+        schema: None | str = None
         default: None | tuple[typing.Any, ...] = None
         required: bool = True
 
@@ -302,12 +306,12 @@ class Record(_TypedDict, Serializable, metaclass=abc.ABCMeta):
         fields = {}
 
         for alias, _packed in required.items():
-            spec, name = explode(_packed, 2)
-            fields[alias] = _TypedDict._TypedField(spec, name, None, True)
+            spec, schema = explode(_packed, 2)
+            fields[alias] = _TypedDict._TypedField(spec, schema, None, True)
 
         for alias, _packed in (optional or {}).items():
-            spec, name = explode(_packed, 2)
-            fields[alias] = _TypedDict._TypedField(spec, name, None, False)
+            spec, schema = explode(_packed, 2)
+            fields[alias] = _TypedDict._TypedField(spec, schema, None, False)
 
         class Record(cls):
             @property
@@ -328,7 +332,7 @@ class Record(_TypedDict, Serializable, metaclass=abc.ABCMeta):
         result = cls(*args, **kwargs)
 
         for alias, field in result._key_to_field.items():
-            val = result._read_next(cursor, field.spec, field.name)
+            val = result._read_next(cursor, field.spec, field.schema)
             if val is None:
                 if field.required:
                     raise UnexpectedStructureError(
@@ -344,13 +348,13 @@ class Record(_TypedDict, Serializable, metaclass=abc.ABCMeta):
             self,
             cursor: Cursor,
             spec: Spec[T],
-            name: None | str = None) -> None | T:
+            schema: None | str = None) -> None | T:
         # objects in a Record have no OBJECT_BEGIN OBJECT_END demarcating
         # bytes. the demarcation is implied by the ordering of the elements
 
         cursor.save()
         try:
-            val = spec.read(cursor, name)
+            val = spec.read(cursor, schema)
             cursor.unsave()
             return val
         except UnexpectedBytesError:
@@ -365,7 +369,7 @@ class Record(_TypedDict, Serializable, metaclass=abc.ABCMeta):
             if not alias in self:
                 assert not field.required, 'required field not present'
                 break
-            field.spec.write(cursor, self[alias], field.name)
+            field.spec.write(cursor, self[alias], field.schema)
 
 
 # can contain Bool, Char, Byte, Short, Int, Long, Float, Double, Utf8Str, Object
@@ -386,11 +390,11 @@ class IntMap(_TypedDict, Serializable):
     @classmethod
     def spec(
         cls,
-        alias_name_spec: list[tuple[str, str, Spec]],
+        alias_schema_spec: list[tuple[str, str, Spec]],
     ) -> Spec[typing.Self]:
         fields = {}
-        for alias, name, spec in alias_name_spec:
-            fields[alias] = _TypedDict._TypedField(spec, name, None, False)
+        for alias, schema, spec in alias_schema_spec:
+            fields[alias] = _TypedDict._TypedField(spec, schema, None, False)
 
         class IntMap(cls):
             @property
@@ -419,9 +423,9 @@ class IntMap(_TypedDict, Serializable):
                     f"Object index number {idxnum} not recognized")
 
             alias = result._idx_to_alias[idxnum]
-            name = result._idx_to_field[idxnum].name
+            schema = result._idx_to_field[idxnum].schema
             spc = result._idx_to_field[idxnum].spec
-            result[alias] = spc.read(cursor, name)
+            result[alias] = spc.read(cursor, schema)
         return result
 
     @typing.override
@@ -430,11 +434,11 @@ class IntMap(_TypedDict, Serializable):
 
         for alias, value in self.items():
             idx = self._to_idx(alias)
-            name = self._idx_to_field[idx].name
+            schema = self._idx_to_field[idx].schema
             spc = self._idx_to_field[idx].spec
 
             write_int(cursor, idx)
-            spc.write(cursor, value, name)
+            spc.write(cursor, value, schema)
 
 
 # can contain Bool, Char, Byte, Short, Int, Long, Float, Double, Utf8Str
@@ -1027,7 +1031,7 @@ class DataStore(DictBase, Serializable):
         1  # present after the signature; unknown what this number means
     )
 
-    # named object data structure (name utf8str + data)
+    # named object data structure (schema utf8str + data)
     _OBJECT_BEGIN: typing.Final[int] = 0xfe
     # end of data for object
     _OBJECT_END: typing.Final[int] = 0xff
@@ -1037,11 +1041,13 @@ class DataStore(DictBase, Serializable):
 
     @typing.override
     def _is_key_readable(self, key: typing.Any) -> bool:
-        return key in self.keys() or schemas.get_spec_by_name(key) is not None
+        return key in self.keys() or schemas.get_factory_by_schema(
+            key) is not None
 
     @typing.override
     def _is_key_writable(self, key: typing.Any) -> bool:
-        return key in self.keys() or schemas.get_spec_by_name(key) is not None
+        return key in self.keys() or schemas.get_factory_by_schema(
+            key) is not None
 
     @typing.override
     def _is_value_writable(
@@ -1049,11 +1055,13 @@ class DataStore(DictBase, Serializable):
         value: typing.Any,
         key: typing.Any,
     ) -> bool:
-        return key in self.keys() or schemas.get_spec_by_name(key) is not None
+        return key in self.keys() or schemas.get_factory_by_schema(
+            key) is not None
 
     @typing.override
     def _is_key_deletable(self, key: typing.Any) -> bool:
-        return key in self.keys() or schemas.get_spec_by_name(key) is not None
+        return key in self.keys() or schemas.get_factory_by_schema(
+            key) is not None
 
     @classmethod
     def _eat_signature_or_error(cls, cursor: Cursor):
@@ -1086,9 +1094,9 @@ class DataStore(DictBase, Serializable):
 
         size = read_int(cursor)
         for _ in range(size):
-            value, name = read_object(cursor)
-            assert name, 'Object has blank name.'
-            result[name] = value
+            value, schema = read_object(cursor)
+            assert schema, 'Object has blank schema.'
+            result[schema] = value
         return result
 
     @typing.override
@@ -1096,8 +1104,8 @@ class DataStore(DictBase, Serializable):
         cursor.write(self.MAGIC_STR)
         write_long(cursor, self.FIXED_MYSTERY_NUM)
         write_int(cursor, len(self))
-        for name, value in self.items():
-            write_object(cursor, value, name)
+        for schema, value in self.items():
+            write_object(cursor, value, schema)
 
     def __str__(self) -> str:
         return f"{self.__class__.__name__}{dict(self)}"
