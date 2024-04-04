@@ -104,30 +104,33 @@ def _read_basic(cursor: Cursor) \
     return None
 
 
-class Array(ListBase[T], Serializable):
-    _ELMT_SPEC: typing.Final[str] = '_schema_array_elmt_spec'
-    _ELMT_NAME: typing.Final[str] = '_schema_array_elmt_name'
-
+class Array(ListBase[T], Serializable, metaclass=abc.ABCMeta):
     # Array can contain Basic and other containers
-    def __init__(self, *args, **kwargs):
-        self._elmt_spec: typing.Final[Spec[T]] \
-            = kwargs.pop(self._ELMT_SPEC)
-        self._elmt_name: typing.Final[str] \
-            = kwargs.pop(self._ELMT_NAME, None) or ''
-
-        # parent constructor /after/ specs set up so that hooks run correctly
-        super().__init__(*args, **kwargs)
-
     @classmethod
     def spec(cls, elmt: Spec[T], name: None | str = None) -> Spec[typing.Self]:
-        return Spec(
-            cls,
-            kwargs={
-                cls._ELMT_SPEC: elmt,
-                cls._ELMT_NAME: name
-            },
-            indexes=[Index(elmt.cls_)],
-        )
+        class Array(cls):
+            @property
+            def elmt_spec(self) -> Spec[T]:
+                return elmt
+
+            @property
+            def elmt_name(self) -> None | str:
+                return name
+
+        return Spec(Array)  # type: ignore
+
+    @property
+    @abc.abstractmethod
+    def elmt_spec(self) -> Spec[T]:
+        raise NotImplementedError("Must be implemented by the subclass.")
+
+    @property
+    def elmt_cls(self) -> type[T]:
+        return self.elmt_spec.cls_
+
+    @property
+    def elmt_name(self) -> None | str:
+        return None
 
     @typing.override
     @classmethod
@@ -135,7 +138,7 @@ class Array(ListBase[T], Serializable):
         result = cls(*args, **kwargs)
         size = read_int(cursor)
         for _ in range(size):
-            e = result._elmt_spec.read(cursor, result._elmt_name)
+            e = result.elmt_spec.read(cursor, result.elmt_name)
             result.append(e)
         return result
 
@@ -143,21 +146,13 @@ class Array(ListBase[T], Serializable):
     def _write(self, cursor: Cursor):
         write_int(cursor, len(self))
         for e in self:
-            self._elmt_spec.write(cursor, e, self._elmt_name)
-
-    @property
-    def elmt_cls(self) -> type[T]:
-        return self._elmt_spec.cls_
-
-    @property
-    def elmt_name(self) -> str:
-        return self._elmt_name
+            self.elmt_spec.write(cursor, e, self.elmt_name)
 
     def make_element(self, *args, **kwargs) -> T:
-        if issubclass(self._elmt_spec.cls_, Basic) and (args or kwargs):
-            return self._elmt_spec.make(*args, **kwargs)
+        if issubclass(self.elmt_spec.cls_, Basic) and (args or kwargs):
+            return self.elmt_spec.make(*args, **kwargs)
 
-        result = self._elmt_spec.make()
+        result = self.elmt_spec.make()
         if isinstance(result, dict) and (args or kwargs):
             result.update(*args, **kwargs)
         elif isinstance(result, list) and (args or kwargs):
@@ -172,11 +167,11 @@ class Array(ListBase[T], Serializable):
 
     @typing.override
     def _is_allowed(self, value: typing.Any) -> bool:
-        return self._elmt_spec.is_compatible(value)
+        return self.elmt_spec.is_compatible(value)
 
     @typing.override
     def _transform(self, value: typing.Any) -> T:
-        return self._elmt_spec.make(value)
+        return self.elmt_spec.make(value)
 
 
 class _OptionalDict(DictBase[str, T], metaclass=abc.ABCMeta):

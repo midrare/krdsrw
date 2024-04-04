@@ -45,10 +45,6 @@ class TestSpec:
         o = Spec(Int)
         assert o.cls_ == Int
 
-    def test_indexes(self):
-        o = Array.spec(Spec(Int))
-        assert o.indexes == [Index(Int)]
-
     def test_make(self):
         spc = Spec(Int)
         assert spc.make(1337) == 1337
