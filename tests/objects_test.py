@@ -343,6 +343,46 @@ class TestTypedDict:
         o = Custom()  # no error
         assert o == { 'a': False, 'b': 0, 'c': ''}
 
+    def test_delete_required(self):
+        class Custom(_TypedDict):
+            @property
+            @typing.override
+            def _key_to_field(self) -> dict[str, _TypedDict._TypedField]:
+                return {
+                    'a': _TypedDict._TypedField(Spec(Bool), None, None, True),
+                    'b': _TypedDict._TypedField(Spec(Int), None, None, True),
+                    'c':
+                    _TypedDict._TypedField(Spec(Utf8Str), None, None, True),
+                    'x': _TypedDict._TypedField(Spec(Bool), None, None, False),
+                    'y': _TypedDict._TypedField(Spec(Int), None, None, False),
+                    'z':
+                    _TypedDict._TypedField(Spec(Utf8Str), None, None, False),
+                }
+
+        o = Custom()
+        with pytest.raises(KeyError):
+            del o['a']
+
+        o = Custom()
+        with pytest.raises(KeyError):
+            del o['b']
+
+        o = Custom()
+        with pytest.raises(KeyError):
+            del o['c']
+
+        o = Custom({ 'x': True, 'y': 8, 'z': 'hello'})
+        del o['x']  # no error
+        assert 'x' not in o
+
+        o = Custom({ 'x': True, 'y': 8, 'z': 'hello'})
+        del o['y']  # no error
+        assert 'y' not in o
+
+        o = Custom({ 'x': True, 'y': 8, 'z': 'hello'})
+        del o['z']  # no error
+        assert 'z' not in o
+
 
 class TestRecord:
     def test_instantiate(self):
