@@ -163,22 +163,22 @@ def _annotation_cache_object() -> Spec:
 
         _annotation_object_cache_factory = IntMap.spec([
             (
-                0, "bookmarks", "saved.avl.interval.tree",
+                "bookmarks", "saved.avl.interval.tree",
                 Array.spec(
                     _annotation_personal_element(),
                     "annotation.personal.bookmark")),
             (
-                1, "highlights", "saved.avl.interval.tree",
+                "highlights", "saved.avl.interval.tree",
                 Array.spec(
                     _annotation_personal_element(),
                     "annotation.personal.highlight")),
             (
-                2, "notes", "saved.avl.interval.tree",
+                "notes", "saved.avl.interval.tree",
                 Array.spec(
                     _annotation_personal_element(),
                     "annotation.personal.note")),
             (
-                3, "clip_articles", "saved.avl.interval.tree",
+                "clip_articles", "saved.avl.interval.tree",
                 Array.spec(
                     _annotation_personal_element(),
                     "annotation.personal.clip_article")),

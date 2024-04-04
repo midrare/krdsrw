@@ -362,21 +362,16 @@ class Record(_TypedDict, Serializable, metaclass=abc.ABCMeta):
 
 
 # can contain Bool, Char, Byte, Short, Int, Long, Float, Double, Utf8Str, Object
-class IntMap(DictBase[str, typing.Any], Serializable):
-    _IDX_ALIAS_NAME_SPEC: typing.Final[str] \
-        = '_schema_intmap_idx_alias_name_spec'
-
+class IntMap(_TypedDict, Serializable):
     def __init__(self, *args, **kwargs):
-        idx_alias_name_spec = kwargs.pop(self._IDX_ALIAS_NAME_SPEC)
-
-        self._idx_to_spec: dict[int, Spec] = {}
-        self._idx_to_name: dict[int, str] = {}
+        self._idx_to_field: dict[int, _TypedDict._TypedField] = {}
+        self._alias_to_idx: dict[str, int] = {}
         self._idx_to_alias: dict[int, str] = {}
 
-        for idx, alias, name, spec in idx_alias_name_spec:
-            self._idx_to_alias[idx] = alias
-            self._idx_to_name[idx] = name
-            self._idx_to_spec[idx] = spec
+        for i, (alias, field) in enumerate(self._key_to_field.items()):
+            self._idx_to_field[i] = field
+            self._alias_to_idx[alias] = i
+            self._idx_to_alias[i] = alias
 
         # parent constructor after schema setup so hooks run correctly
         super().__init__(*args, **kwargs)
@@ -384,99 +379,25 @@ class IntMap(DictBase[str, typing.Any], Serializable):
     @classmethod
     def spec(
         cls,
-        idx_alias_name_spec: list[tuple[int, str, str, Spec]],
+        alias_name_spec: list[tuple[str, str, Spec]],
     ) -> Spec[typing.Self]:
-        return Spec(
-            cls,
-            kwargs={cls._IDX_ALIAS_NAME_SPEC: idx_alias_name_spec},
-        )
+        fields = {}
+        for alias, name, spec in alias_name_spec:
+            fields[alias] = _TypedDict._TypedField(spec, name, False)
 
-    @typing.override
-    def _is_key_readable(self, key: typing.Any) -> bool:
-        return key in list(self._idx_to_spec.keys()) \
-            + list(self._idx_to_name.keys()) \
-            + list(self._idx_to_alias.keys()) \
-            + list(self._idx_to_alias.values())
+        class IntMap(cls):
+            @property
+            @typing.override
+            def _key_to_field(self) -> dict[str, _TypedDict._TypedField]:
+                return fields
 
-    @typing.override
-    def _is_key_deletable(self, key: typing.Any) -> bool:
-        return True
-
-    @typing.override
-    def _is_key_writable(self, key: typing.Any) -> bool:
-        return key in list(self._idx_to_spec.keys()) \
-                + list(self._idx_to_name.keys()) \
-                + list(self._idx_to_alias.keys()) \
-                + list(self._idx_to_alias.values())
-
-    @typing.override
-    def _is_value_writable(
-        self,
-        value: typing.Any,
-        key: typing.Any,
-    ) -> bool:
-        if key not in list(self._idx_to_spec.keys()) \
-                + list(self._idx_to_name.keys()) \
-                + list(self._idx_to_alias.keys()) \
-                + list(self._idx_to_alias.values()):
-            return False
-
-        idx = self._to_idx(key) if isinstance(key, str) else key
-        assert idx >= 0, 'failed to determine key'
-        if not self._idx_to_spec[idx].is_compatible(value):
-            return False
-
-        return True
-
-    @typing.override
-    def _transform_key(self, key: typing.Any) -> str:
-        return self._to_alias(key)
-
-    @typing.override
-    def _transform_value(
-        self,
-        value: typing.Any,
-        key: typing.Any,
-    ) -> typing.Any:
-        maker = self._idx_to_spec[self._to_idx(key)]
-        if issubclass(maker.cls_, Basic) \
-        and isinstance(value, (bool, int, float, str, bytes)) \
-        and not isinstance(value, Basic):
-            value = maker.make(value)
-
-        return value
-
-    @typing.override
-    def _make_postulate(self, key: typing.Any) -> None | typing.Any:
-        idx = self._to_idx(key)
-        fact = self._idx_to_spec.get(idx)
-        if fact is None:
-            return None
-        return fact.make()
+        return Spec(IntMap)  # type: ignore
 
     def _to_idx(self, alias: int | str) -> int:
         if isinstance(alias, int):
             return alias
 
-        for k, v in self._idx_to_alias.items():
-            if v == alias:
-                return k
-
-        raise ValueError(
-            f"Human-readable alias \"{alias}\" has no associated index.")
-
-    def _to_alias(self, idx: int | str) -> str:
-        if isinstance(idx, str):
-            return idx
-
-        # we want to use string alias instead of raw int so that casting
-        # to plain dict retains human-readable key names
-        for k, v in self._idx_to_alias.items():
-            if idx == k:
-                return v
-
-        raise ValueError(
-            f"Index \"{idx}\" has no associated human-readable alias.")
+        return self._alias_to_idx[alias]
 
     @typing.override
     @classmethod
@@ -486,13 +407,14 @@ class IntMap(DictBase[str, typing.Any], Serializable):
         for _ in range(size):
             idxnum = read_int(cursor)
 
-            if idxnum not in list(result._idx_to_spec.keys()) \
-                    + list(result._idx_to_alias.keys()):
+            if idxnum not in result._idx_to_field:
                 raise UnexpectedStructureError(
                     f"Object index number {idxnum} not recognized")
-            name = result._idx_to_name[idxnum]
+
             alias = result._idx_to_alias[idxnum]
-            result[alias] = result._idx_to_spec[idxnum].read(cursor, name)
+            name = result._idx_to_field[idxnum].name
+            spc = result._idx_to_field[idxnum].spec
+            result[alias] = spc.read(cursor, name)
         return result
 
     @typing.override
@@ -501,9 +423,11 @@ class IntMap(DictBase[str, typing.Any], Serializable):
 
         for alias, value in self.items():
             idx = self._to_idx(alias)
-            name = self._idx_to_name[idx]
+            name = self._idx_to_field[idx].name
+            spc = self._idx_to_field[idx].spec
+
             write_int(cursor, idx)
-            self._idx_to_spec[idx].write(cursor, value, name)
+            spc.write(cursor, value, name)
 
 
 # can contain Bool, Char, Byte, Short, Int, Long, Float, Double, Utf8Str

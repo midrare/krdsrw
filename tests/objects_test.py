@@ -409,17 +409,17 @@ class TestRecord:
 class TestIntMap:
     def test_instantiate(self):
         spc = IntMap.spec([
-            (0, "apple", "name.a", Array.spec(Spec(Int), "x")),
-            (1, "banana", "name.b", Array.spec(Spec(Int), "y")),
-            (2, "pear", "name.c", Array.spec(Spec(Int), "z")),
+            ("apple", "name.a", Array.spec(Spec(Int), "x")),
+            ("banana", "name.b", Array.spec(Spec(Int), "y")),
+            ("pear", "name.c", Array.spec(Spec(Int), "z")),
         ])
         spc.make()
 
     def test_make_element(self):
         spc = IntMap.spec([
-            (0, "apple", "name.a", Array.spec(Spec(Int), "x")),
-            (1, "banana", "name.b", Array.spec(Spec(Int), "y")),
-            (2, "pear", "name.c", Array.spec(Spec(Int), "z")),
+            ("apple", "name.a", Array.spec(Spec(Int), "x")),
+            ("banana", "name.b", Array.spec(Spec(Int), "y")),
+            ("pear", "name.c", Array.spec(Spec(Int), "z")),
         ])
 
         o = spc.make()
