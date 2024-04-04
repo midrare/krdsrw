@@ -694,8 +694,8 @@ class Position(_TypedDict, Serializable):
     _MAGIC_CHUNK_V1: typing.Final[int] = 0x01
     _FIELDS: typing.Final[dict[str, _TypedDict._TypedField]] = {
         'char_pos': _TypedDict._TypedField(Spec(Int), None, None, True),
-        'chunk_eid': _TypedDict._TypedField(Spec(Int), None, None, False),
-        'chunk_pos': _TypedDict._TypedField(Spec(Int), None, None, False),
+        'chunk_eid': _TypedDict._TypedField(Spec(Int), None, [-1], False),
+        'chunk_pos': _TypedDict._TypedField(Spec(Int), None, [-1], False),
     }
 
     @property
@@ -743,8 +743,8 @@ class LPR(_TypedDict, Serializable):  # aka LPR
     _MAGIC_V2: typing.Final[int] = 2
     _FIELDS: typing.Final[dict[str, _TypedDict._TypedField]] = {
         'pos': _TypedDict._TypedField(Spec(Position), None, None, True),
-        'timestamp': _TypedDict._TypedField(Spec(Int), None, None, False),
-        'lpr_version': _TypedDict._TypedField(Spec(Int), None, None, False),
+        'timestamp': _TypedDict._TypedField(Spec(Int), None, [-1], False),
+        'lpr_version': _TypedDict._TypedField(Spec(Int), None, [-1], False),
     }
 
     @property
