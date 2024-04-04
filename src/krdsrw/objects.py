@@ -110,10 +110,12 @@ class Array(ListBase[T], Serializable, metaclass=abc.ABCMeta):
     def spec(cls, elmt: Spec[T], name: None | str = None) -> Spec[typing.Self]:
         class Array(cls):
             @property
+            @typing.override
             def elmt_spec(self) -> Spec[T]:
                 return elmt
 
             @property
+            @typing.override
             def elmt_name(self) -> None | str:
                 return name
 
@@ -174,72 +176,37 @@ class Array(ListBase[T], Serializable, metaclass=abc.ABCMeta):
         return self.elmt_spec.make(value)
 
 
-class _OptionalDict(DictBase[str, T], metaclass=abc.ABCMeta):
+class _TypedDict(DictBase[str, T], metaclass=abc.ABCMeta):
+    class _TypedField(typing.NamedTuple):
+        spec: Spec[typing.Any]
+        name: None | str = None
+        required: bool = True
+
     def __init__(self, *args, **kwargs):
-        def explode(o: typing.Any, num: int) -> tuple[typing.Any, ...]:
-            result = []
-            if isinstance(o, (tuple, list)):
-                result.extend(o)
-                result.extend(None for i in range(num - len(o)))
-            else:
-                result.append(o)
-                result.extend(None for i in range(num - 1))
-            return tuple(result)
-
-        def get_spec(v):
-            if isinstance(v, (tuple, list)):
-                return next(e for e in v if isinstance(e, Spec))
-            if isinstance(v, Spec):
-                return v
-            return v
-
-        def get_name(v):
-            if isinstance(v, (tuple, list)):
-                return next(e for e in v if isinstance(e, str))
-            if isinstance(v, str):
-                return v
-            return ''
-
-        self._required_spec: typing.Final[dict[str, Spec[T]]] = {}
-        self._required_name: typing.Final[dict[str, str]] = {}
-
-        self._optional_spec: typing.Final[dict[str, Spec[T]]] = {}
-        self._optional_name: typing.Final[dict[str, str]] = {}
-
-        for key, values in self._required().items():
-            self._required_spec[key] = get_spec(values)
-            self._required_name[key] = get_name(values)
-
-        for key, values in self._optional().items():
-            self._optional_spec[key] = get_spec(values)
-            self._optional_name[key] = get_name(values)
-
         init = dict(*args, **kwargs)
-        for key, values in self._required_spec.items():
+        for key, field in self._key_to_field.items():
             if key not in init:
-                init[key] = values.make()
+                init[key] = field.spec.make()
 
         # call parent constructor last so that hooks will work
         super().__init__(init)
 
-    def _required(self) -> dict[str, Spec[T]]:
-        return {}
-
-    def _optional(self) -> dict[str, Spec[T]]:
-        return {}
+    @property
+    @abc.abstractmethod
+    def _key_to_field(self) -> dict[str, _TypedField]:
+        raise NotImplementedError("Must be implemented in subclass.")
 
     @typing.override
     def _is_key_readable(self, key: typing.Any) -> bool:
         if not isinstance(key, str):
             return False
-        return key in self._required_spec or key in self._optional_spec
+        return key in self._key_to_field
 
     @typing.override
     def _is_key_writable(self, key: typing.Any) -> bool:
         if not isinstance(key, str):
             return False
-        maker = self._required_spec.get(key) or self._optional_spec.get(key)
-        return bool(maker)
+        return bool(self._key_to_field.get(key))
 
     @typing.override
     def _is_value_writable(
@@ -249,16 +216,17 @@ class _OptionalDict(DictBase[str, T], metaclass=abc.ABCMeta):
     ) -> bool:
         if not isinstance(key, str):
             return False
-        maker = self._required_spec.get(key) or self._optional_spec.get(key)
-        if not maker:
+        field = self._key_to_field.get(key)
+        if not field:
             return False
-        if value is not None and not maker.is_compatible(value):
+        if value is not None and not field.spec.is_compatible(value):
             return False
         return True
 
     @typing.override
     def _is_key_deletable(self, key: typing.Any) -> bool:
-        return key not in self._required_spec
+        return key not in self._key_to_field or not self._key_to_field[
+            key].required
 
     @typing.override
     def _transform_value(
@@ -266,30 +234,30 @@ class _OptionalDict(DictBase[str, T], metaclass=abc.ABCMeta):
         value: typing.Any,
         key: typing.Any,
     ) -> T:
-        maker = self._required_spec.get(key) or self._optional_spec.get(key)
-        if not maker:
+        field = self._key_to_field.get(key)
+        if not field:
             raise KeyError(f"No template for key \"{key}\".")
         if value is None:
-            value = maker.make()
+            value = field.spec.make()
         elif isinstance(value, (bool, int, float, str, bytes)) \
         and not isinstance(value, Basic):
-            value = maker.make(value)
+            value = field.spec.make(value)
 
         return value  # type: ignore
 
     @typing.override
     def _make_postulate(self, key: typing.Any) -> None | T:
-        spc = self._required().get(key) or self._optional().get(key)
-        if spc is None:
+        field = self._key_to_field.get(key)
+        if field is None:
             return None
-        return spc.make()
+        return field.spec.make()
 
     @typing.override
     def __eq__(self, other: typing.Any) -> bool:
         if isinstance(other, self.__class__):
             return (
-                self._required_spec == other._required  # type: ignore
-                and self._optional_spec == other._optional  # type: ignore
+                self._required_spec == other._required_spec  # type: ignore
+                and self._optional_spec == other._optional_spec  # type: ignore
                 and dict(self) == dict(other))
         return super().__eq__(other)
 
@@ -303,48 +271,64 @@ class _OptionalDict(DictBase[str, T], metaclass=abc.ABCMeta):
         return f"{self.__class__.__name__}{dict(self)}"
 
 
-class Record(_OptionalDict, Serializable):
+class Record(_TypedDict, Serializable, metaclass=abc.ABCMeta):
     # Record can contain basics and other containers
     # keys are just arbitrary aliases for convenience. values are
     # hardcoded and knowing what value is where is determined by
     # the order of their appearance
 
-    _REQUIRED: typing.Final[str] = '_schema_record_required'
-    _OPTIONAL: typing.Final[str] = '_schema_record_optional'
+    @classmethod
+    def spec(
+        cls,
+        required: dict[str, Spec[T] | tuple[Spec[T], str]],
+        optional: None | dict[str, Spec[T] | tuple[Spec[T], str]] = None,
+    ) -> Spec[_TypedDict]:
+        def explode(o, len_: int) -> list:
+            result = []
+            if isinstance(o, (tuple, list)):
+                result.extend(o)
+            else:
+                result.append(o)
+            result += [ None for _ in range(len_ - len(result)) ]
+            return result
 
-    @typing.override
-    def __init__(self, *args, **kwargs):
-        self._required_items = kwargs.pop(self._REQUIRED, None) or {}
-        self._optional_items = kwargs.pop(self._OPTIONAL, None) or {}
-        super().__init__(*args, **kwargs)
+        fields = {}
 
-    @typing.override
-    def _required(self) -> dict[str, Spec[type]]:
-        return self._required_items
+        for alias, _packed in required.items():
+            spec, name = explode(_packed, 2)
+            fields[alias] = _TypedDict._TypedField(spec, name, True)
 
-    @typing.override
-    def _optional(self) -> dict[str, Spec[type]]:
-        return self._optional_items
+        for alias, _packed in (optional or {}).items():
+            spec, name = explode(_packed, 2)
+            fields[alias] = _TypedDict._TypedField(spec, name, False)
+
+        class Record(cls):
+            @property
+            @typing.override
+            def _key_to_field(self) -> dict[str, _TypedDict._TypedField]:
+                return fields
+
+        return Spec(Record)
+
+    @property
+    @abc.abstractmethod
+    def _key_to_field(self) -> dict[str, _TypedDict._TypedField]:
+        raise NotImplementedError("Must be implemented in subclass.")
 
     @typing.override
     @classmethod
     def _create(cls, cursor: Cursor, *args, **kwargs) -> typing.Self:
         result = cls(*args, **kwargs)
 
-        for alias, spec in result._required_spec.items():
-            name = result._required_name.get(alias)
+        for alias, (spec, name, required) in result._key_to_field.items():
             val = result._read_next(cursor, spec, name)
             if val is None:
-                raise UnexpectedStructureError(
-                    f'Value for field "{alias}" but was not found',
-                    pos=cursor.tell())
-            result[alias] = val
-
-        for alias, spec in result._optional_spec.items():
-            name = result._optional_name.get(alias)
-            val = result._read_next(cursor, spec, name)
-            if val is None:
-                break
+                if required:
+                    raise UnexpectedStructureError(
+                        f'Value for field "{alias}" but was not found',
+                        pos=cursor.tell())
+                else:
+                    break
             result[alias] = val
 
         return result
@@ -368,49 +352,13 @@ class Record(_OptionalDict, Serializable):
 
     @typing.override
     def _write(self, cursor: Cursor):
-        for alias, spec in self._required_spec.items():
-            assert isinstance(self[alias], spec.cls_), 'Invalid state'
-            name = self._required_name.get(alias)
-            spec.write(cursor, self[alias], name)
-
-        for alias, spec in self._optional_spec.items():
-            value = self.get(alias)
-            if value is None:
+        for alias, (spec, name, required) in self._key_to_field.items():
+            assert (not required and alias not in self) \
+            or isinstance(self[alias], spec.cls_), 'Invalid state'
+            if not alias in self:
+                assert not required, 'required field not present'
                 break
-            assert isinstance(value, spec.cls_), 'Invalid state'
-            name = self._optional_name.get(alias)
-            spec.write(cursor, value, name)
-
-    @property
-    def required(self) -> dict[str, type]:
-        return { k: v.cls_ for k, v in self._required_spec.items() }
-
-    @property
-    def optional(self) -> dict[str, type]:
-        return { k: v.cls_ for k, v in self._optional_spec.items() }
-
-    @classmethod
-    def spec(
-        cls,
-        required: dict[str, Spec[T] | tuple[Spec[T], str]],
-        optional: None | dict[str, Spec[T] | tuple[Spec[T], str]] = None,
-    ) -> Spec[_OptionalDict]:
-        return Spec(
-            cls,
-            kwargs={
-                cls._REQUIRED: copy.deepcopy(required),
-                cls._OPTIONAL: copy.deepcopy(optional),
-            },
-            indexes=[
-                Field(
-                    k,
-                    v[0] if isinstance(v, (tuple, list)) else v,
-                    is_deletable=False) for k, v in required.items()
-            ] + [
-                Field(k, v[0] if isinstance(v, (tuple, list)) else v)
-                for k, v in (optional or {}).items()
-            ],
-        )
+            spec.write(cursor, self[alias], name)
 
 
 # can contain Bool, Char, Byte, Short, Int, Long, Float, Double, Utf8Str, Object
@@ -811,26 +759,18 @@ class _JsonEncoder(json.JSONEncoder):
         return super().iterencode(o, _one_shot)
 
 
-class Position(_OptionalDict, Serializable):
+class Position(_TypedDict, Serializable):
     _MAGIC_CHUNK_V1: typing.Final[int] = 0x01
-    _REQUIRED: typing.Final[dict[str, Spec[typing.Any]]] = {
-        'char_pos': Spec(Int),
-    }
-    _OPTIONAL: typing.Final[dict[str, Spec[typing.Any]]] = {
-        'chunk_eid': Spec(Int),
-        'chunk_pos': Spec(Int),
+    _FIELDS: typing.Final[dict[str, _TypedDict._TypedField]] = {
+        'char_pos': _TypedDict._TypedField(Spec(Int), None, True),
+        'chunk_eid': _TypedDict._TypedField(Spec(Int), None, False),
+        'chunk_pos': _TypedDict._TypedField(Spec(Int), None, False),
     }
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
+    @property
     @typing.override
-    def _required(self) -> dict[str, Spec[typing.Any]]:
-        return self._REQUIRED
-
-    @typing.override
-    def _optional(self) -> dict[str, Spec[typing.Any]]:
-        return self._OPTIONAL
+    def _key_to_field(self) -> dict[str, _TypedDict._TypedField]:
+        return self._FIELDS
 
     @typing.override
     @classmethod
@@ -868,23 +808,18 @@ class Position(_OptionalDict, Serializable):
         write_utf8str(cursor, s)
 
 
-class LPR(_OptionalDict, Serializable):  # aka LPR
+class LPR(_TypedDict, Serializable):  # aka LPR
     _MAGIC_V2: typing.Final[int] = 2
-    _REQUIRED: typing.Final[dict[str, Spec[typing.Any]]] = {
-        'pos': Spec(Position),
-    }
-    _OPTIONAL: typing.Final[dict[str, Spec[typing.Any]]] = {
-        'timestamp': Spec(Int),
-        'lpr_version': Spec(Int),
+    _FIELDS: typing.Final[dict[str, _TypedDict._TypedField]] = {
+        'pos': _TypedDict._TypedField(Spec(Position), None, True),
+        'timestamp': _TypedDict._TypedField(Spec(Int), None, False),
+        'lpr_version': _TypedDict._TypedField(Spec(Int), None, False),
     }
 
+    @property
     @typing.override
-    def _required(self) -> dict[str, Spec[typing.Any]]:
-        return self._REQUIRED
-
-    @typing.override
-    def _optional(self) -> dict[str, Spec[typing.Any]]:
-        return self._OPTIONAL
+    def _key_to_field(self) -> dict[str, _TypedDict._TypedField]:
+        return self._FIELDS
 
     @typing.override
     @classmethod
