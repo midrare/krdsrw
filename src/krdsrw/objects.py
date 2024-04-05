@@ -44,35 +44,39 @@ T = typing.TypeVar("T", bound=Byte | Char | Bool | Short | Int | Long \
 
 class Array(ListBase[T], Serializable, metaclass=abc.ABCMeta):
     # Array can contain Basic and other containers
+
+    _INIT_SPEC: typing.Final[str] = '_schema_init_elmt_spec'
+    _INIT_SCHEMA: typing.Final[str] = '_schema_init_elmt_schema'
+
+    def __init__(self, *args, **kwargs):
+        self._elmt_spec: Spec = kwargs.pop(self._INIT_SPEC)
+        self._elmt_schema: str = kwargs.pop(self._INIT_SCHEMA)
+        super().__init__(*args, **kwargs)
+
     @classmethod
-    def spec(cls,
-             elmt: Spec[T],
-             schema: None | str = None) -> Spec[typing.Self]:
-        class Array(cls):
-            @property
-            @typing.override
-            def elmt_spec(self) -> Spec[T]:
-                return elmt
-
-            @property
-            @typing.override
-            def elmt_schema(self) -> None | str:
-                return schema
-
-        return Spec(Array)  # type: ignore
+    def spec(
+        cls,
+        elmt: Spec[T],
+        schema: None | str = None,
+    ) -> Spec[typing.Self]:
+        return Spec(
+            cls, [], {
+                cls._INIT_SPEC: elmt,
+                cls._INIT_SCHEMA: schema
+            })  # type: ignore
 
     @property
     @abc.abstractmethod
     def elmt_spec(self) -> Spec[T]:
-        raise NotImplementedError("Must be implemented by the subclass.")
+        self._elmt_spec
 
     @property
     def elmt_cls(self) -> type[T]:
-        return self.elmt_spec.cls_
+        return self._elmt_spec.cls_
 
     @property
     def elmt_schema(self) -> None | str:
-        return None
+        return self._elmt_schema
 
     @typing.override
     @classmethod
@@ -80,7 +84,7 @@ class Array(ListBase[T], Serializable, metaclass=abc.ABCMeta):
         result = cls(*args, **kwargs)
         size = read_int(cursor)
         for _ in range(size):
-            e = result.elmt_spec.read(cursor, result.elmt_schema)
+            e = result._elmt_spec.read(cursor, result.elmt_schema)
             result.append(e)
         return result
 
@@ -88,13 +92,13 @@ class Array(ListBase[T], Serializable, metaclass=abc.ABCMeta):
     def _write(self, cursor: Cursor):
         write_int(cursor, len(self))
         for e in self:
-            self.elmt_spec.write(cursor, e, self.elmt_schema)
+            self._elmt_spec.write(cursor, e, self.elmt_schema)
 
     def make_element(self, *args, **kwargs) -> T:
-        if issubclass(self.elmt_spec.cls_, Basic) and (args or kwargs):
-            return self.elmt_spec.make(*args, **kwargs)
+        if issubclass(self._elmt_spec.cls_, Basic) and (args or kwargs):
+            return self._elmt_spec.make(*args, **kwargs)
 
-        result = self.elmt_spec.make()
+        result = self._elmt_spec.make()
         if isinstance(result, dict) and (args or kwargs):
             result.update(*args, **kwargs)
         elif isinstance(result, list) and (args or kwargs):
@@ -109,11 +113,11 @@ class Array(ListBase[T], Serializable, metaclass=abc.ABCMeta):
 
     @typing.override
     def _is_allowed(self, value: typing.Any) -> bool:
-        return self.elmt_spec.is_compatible(value)
+        return self._elmt_spec.is_compatible(value)
 
     @typing.override
     def _transform(self, value: typing.Any) -> T:
-        return self.elmt_spec.make(value)
+        return self._elmt_spec.make(value)
 
 
 class _TypedField(typing.NamedTuple):
@@ -218,6 +222,12 @@ class Record(_TypedDict, Serializable, metaclass=abc.ABCMeta):
     # hardcoded and knowing what value is where is determined by
     # the order of their appearance
 
+    _INIT_FIELDS: typing.Final[str] = '_schema_init_fields'
+
+    def __init__(self, *args, **kwargs):
+        self._fields: dict[str, _TypedField] = kwargs.pop(self._INIT_FIELDS)
+        super().__init__(*args, **kwargs)
+
     @classmethod
     def spec(
         cls,
@@ -243,18 +253,12 @@ class Record(_TypedDict, Serializable, metaclass=abc.ABCMeta):
             spec, schema = explode(_packed, 2)
             fields[alias] = _TypedField(spec, schema, False)
 
-        class Record(cls):
-            @property
-            @typing.override
-            def _key_to_field(self) -> dict[str, _TypedField]:
-                return fields
-
-        return Spec(Record)
+        return Spec(Record, [], {cls._INIT_FIELDS: fields})
 
     @property
     @abc.abstractmethod
     def _key_to_field(self) -> dict[str, _TypedField]:
-        raise NotImplementedError("Must be implemented in subclass.")
+        return self._fields
 
     @typing.override
     @classmethod
@@ -302,14 +306,20 @@ class Record(_TypedDict, Serializable, metaclass=abc.ABCMeta):
             field.spec.write(cursor, self[alias], field.schema)
 
 
-# can contain Bool, Char, Byte, Short, Int, Long, Float, Double, Utf8Str, Object
 class IntMap(_TypedDict, Serializable):
+    # can contain Bool, Char, Byte, Short, Int, Long, Float, Double,
+    #   Utf8Str, Object
+
+    _INIT_FIELDS: typing.Final[str] = '_schema_init_fields'
+
     def __init__(self, *args, **kwargs):
+        self._fields: dict[str, _TypedField] = kwargs.pop(self._INIT_FIELDS)
+
         self._idx_to_field: dict[int, _TypedField] = {}
         self._alias_to_idx: dict[str, int] = {}
         self._idx_to_alias: dict[int, str] = {}
 
-        for i, (alias, field) in enumerate(self._key_to_field.items()):
+        for i, (alias, field) in enumerate(self._fields.items()):
             self._idx_to_field[i] = field
             self._alias_to_idx[alias] = i
             self._idx_to_alias[i] = alias
@@ -326,19 +336,18 @@ class IntMap(_TypedDict, Serializable):
         for alias, schema, spec in alias_schema_spec:
             fields[alias] = _TypedField(spec, schema, False)
 
-        class IntMap(cls):
-            @property
-            @typing.override
-            def _key_to_field(self) -> dict[str, _TypedField]:
-                return fields
-
-        return Spec(IntMap)  # type: ignore
+        return Spec(IntMap, [], {cls._INIT_FIELDS: fields})  # type: ignore
 
     def _to_idx(self, alias: int | str) -> int:
         if isinstance(alias, int):
             return alias
 
         return self._alias_to_idx[alias]
+
+    @property
+    @typing.override
+    def _key_to_field(self) -> dict[str, _TypedField]:
+        return self._fields
 
     @typing.override
     @classmethod
@@ -686,8 +695,8 @@ class LPR(_TypedDict, Serializable):  # aka LPR
     _MAGIC_V2: typing.Final[int] = 2
     _FIELDS: typing.Final[dict[str, _TypedField]] = {
         'pos': _TypedField(Spec(Position), None, True),
-        'timestamp': _TypedField(Spec(Int), None, False),
-        'lpr_version': _TypedField(Spec(Int), None, False),
+        'timestamp': _TypedField(Spec(Int, -1), None, False),
+        'lpr_version': _TypedField(Spec(Int, -1), None, False),
     }
 
     @property
@@ -969,11 +978,18 @@ class ObjectMap(_TypedDict, Serializable):
     _FIXED_MYSTERY_NUM: typing.Final[int] = (
         1  # present after the signature; unknown what this number means
     )
+    _INIT_FIELDS: typing.Final[str] = '_schema_init_fields'
 
     # named object data structure (schema utf8str + data)
     _OBJECT_BEGIN: typing.Final[int] = 0xfe
     # end of data for object
     _OBJECT_END: typing.Final[int] = 0xff
+
+    def __init__(self, *args, **kwargs):
+        assert self._INIT_FIELDS in kwargs, \
+            f"{self.__class__.__name__} cannot be instantiated directly"
+        self._fields: dict[str, _TypedField] = kwargs.pop(self._INIT_FIELDS)
+        super().__init__(*args, **kwargs)
 
     @classmethod
     def spec(cls, map_: dict[str, Spec]) -> Spec[typing.Self]:
@@ -981,13 +997,12 @@ class ObjectMap(_TypedDict, Serializable):
         for key, spc in map_.items():
             fields[key] = _TypedField(spc, key, False)
 
-        class ObjectMap(cls):
-            @property
-            @typing.override
-            def _key_to_field(self) -> dict[str, _TypedField]:
-                return fields
+        return Spec(ObjectMap, [], {cls._INIT_FIELDS: fields})  # type: ignore
 
-        return Spec(ObjectMap)  # type: ignore
+    @typing.override
+    @property
+    def _key_to_field(self) -> dict[str, _TypedField]:
+        return self._fields
 
     @classmethod
     def _eat_signature_or_error(cls, cursor: Cursor):

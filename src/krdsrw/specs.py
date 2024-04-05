@@ -55,16 +55,16 @@ class Spec(typing.Generic[T]):
     def __init__(
         self,
         cls_: type[T],
-        args: None | typing.Any \
+        default: None | typing.Any \
         | tuple[typing.Any, ...] | list[typing.Any] = None,
-        kwargs: None | dict[typing.Any, typing.Any] = None,
+        schema: None | dict[typing.Any, typing.Any] = None,
         indexes: None | list[Index] | list[Field] | list[Index | Field] = None,
     ):
         super().__init__()
 
         self._cls: typing.Final[type[T]] = cls_
-        self._init_args: list[typing.Any] = _flatten(args or [])
-        self._init_kwargs: dict[typing.Any, typing.Any] = kwargs or {}
+        self._init_default: list[typing.Any] = _flatten(default or [])
+        self._init_schema: dict[typing.Any, typing.Any] = schema or {}
         self._indexes: list[Index | Field] \
             = copy.deepcopy(indexes or [])  # type: ignore
 
@@ -92,11 +92,7 @@ class Spec(typing.Generic[T]):
                     f"Expected object schema \"{schema}\""
                     + f" but got \"{schema_}\".")
 
-        result = self._cls._create(
-            cursor,
-            *self._init_args,
-            **self._init_kwargs,
-        )
+        result = self._cls._create(cursor, **self._init_schema)
 
         if schema and not cursor.eat(self._OBJECT_END):
             raise UnexpectedBytesError(
@@ -107,8 +103,8 @@ class Spec(typing.Generic[T]):
 
     def make(self, *args, **kwargs) -> T:
         if not args and not kwargs:
-            return self._cls(*self._init_args, **self._init_kwargs)
-        return self._cls(*args, **kwargs)
+            return self._cls(*self._init_default, **self._init_schema)
+        return self._cls(*args, **kwargs, **self._init_schema)
 
     def write(self, cursor: Cursor, o: T, schema: None | str = None):
         if schema:
@@ -122,8 +118,8 @@ class Spec(typing.Generic[T]):
     def __eq__(self, o: typing.Any) -> bool:
         if isinstance(o, self.__class__):
             return self._cls == o._cls \
-            and self._init_args == o._init_args \
-            and self._init_kwargs == o._init_kwargs
+            and self._init_default == o._init_default \
+            and self._init_schema == o._init_schema
         return super().__eq__(o)
 
     def is_compatible(self, o: type | typing.Any) -> bool:
