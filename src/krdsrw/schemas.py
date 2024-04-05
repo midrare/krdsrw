@@ -29,6 +29,8 @@ _annotation_personal_element_factory: None | Spec = None
 _timer_average_calculator_factory: None | Spec = None
 _timer_average_calculator_distribution_normal_factory: None | Spec = None
 _timer_average_calculator_calculator_outliers_factory: None | Spec = None
+_datetime_factory: None | Spec = None
+_position_factory: None | Spec = None
 
 _schema_to_factory: dict[str, None | Spec] = {}
 
@@ -190,16 +192,14 @@ def _annotation_cache_object() -> Spec:
 def _annotation_personal_element() -> Spec:
     global _annotation_personal_element_factory
     if not _annotation_personal_element_factory:
-        from .objects import DateTime
         from .objects import Record
-        from .objects import Position
 
         _annotation_personal_element_factory = Record.spec(
             {
-                "start_pos": Spec(Position),
-                "end_pos": Spec(Position),
-                "creation_time": Spec(DateTime),
-                "last_modification_time": Spec(DateTime),
+                "start_pos": _position(),
+                "end_pos": _position(),
+                "creation_time": _datetime(),
+                "last_modification_time": _datetime(),
                 "template": _utf8str,
             }, {
                 "note": _utf8str,
@@ -207,16 +207,30 @@ def _annotation_personal_element() -> Spec:
     return _annotation_personal_element_factory
 
 
+def _datetime() -> Spec:
+    global _datetime_factory
+    if not _datetime_factory:
+        from .objects import DateTime
+        _datetime_factory = Spec(DateTime)
+    return _datetime_factory
+
+
+def _position() -> Spec:
+    global _position_factory
+    if not _position_factory:
+        from .objects import Position
+        _position_factory = Spec(Position)
+    return _position_factory
+
+
 def _get_schema_to_factory() -> dict[str, None | Spec]:
     global _schema_to_factory
     if not _schema_to_factory:
-        from .objects import DateTime
         from .objects import DynamicMap
         from .objects import Array
         from .objects import Record
         from .objects import Json
         from .objects import LPR
-        from .objects import Position
         from .objects import TimeZoneOffset
 
         # NOTE if you update this schema map update the type hint maker too
@@ -260,23 +274,23 @@ def _get_schema_to_factory() -> dict[str, None | Spec]:
             "price.info.data":
             Spec(Json),
             "erl":
-            Spec(Position),
+            _position(),
             "lpr":
             Spec(LPR),
             "fpr":
             Record.spec({
-                "pos": Spec(Position),
+                "pos": _position(),
             }, {
-                "timestamp": Spec(DateTime),
+                "timestamp": _datetime(),
                 "timezone_offset": Spec(TimeZoneOffset),
                 "country": _utf8str,
                 "device": _utf8str,
             }),
             "updated_lpr":
             Record.spec({
-                "pos": Spec(Position),
+                "pos": _position(),
             }, {
-                "timestamp": Spec(DateTime),
+                "timestamp": _datetime(),
                 "timezone_offset": Spec(TimeZoneOffset),
                 "country": _utf8str,
                 "device": _utf8str,
@@ -318,7 +332,7 @@ def _get_schema_to_factory() -> dict[str, None | Spec]:
             "purchase.state.data":
             Record.spec({
                 "state": _int,
-                "time": Spec(DateTime),
+                "time": _datetime(),
             }),
             "timer.model":
             _timer_model(),
@@ -343,8 +357,8 @@ def _get_schema_to_factory() -> dict[str, None | Spec]:
             "page.history.store":
             Array.spec(
                 Record.spec({
-                    "pos": Spec(Position),
-                    "time": Spec(DateTime),
+                    "pos": _position(),
+                    "time": _datetime(),
                 }),
                 "page.history.record",
             ),
