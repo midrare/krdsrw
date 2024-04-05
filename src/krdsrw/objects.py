@@ -964,7 +964,7 @@ WhisperstoreMigrationStatus = typing.TypedDict(
 
 
 # can contain Bool, Char, Byte, Short, Int, Long, Float, Double, Utf8Str, Object
-class DataStore(DictBase, Serializable):
+class ObjectMap(_TypedDict, Serializable):
     _MAGIC_STR: typing.Final[bytes] = b"\x00\x00\x00\x00\x00\x1A\xB1\x26"
     _FIXED_MYSTERY_NUM: typing.Final[int] = (
         1  # present after the signature; unknown what this number means
@@ -975,29 +975,19 @@ class DataStore(DictBase, Serializable):
     # end of data for object
     _OBJECT_END: typing.Final[int] = 0xff
 
-    @typing.override
-    def _is_key_readable(self, key: typing.Any) -> bool:
-        return key in self.keys() or schemas.get_factory_by_schema(
-            key) is not None
+    @classmethod
+    def spec(cls, map_: dict[str, Spec]) -> Spec[typing.Self]:
+        fields = {}
+        for key, spc in map_.items():
+            fields[key] = _TypedField(spc, key, False)
 
-    @typing.override
-    def _is_key_writable(self, key: typing.Any) -> bool:
-        return key in self.keys() or schemas.get_factory_by_schema(
-            key) is not None
+        class ObjectMap(cls):
+            @property
+            @typing.override
+            def _key_to_field(self) -> dict[str, _TypedField]:
+                return fields
 
-    @typing.override
-    def _is_value_writable(
-        self,
-        value: typing.Any,
-        key: typing.Any,
-    ) -> bool:
-        return key in self.keys() or schemas.get_factory_by_schema(
-            key) is not None
-
-    @typing.override
-    def _is_key_deletable(self, key: typing.Any) -> bool:
-        return key in self.keys() or schemas.get_factory_by_schema(
-            key) is not None
+        return Spec(ObjectMap)  # type: ignore
 
     @classmethod
     def _eat_signature_or_error(cls, cursor: Cursor):
@@ -1124,5 +1114,5 @@ ALL_OBJECT_TYPES: typing.Final[tuple[type, ...]] = (
     LPR,
     Position,
     TimeZoneOffset,
-    DataStore,
+    ObjectMap,
 )

@@ -35,7 +35,7 @@ def main(argv: None | list[str] = None) -> int:
         csr = cursor.Cursor()
         csr.load(args.in_file.read())
 
-        root = objects.DataStore()
+        root = objects.ObjectMap()
         root._read(csr)
 
         ser = json.dumps(root, default=lambda o: o.__json__(), indent=2)

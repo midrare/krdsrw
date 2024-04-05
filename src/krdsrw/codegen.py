@@ -22,7 +22,7 @@ from .basics import Utf8Str
 from .objects import DynamicMap
 from .objects import Json
 from .objects import IntMap
-from .objects import DataStore
+from .objects import ObjectMap
 from .objects import Position
 from .objects import LPR
 from .objects import PageReadPos
@@ -353,7 +353,7 @@ def _main(argv: list[str]) -> int:
 
         f.write(_generate_imports(fields))
         f.write('\n\n')
-        f.write(_generate_map(DataStore, fields))
+        f.write(_generate_map(ObjectMap, fields))
         f.write('\n')
 
         f.write("# @formatter: on\n")

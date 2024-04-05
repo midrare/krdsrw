@@ -16,7 +16,7 @@ from krdsrw.specs import Index
 from krdsrw.specs import Field
 from krdsrw.objects import Array
 from krdsrw.objects import LPR
-from krdsrw.objects import DataStore
+from krdsrw.objects import ObjectMap
 from krdsrw.objects import DynamicMap
 from krdsrw.objects import IntMap
 from krdsrw.objects import Json
@@ -477,20 +477,21 @@ class TestLPR:
         assert o == { 'pos': { 'char_pos': 12345 } }
 
 
-class TestDataStore:
+class TestObjectMap:
     def test_instantiate(self):
-        root = DataStore()  # no error
+        spc = ObjectMap.spec({})
+        root = spc.make()  # no error
         assert root is not None
 
     def test_read(self):
         csr = Cursor(TEMPEST_YJR.read_bytes())
-        root = DataStore._create(csr)
+        root = ObjectMap._create(csr)
 
     def test_read_write(self):
         orig_data = TEMPEST_YJR.read_bytes()
 
         csr = Cursor(orig_data)
-        root = DataStore._create(csr)
+        root = ObjectMap._create(csr)
 
         csr = Cursor()
         root._write(csr)
@@ -499,12 +500,12 @@ class TestDataStore:
 
     def test_annotation_cache_object_len(self):
         csr = Cursor(TEMPEST_YJR.read_bytes())
-        root = DataStore._create(csr)
+        root = ObjectMap._create(csr)
         assert len(root["annotation.cache.object"]) == 3
 
     def test_bookmark(self):
         csr = Cursor(TEMPEST_YJR.read_bytes())
-        root = DataStore._create(csr)
+        root = ObjectMap._create(csr)
 
         o = root["annotation.cache.object"]["bookmarks"][0]
         assert o["start_pos"]['chunk_eid'] == 5525
@@ -519,13 +520,13 @@ class TestDataStore:
     def test_peek_object_schema(self):
         csr = Cursor(
             b'\xfe\x00\x00\x0a\x66\x6F\x6E\x74\x2E\x70\x72\x65\x66\x73')
-        assert DataStore._peek_object_schema(csr) == 'font.prefs'
+        assert ObjectMap._peek_object_schema(csr) == 'font.prefs'
         assert csr.tell() == 0
 
     def test_peek_object_type(self):
         csr = Cursor(
             b'\xfe\x00\x00\x0a\x66\x6F\x6E\x74\x2E\x70\x72\x65\x66\x73')
-        t = DataStore._peek_object_type(csr)
+        t = ObjectMap._peek_object_type(csr)
         assert t is not None and issubclass(t, Record)
 
     def test_read_object(self):
@@ -544,7 +545,7 @@ class TestDataStore:
             + b'\x00\x01\x8C\x02\xDF\x5A\xC1\x03' \
             + b'\x00\x00\x05\x30\xEF\xBF\xBC\x30' \
             + b'\xFF')
-        o, n = DataStore._read_object(csr, 'annotation.personal.highlight')
+        o, n = ObjectMap._read_object(csr, 'annotation.personal.highlight')
         assert n == 'annotation.personal.highlight'
         assert o['start_pos']['chunk_eid'] == 2788
         assert o['start_pos']['chunk_pos'] == 38
@@ -596,7 +597,7 @@ class TestDataStore:
             "reading_preset_selected": '',
         })
 
-        DataStore._write_object(csr, o, "font.prefs")
+        ObjectMap._write_object(csr, o, "font.prefs")
         assert csr.dump() == (
             b'\xFE\x00\x00\x0A\x66\x6F\x6E\x74'
             + b'\x2E\x70\x72\x65\x66\x73\x03\x00' \

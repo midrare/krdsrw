@@ -1,5 +1,5 @@
 from . import schemas
-from .objects import DataStore
+from .objects import ObjectMap
 from .objects import Array
 from .objects import DateTime
 from .objects import DynamicMap
@@ -51,9 +51,9 @@ __all__ = [
     "LPR",
     "Position",
     "IntMap",
-    "DataStore",
+    "ObjectMap",
     "TimeZoneOffset",
-    "DataStore",
+    "ObjectMap",
     "UnexpectedBytesError",
     "UnexpectedStructureError",
     "Byte",
