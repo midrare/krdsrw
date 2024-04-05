@@ -55,8 +55,8 @@ class Spec(typing.Generic[T]):
     def __init__(
         self,
         cls_: type[T],
-        args: None | typing.Any | tuple[typing.Any, ...]
-        | list[typing.Any] = None,
+        args: None | typing.Any \
+        | tuple[typing.Any, ...] | list[typing.Any] = None,
         kwargs: None | dict[typing.Any, typing.Any] = None,
         indexes: None | list[Index] | list[Field] | list[Index | Field] = None,
     ):
@@ -106,12 +106,9 @@ class Spec(typing.Generic[T]):
         return result  # type: ignore
 
     def make(self, *args, **kwargs) -> T:
-        return self._cls(
-            *args,
-            *self._init_args,
-            **kwargs,
-            **self._init_kwargs,
-        )
+        if not args and not kwargs:
+            return self._cls(*self._init_args, **self._init_kwargs)
+        return self._cls(*args, **kwargs)
 
     def write(self, cursor: Cursor, o: T, schema: None | str = None):
         if schema:

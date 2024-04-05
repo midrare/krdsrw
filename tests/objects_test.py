@@ -25,6 +25,7 @@ from krdsrw.objects import peek_object_schema
 from krdsrw.objects import peek_object_type
 from krdsrw.objects import Position
 from krdsrw.objects import _TypedDict
+from krdsrw.objects import _TypedField
 from krdsrw.objects import read_object
 from krdsrw.objects import write_object
 
@@ -325,16 +326,14 @@ class TestTypedDict:
         class Custom(_TypedDict):
             @property
             @typing.override
-            def _key_to_field(self) -> dict[str, _TypedDict._TypedField]:
+            def _key_to_field(self) -> dict[str, _TypedField]:
                 return {
-                    'a': _TypedDict._TypedField(Spec(Bool), None, None, True),
-                    'b': _TypedDict._TypedField(Spec(Int), None, None, True),
-                    'c':
-                    _TypedDict._TypedField(Spec(Utf8Str), None, None, True),
-                    'x': _TypedDict._TypedField(Spec(Bool), None, None, False),
-                    'y': _TypedDict._TypedField(Spec(Int), None, None, False),
-                    'z':
-                    _TypedDict._TypedField(Spec(Utf8Str), None, None, False),
+                    'a': _TypedField(Spec(Bool), None, True),
+                    'b': _TypedField(Spec(Int), None, True),
+                    'c': _TypedField(Spec(Utf8Str), None, True),
+                    'x': _TypedField(Spec(Bool), None, False),
+                    'y': _TypedField(Spec(Int), None, False),
+                    'z': _TypedField(Spec(Utf8Str), None, False),
                 }
 
         o = Custom()  # no error
@@ -347,16 +346,14 @@ class TestTypedDict:
         class Custom(_TypedDict):
             @property
             @typing.override
-            def _key_to_field(self) -> dict[str, _TypedDict._TypedField]:
+            def _key_to_field(self) -> dict[str, _TypedField]:
                 return {
-                    'a': _TypedDict._TypedField(Spec(Bool), None, None, True),
-                    'b': _TypedDict._TypedField(Spec(Int), None, None, True),
-                    'c':
-                    _TypedDict._TypedField(Spec(Utf8Str), None, None, True),
-                    'x': _TypedDict._TypedField(Spec(Bool), None, None, False),
-                    'y': _TypedDict._TypedField(Spec(Int), None, None, False),
-                    'z':
-                    _TypedDict._TypedField(Spec(Utf8Str), None, None, False),
+                    'a': _TypedField(Spec(Bool), None, True),
+                    'b': _TypedField(Spec(Int), None, True),
+                    'c': _TypedField(Spec(Utf8Str), None, True),
+                    'x': _TypedField(Spec(Bool), None, False),
+                    'y': _TypedField(Spec(Int), None, False),
+                    'z': _TypedField(Spec(Utf8Str), None, False),
                 }
 
         o = Custom()

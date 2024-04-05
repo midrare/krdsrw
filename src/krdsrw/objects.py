@@ -180,22 +180,18 @@ class Array(ListBase[T], Serializable, metaclass=abc.ABCMeta):
         return self.elmt_spec.make(value)
 
 
-class _TypedDict(DictBase[str, T], metaclass=abc.ABCMeta):
-    class _TypedField(typing.NamedTuple):
-        spec: Spec[typing.Any]
-        schema: None | str = None
-        default: None | tuple[typing.Any, ...] = None
-        required: bool = True
+class _TypedField(typing.NamedTuple):
+    spec: Spec[typing.Any]
+    schema: None | str = None
+    required: bool = True
 
+
+class _TypedDict(DictBase[str, T], metaclass=abc.ABCMeta):
     def __init__(self, *args, **kwargs):
         init = dict(*args, **kwargs)
         for key, field in self._key_to_field.items():
             if field.required and key not in init:
-                if field.default is None:
-                    init[key] = field.spec.make()
-                else:
-                    assert isinstance(field.default, (tuple, list))
-                    init[key] = field.spec.make(*field.default)
+                init[key] = field.spec.make()
 
         # call parent constructor last so that hooks will work
         super().__init__(init)
@@ -259,8 +255,6 @@ class _TypedDict(DictBase[str, T], metaclass=abc.ABCMeta):
         field = self._key_to_field.get(key)
         if field is None:
             return None
-        if field.default is not None:
-            return field.spec.make(*field.default)
         return field.spec.make()
 
     @typing.override
@@ -307,23 +301,23 @@ class Record(_TypedDict, Serializable, metaclass=abc.ABCMeta):
 
         for alias, _packed in required.items():
             spec, schema = explode(_packed, 2)
-            fields[alias] = _TypedDict._TypedField(spec, schema, None, True)
+            fields[alias] = _TypedField(spec, schema, True)
 
         for alias, _packed in (optional or {}).items():
             spec, schema = explode(_packed, 2)
-            fields[alias] = _TypedDict._TypedField(spec, schema, None, False)
+            fields[alias] = _TypedField(spec, schema, False)
 
         class Record(cls):
             @property
             @typing.override
-            def _key_to_field(self) -> dict[str, _TypedDict._TypedField]:
+            def _key_to_field(self) -> dict[str, _TypedField]:
                 return fields
 
         return Spec(Record)
 
     @property
     @abc.abstractmethod
-    def _key_to_field(self) -> dict[str, _TypedDict._TypedField]:
+    def _key_to_field(self) -> dict[str, _TypedField]:
         raise NotImplementedError("Must be implemented in subclass.")
 
     @typing.override
@@ -375,7 +369,7 @@ class Record(_TypedDict, Serializable, metaclass=abc.ABCMeta):
 # can contain Bool, Char, Byte, Short, Int, Long, Float, Double, Utf8Str, Object
 class IntMap(_TypedDict, Serializable):
     def __init__(self, *args, **kwargs):
-        self._idx_to_field: dict[int, _TypedDict._TypedField] = {}
+        self._idx_to_field: dict[int, _TypedField] = {}
         self._alias_to_idx: dict[str, int] = {}
         self._idx_to_alias: dict[int, str] = {}
 
@@ -394,12 +388,12 @@ class IntMap(_TypedDict, Serializable):
     ) -> Spec[typing.Self]:
         fields = {}
         for alias, schema, spec in alias_schema_spec:
-            fields[alias] = _TypedDict._TypedField(spec, schema, None, False)
+            fields[alias] = _TypedField(spec, schema, False)
 
         class IntMap(cls):
             @property
             @typing.override
-            def _key_to_field(self) -> dict[str, _TypedDict._TypedField]:
+            def _key_to_field(self) -> dict[str, _TypedField]:
                 return fields
 
         return Spec(IntMap)  # type: ignore
@@ -696,15 +690,15 @@ class _JsonEncoder(json.JSONEncoder):
 
 class Position(_TypedDict, Serializable):
     _MAGIC_CHUNK_V1: typing.Final[int] = 0x01
-    _FIELDS: typing.Final[dict[str, _TypedDict._TypedField]] = {
-        'char_pos': _TypedDict._TypedField(Spec(Int), None, None, True),
-        'chunk_eid': _TypedDict._TypedField(Spec(Int), None, [-1], False),
-        'chunk_pos': _TypedDict._TypedField(Spec(Int), None, [-1], False),
+    _FIELDS: typing.Final[dict[str, _TypedField]] = {
+        'char_pos': _TypedField(Spec(Int), None, True),
+        'chunk_eid': _TypedField(Spec(Int, -1), None, False),
+        'chunk_pos': _TypedField(Spec(Int, -1), None, False),
     }
 
     @property
     @typing.override
-    def _key_to_field(self) -> dict[str, _TypedDict._TypedField]:
+    def _key_to_field(self) -> dict[str, _TypedField]:
         return self._FIELDS
 
     @typing.override
@@ -745,15 +739,15 @@ class Position(_TypedDict, Serializable):
 
 class LPR(_TypedDict, Serializable):  # aka LPR
     _MAGIC_V2: typing.Final[int] = 2
-    _FIELDS: typing.Final[dict[str, _TypedDict._TypedField]] = {
-        'pos': _TypedDict._TypedField(Spec(Position), None, None, True),
-        'timestamp': _TypedDict._TypedField(Spec(Int), None, [-1], False),
-        'lpr_version': _TypedDict._TypedField(Spec(Int), None, [-1], False),
+    _FIELDS: typing.Final[dict[str, _TypedField]] = {
+        'pos': _TypedField(Spec(Position), None, True),
+        'timestamp': _TypedField(Spec(Int), None, False),
+        'lpr_version': _TypedField(Spec(Int), None, False),
     }
 
     @property
     @typing.override
-    def _key_to_field(self) -> dict[str, _TypedDict._TypedField]:
+    def _key_to_field(self) -> dict[str, _TypedField]:
         return self._FIELDS
 
     @typing.override
