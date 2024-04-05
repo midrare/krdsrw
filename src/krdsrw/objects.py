@@ -965,8 +965,8 @@ WhisperstoreMigrationStatus = typing.TypedDict(
 
 # can contain Bool, Char, Byte, Short, Int, Long, Float, Double, Utf8Str, Object
 class DataStore(DictBase, Serializable):
-    MAGIC_STR: typing.Final[bytes] = b"\x00\x00\x00\x00\x00\x1A\xB1\x26"
-    FIXED_MYSTERY_NUM: typing.Final[int] = (
+    _MAGIC_STR: typing.Final[bytes] = b"\x00\x00\x00\x00\x00\x1A\xB1\x26"
+    _FIXED_MYSTERY_NUM: typing.Final[int] = (
         1  # present after the signature; unknown what this number means
     )
 
@@ -1001,22 +1001,22 @@ class DataStore(DictBase, Serializable):
 
     @classmethod
     def _eat_signature_or_error(cls, cursor: Cursor):
-        if not cursor.eat(cls.MAGIC_STR):
+        if not cursor.eat(cls._MAGIC_STR):
             raise UnexpectedBytesError(
                 cursor.tell(),
-                cls.MAGIC_STR,
-                cursor.peek(len(cls.MAGIC_STR)),
+                cls._MAGIC_STR,
+                cursor.peek(len(cls._MAGIC_STR)),
             )
 
     @classmethod
     def _eat_fixed_mystery_num_or_error(cls, cursor: Cursor):
         cursor.save()
         value = read_long(cursor)
-        if value != cls.FIXED_MYSTERY_NUM:
+        if value != cls._FIXED_MYSTERY_NUM:
             cursor.restore()
             raise UnexpectedBytesError(
                 cursor.tell(),
-                Long(cls.FIXED_MYSTERY_NUM).to_bytes(),
+                Long(cls._FIXED_MYSTERY_NUM).to_bytes(),
                 Long(value).to_bytes(),
             )
         cursor.unsave()
@@ -1104,8 +1104,8 @@ class DataStore(DictBase, Serializable):
 
     @typing.override
     def _write(self, cursor: Cursor):
-        cursor.write(self.MAGIC_STR)
-        write_long(cursor, self.FIXED_MYSTERY_NUM)
+        cursor.write(self._MAGIC_STR)
+        write_long(cursor, self._FIXED_MYSTERY_NUM)
         write_int(cursor, len(self))
         for schema, value in self.items():
             self._write_object(cursor, value, schema)
