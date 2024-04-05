@@ -1030,9 +1030,6 @@ class DataStore(DictBase, Serializable):
     # end of data for object
     _OBJECT_END: typing.Final[int] = 0xff
 
-    def __init__(self):
-        super().__init__()
-
     @typing.override
     def _is_key_readable(self, key: typing.Any) -> bool:
         return key in self.keys() or schemas.get_factory_by_schema(
