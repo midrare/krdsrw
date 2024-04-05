@@ -42,15 +42,6 @@ T = typing.TypeVar("T", bound=Byte | Char | Bool | Short | Int | Long \
     | Float | Double | Utf8Str | Serializable)
 
 
-def _read_basic(cursor: Cursor) \
--> None|Bool|Char|Byte|Short|Int|Long|Float|Double|Utf8Str:
-    for t in [ Bool, Byte, Char, Short, Int, Long, Float, Double, Utf8Str ]:
-        if cursor._peek_raw_byte() == t.magic_byte:
-            return t._create(cursor)
-
-    return None
-
-
 class Array(ListBase[T], Serializable, metaclass=abc.ABCMeta):
     # Array can contain Basic and other containers
     @classmethod
@@ -431,6 +422,15 @@ class DynamicMap(DictBase[str, typing.Any], Serializable):
 
         return value
 
+    @classmethod
+    def _read_basic(cls, cursor: Cursor) \
+    -> None|Bool|Char|Byte|Short|Int|Long|Float|Double|Utf8Str:
+        for t in [ Bool, Byte, Char, Short, Int, Long, Float, Double, Utf8Str ]:
+            if cursor._peek_raw_byte() == t.magic_byte:
+                return t._create(cursor)
+
+        return None
+
     @typing.override
     @classmethod
     def _create(cls, cursor: Cursor, *args, **kwargs) -> typing.Self:
@@ -438,7 +438,7 @@ class DynamicMap(DictBase[str, typing.Any], Serializable):
         size = read_int(cursor)
         for _ in range(size):
             key = read_utf8str(cursor)
-            value = _read_basic(cursor)
+            value = cls._read_basic(cursor)
             assert value is not None, 'Value not found'
             result[key] = value
         return result
