@@ -1005,8 +1005,8 @@ class ObjectMap(_TypedDict, Serializable):
 
         return Spec(ObjectMap, [], {cls._INIT_FIELDS: fields})  # type: ignore
 
-    @typing.override
     @property
+    @typing.override
     def _key_to_field(self) -> dict[str, _TypedField]:
         return self._fields
 
