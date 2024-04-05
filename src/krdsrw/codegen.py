@@ -31,7 +31,7 @@ from .specs import Index
 
 
 @dataclasses.dataclass
-class Signature:
+class Function:
     name: str
     args: dict[str,
         None | type | typing.Literal['*'] | typing.Any \
@@ -43,7 +43,11 @@ class Signature:
         | list[None | type | typing.Literal['*'] | typing.Any] \
         = dataclasses.field(default_factory=list)
     decorators: list[str] = dataclasses.field(default_factory=list)
-    bind: None | typing.Literal['self'] | typing.Literal['cls'] = None
+
+
+@dataclasses.dataclass
+class Class:
+    name: str
 
 
 def _path_arg(
@@ -113,15 +117,17 @@ def _to_type(type_: type | typing.Literal['*'] | typing.Any) -> str:
     return str(type_)
 
 
-def _generate_function(sig: Signature) -> str:
+def _generate_function(sig: Function) -> str:
     result = []
 
     result.extend(sig.decorators)
     result.append(f"def {sig.name}(")
-    if sig.bind:
-        result.append(f"    {sig.bind},")
 
-    for key, values in sig.args.items():
+    for i, (key, values) in enumerate(sig.args.items()):
+        if key in [ 'self', 'cls'] and i <= 0:
+            result.append(f"    {key}, \\")
+            continue
+
         assert isinstance(values, (tuple, list))
         values_ = [_to_type(e) for e in values]
         result.append(f"    {key}{': \\' if values_ else ','}")
@@ -160,69 +166,75 @@ def _generate_map(cls_: type | str, fields: list[Field]) -> str:
     for field in fields:
         if field.is_readable:
             sigs.append(
-                Signature(
+                Function(
                     '__getitem__',
-                    { 'key': field.key },
-                    field.value,
-                    bind='self',
-                ))
-            sigs.append(
-                Signature(
-                    '__contains__',
-                    { 'key': field.key },
-                    [bool],
-                    bind='self',
-                ))
-            sigs.append(
-                Signature(
-                    'get',
                     {
+                        'self': True,
                         'key': field.key,
-                        'default': [ None, '*']
                     },
                     field.value,
-                    bind='self',
+                ))
+            sigs.append(
+                Function(
+                    '__contains__',
+                    {
+                        'self': True,
+                        'key': field.key,
+                    },
+                    [bool],
+                ))
+            sigs.append(
+                Function(
+                    'get',
+                    {
+                        'self': True,
+                        'key': field.key,
+                        'default': [ None, '*'],
+                    },
+                    field.value,
                 ))
 
         if field.is_writable:
             sigs.append(
-                Signature(
+                Function(
                     '__setitem__',
                     {
+                        'self': True,
                         'key': field.key,
-                        'value': field.value
+                        'value': field.value,
                     },
                     [None],
-                    bind='self',
                 ))
             sigs.append(
-                Signature(
+                Function(
                     'setdefault',
                     {
+                        'self': True,
                         'key': field.key,
-                        'default': [None] + _flatten(field.value)
+                        'default': [None] + _flatten(field.value),
                     },
                     [None] + _flatten(field.value),
-                    bind='self',
                 ))
 
         if field.is_deletable:
             sigs.append(
-                Signature(
+                Function(
                     '__delitem__',
-                    { 'key': field.key },
+                    {
+                        'self': True,
+                        'key': field.key,
+                    },
                     [None],
-                    bind='self',
                 ))
             sigs.append(
-                Signature(
+                Function(
                     'pop',
                     {
+                        'self': True,
                         'key': field.key,
-                        'default': [None] + _flatten(field.value)
+                        'default': [None] + _flatten(field.value),
                     },
                     [None] + _flatten(field.value),
-                    bind='self',
                 ))
 
     fn_to_sigs = collections.defaultdict(list)
@@ -293,8 +305,8 @@ def _main(argv: list[str]) -> int:
         f.write("# @formatter:off\n")
         f.write('import typing\n')
         f.write('\n')
-        f.write('from .basics import *\n')
-        f.write('from .objects import *\n')
+        f.write('from .basics import *  # type: ignore  # pyright: ignore\n')
+        f.write('from .objects import *  # type: ignore  # pyright: ignore\n')
         f.write('\n')
 
         fields = [
