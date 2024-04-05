@@ -14,10 +14,6 @@ from krdsrw.specs import Field
 from krdsrw.objects import Array
 from krdsrw.objects import DynamicMap
 from krdsrw.objects import Record
-from krdsrw.objects import peek_object_schema
-from krdsrw.objects import peek_object_type
-from krdsrw.objects import read_object
-from krdsrw.objects import write_object
 
 
 class TestSpec:

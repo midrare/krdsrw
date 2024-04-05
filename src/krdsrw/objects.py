@@ -37,61 +37,6 @@ from .basics import write_long
 from .basics import read_utf8str
 from .basics import write_utf8str
 
-_OBJECT_BEGIN_INDICATOR: typing.Final[int] = 254
-_OBJECT_END_INDICATOR: typing.Final[int] = 255
-
-
-def peek_object_schema(csr: Cursor, magic_byte: bool = True) -> None | str:
-    schema = None
-    csr.save()
-    if not magic_byte or csr.eat(_OBJECT_BEGIN_INDICATOR):
-        schema = read_utf8str(csr, False)
-    csr.restore()
-    return schema
-
-
-def peek_object_type(csr: Cursor, magic_byte: bool = True) -> None | type:
-    from . import schemas
-    cls_ = None
-    csr.save()
-
-    if not magic_byte or csr.eat(_OBJECT_BEGIN_INDICATOR):
-        schema = read_utf8str(csr, False)
-        fct = schemas.get_factory_by_schema(schema)
-        assert fct, f'Unsupported schema \"{schema}\".'
-        cls_ = fct.cls_
-
-    csr.restore()
-    return cls_
-
-
-def read_object(csr: Cursor,
-                schema: None | str = None) -> tuple[typing.Any, str]:
-    assert schema is None or schema, 'expected either null or non-empty schema'
-    from . import schemas
-
-    schema_ = peek_object_schema(csr)
-    if not schema_:
-        raise UnexpectedStructureError('Failed to read schema for object.')
-    if schema is not None and schema_ != schema:
-        raise UnexpectedStructureError(
-            f'Object schema "{schema_}" does not match expected schema "{schema}"'
-        )
-    maker = schemas.get_factory_by_schema(schema_)
-    if not maker:
-        raise UnexpectedStructureError(f'Unsupported schema \"{schema_}\".')
-    o = maker.read(csr, schema_)
-    return o, schema_
-
-
-def write_object(csr: Cursor, o: typing.Any, schema: str):
-    assert schema, 'expected non-empty schema'
-    csr.write(_OBJECT_BEGIN_INDICATOR)
-    write_utf8str(csr, schema, False)
-    o._write(csr)
-    csr.write(_OBJECT_END_INDICATOR)
-
-
 K = typing.TypeVar("K", bound=int | float | str)
 T = typing.TypeVar("T", bound=Byte | Char | Bool | Short | Int | Long \
     | Float | Double | Utf8Str | Serializable)
@@ -1076,6 +1021,73 @@ class DataStore(DictBase, Serializable):
             )
         cursor.unsave()
 
+    @classmethod
+    def _peek_object_type(
+        cls,
+        csr: Cursor,
+        magic_byte: bool = True,
+    ) -> None | type:
+        from . import schemas
+        cls_ = None
+        csr.save()
+
+        if not magic_byte or csr.eat(cls._OBJECT_BEGIN):
+            schema = read_utf8str(csr, False)
+            fct = schemas.get_factory_by_schema(schema)
+            assert fct, f'Unsupported schema \"{schema}\".'
+            cls_ = fct.cls_
+
+        csr.restore()
+        return cls_
+
+    @classmethod
+    def _peek_object_schema(
+        cls,
+        csr: Cursor,
+        magic_byte: bool = True,
+    ) -> None | str:
+        schema = None
+        csr.save()
+        if not magic_byte or csr.eat(cls._OBJECT_BEGIN):
+            schema = read_utf8str(csr, False)
+        csr.restore()
+        return schema
+
+    @classmethod
+    def _read_object(
+        cls,
+        csr: Cursor,
+        schema: None | str = None,
+    ) -> tuple[typing.Any, str]:
+        assert schema is None or schema, 'expected either null or non-empty schema'
+        from . import schemas
+
+        schema_ = cls._peek_object_schema(csr)
+        if not schema_:
+            raise UnexpectedStructureError('Failed to read schema for object.')
+        if schema is not None and schema_ != schema:
+            raise UnexpectedStructureError(
+                f'Object schema "{schema_}" does not match expected schema "{schema}"'
+            )
+        maker = schemas.get_factory_by_schema(schema_)
+        if not maker:
+            raise UnexpectedStructureError(f'Unsupported schema \"{schema_}\".')
+        o = maker.read(csr, schema_)
+        return o, schema_
+
+    @classmethod
+    def _write_object(
+        cls,
+        csr: Cursor,
+        o: typing.Any,
+        schema: str,
+    ):
+        assert schema, 'expected non-empty schema'
+        csr.write(cls._OBJECT_BEGIN)
+        write_utf8str(csr, schema, False)
+        o._write(csr)
+        csr.write(cls._OBJECT_END)
+
     @typing.override
     @classmethod
     def _create(cls, cursor: Cursor, *args, **kwargs) -> typing.Self:
@@ -1085,7 +1097,7 @@ class DataStore(DictBase, Serializable):
 
         size = read_int(cursor)
         for _ in range(size):
-            value, schema = read_object(cursor)
+            value, schema = cls._read_object(cursor)
             assert schema, 'Object has blank schema.'
             result[schema] = value
         return result
@@ -1096,7 +1108,7 @@ class DataStore(DictBase, Serializable):
         write_long(cursor, self.FIXED_MYSTERY_NUM)
         write_int(cursor, len(self))
         for schema, value in self.items():
-            write_object(cursor, value, schema)
+            self._write_object(cursor, value, schema)
 
     def __str__(self) -> str:
         return f"{self.__class__.__name__}{dict(self)}"
