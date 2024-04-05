@@ -48,6 +48,9 @@ class Function:
 @dataclasses.dataclass
 class Class:
     name: str
+    supers: None | str | type \
+    | tuple[str | type, ...] \
+    | list[str | type] = None
 
 
 def _path_arg(
