@@ -31,6 +31,9 @@ _timer_average_calculator_distribution_normal_factory: None | Spec = None
 _timer_average_calculator_calculator_outliers_factory: None | Spec = None
 _datetime_factory: None | Spec = None
 _position_factory: None | Spec = None
+_dynamic_map_factory: None | Spec = None
+_timezoneoffset_factory: None | Spec = None
+_json_factory: None | Spec = None
 
 _schema_to_factory: dict[str, None | Spec] = {}
 
@@ -223,15 +226,36 @@ def _position() -> Spec:
     return _position_factory
 
 
+def _dynamic_map() -> Spec:
+    global _dynamic_map_factory
+    if not _dynamic_map_factory:
+        from .objects import DynamicMap
+        _dynamic_map_factory = Spec(DynamicMap)
+    return _dynamic_map_factory
+
+
+def _timezone_offset() -> Spec:
+    global _timezoneoffset_factory
+    if not _timezoneoffset_factory:
+        from .objects import TimeZoneOffset
+        _timezoneoffset_factory = Spec(TimeZoneOffset)
+    return _timezoneoffset_factory
+
+
+def _json() -> Spec:
+    global _json_factory
+    if not _json_factory:
+        from .objects import Json
+        _json_factory = Spec(Json)
+    return _json_factory
+
+
 def _get_schema_to_factory() -> dict[str, None | Spec]:
     global _schema_to_factory
     if not _schema_to_factory:
-        from .objects import DynamicMap
         from .objects import Array
         from .objects import Record
-        from .objects import Json
         from .objects import LPR
-        from .objects import TimeZoneOffset
 
         # NOTE if you update this schema map update the type hint maker too
         _schema_to_factory = {
@@ -256,23 +280,23 @@ def _get_schema_to_factory() -> dict[str, None | Spec]:
             "XRAY_TAB_STATE":
             NotImplemented,
             "dict.prefs.v2":
-            Spec(DynamicMap),
+            _dynamic_map(),
             "EndActions":
-            Spec(DynamicMap),
+            _dynamic_map(),
             "ReaderMetrics":
-            Spec(DynamicMap),
+            _dynamic_map(),
             "StartActions":
-            Spec(DynamicMap),
+            _dynamic_map(),
             "Translator":
-            Spec(DynamicMap),
+            _dynamic_map(),
             "Wikipedia":
-            Spec(DynamicMap),
+            _dynamic_map(),
             "buy.asin.response.data":
-            Spec(Json),
+            _json(),
             "next.in.series.info.data":
-            Spec(Json),
+            _json(),
             "price.info.data":
-            Spec(Json),
+            _json(),
             "erl":
             _position(),
             "lpr":
@@ -282,7 +306,7 @@ def _get_schema_to_factory() -> dict[str, None | Spec]:
                 "pos": _position(),
             }, {
                 "timestamp": _datetime(),
-                "timezone_offset": Spec(TimeZoneOffset),
+                "timezone_offset": _timezone_offset(),
                 "country": _utf8str,
                 "device": _utf8str,
             }),
@@ -291,7 +315,7 @@ def _get_schema_to_factory() -> dict[str, None | Spec]:
                 "pos": _position(),
             }, {
                 "timestamp": _datetime(),
-                "timezone_offset": Spec(TimeZoneOffset),
+                "timezone_offset": _timezone_offset(),
                 "country": _utf8str,
                 "device": _utf8str,
             }),
