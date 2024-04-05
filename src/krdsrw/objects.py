@@ -142,18 +142,21 @@ class _TypedDict(DictBase[str, T], metaclass=abc.ABCMeta):
         raise NotImplementedError("Must be implemented in subclass.")
 
     @typing.override
+    @typing.final
     def _is_key_readable(self, key: typing.Any) -> bool:
         if not isinstance(key, str):
             return False
         return key in self._key_to_field
 
     @typing.override
+    @typing.final
     def _is_key_writable(self, key: typing.Any) -> bool:
         if not isinstance(key, str):
             return False
         return bool(self._key_to_field.get(key))
 
     @typing.override
+    @typing.final
     def _is_value_writable(
         self,
         value: typing.Any,
@@ -169,11 +172,13 @@ class _TypedDict(DictBase[str, T], metaclass=abc.ABCMeta):
         return True
 
     @typing.override
+    @typing.final
     def _is_key_deletable(self, key: typing.Any) -> bool:
         return key not in self._key_to_field or not self._key_to_field[
             key].required
 
     @typing.override
+    @typing.final
     def _transform_value(
         self,
         value: typing.Any,
@@ -191,6 +196,7 @@ class _TypedDict(DictBase[str, T], metaclass=abc.ABCMeta):
         return value  # type: ignore
 
     @typing.override
+    @typing.final
     def _make_postulate(self, key: typing.Any) -> None | T:
         field = self._key_to_field.get(key)
         if field is None:
