@@ -137,61 +137,61 @@ class TestJson:
 
 class TestArray:
     def test_init(self):
-        spc = Array.spec(Spec(Int))
+        spc = Array._spec(Spec(Int))
         o = spc.make()
         assert o.elmt_cls == Int
 
     def test_append_type_check_allow(self):
-        spc = Array.spec(Spec(Int))
+        spc = Array._spec(Spec(Int))
         o = spc.make()
         o.append(1337)
         assert o[0] == 1337
 
     def test_append_type_check_disallow(self):
-        spc = Array.spec(Spec(Int))
+        spc = Array._spec(Spec(Int))
         o = spc.make()
         with pytest.raises(ValueError):
             o.append("foo")
 
     def test_insert_type_check_allow(self):
-        spc = Array.spec(Spec(Int))
+        spc = Array._spec(Spec(Int))
         o = spc.make()
         o.insert(0, 1337)
         assert o[0] == 1337
 
     def test_insert_type_check_disallow(self):
-        spc = Array.spec(Spec(Int))
+        spc = Array._spec(Spec(Int))
         o = spc.make()
         with pytest.raises(ValueError):
             o.insert(0, "foo")
 
     def test_extend_type_check_allow(self):
-        spc = Array.spec(Spec(Int))
+        spc = Array._spec(Spec(Int))
         o = spc.make()
         o.extend([ 0, 1, 2, 3, 4 ])
         assert o == [ 0, 1, 2, 3, 4 ]
 
     def test_extend_type_check_disallow(self):
-        spc = Array.spec(Spec(Int))
+        spc = Array._spec(Spec(Int))
         o = spc.make()
         with pytest.raises(ValueError):
             o.extend([ "a", "b", "c", "d", "e"])
 
     def test_copy_contents(self):
-        spc = Array.spec(Spec(Int))
+        spc = Array._spec(Spec(Int))
         o = spc.make()
         o.extend([ 0, 1, 2, 3, 4 ])
         o2 = o.copy()
         assert isinstance(o2, Array) and o2 == o
 
     def test_count(self):
-        spc = Array.spec(Spec(Int))
+        spc = Array._spec(Spec(Int))
         o = spc.make()
         o.extend([ 0, 1, 2, 3, 4 ])
         assert o.count(2) == 1
 
     def test_read(self):
-        spc = Array.spec(Spec(Int))
+        spc = Array._spec(Spec(Int))
         csr = Cursor(
             b'\x01\x00\x00\x00\x03' \
             + b'\x01\x00\x00\x00\x0a' \
@@ -201,7 +201,7 @@ class TestArray:
         assert o == [ 0x0a, 0x0b, 0x0c ]
 
     def test_write(self):
-        spc = Array.spec(Spec(Int))
+        spc = Array._spec(Spec(Int))
         o = spc.make()
         o.extend([ 0x0a, 0x0b, 0x0c ])
         csr = Cursor()
@@ -213,23 +213,23 @@ class TestArray:
             + b'\x01\x00\x00\x00\x0c'
 
     def test_elmt_cls(self):
-        spc = Array.spec(Spec(Int))
+        spc = Array._spec(Spec(Int))
         o = spc.make()
         assert o.elmt_cls == Int
 
     def test_elmt_schema(self):
-        spc = Array.spec(Spec(Int), 'abc')
+        spc = Array._spec(Spec(Int), 'abc')
         o = spc.make()
         assert o.elmt_schema == 'abc'
 
     def test_make_element(self):
-        spc = Array.spec(Spec(Int))
+        spc = Array._spec(Spec(Int))
         arr = spc.make()
         o = arr.make_element(1337)
         assert o == 1337
 
     def test_make_and_append(self):
-        spc = Array.spec(Spec(Int))
+        spc = Array._spec(Spec(Int))
         arr = spc.make()
         o = arr.make_and_append(1337)
         assert o == 1337
@@ -298,7 +298,7 @@ class TestTypedDict:
 
 class TestRecord:
     def test_instantiate(self):
-        spc = Record.spec({
+        spc = Record._spec({
             'a': Spec(Int),
             'b': Spec(Float)
         }, {
@@ -316,7 +316,7 @@ class TestRecord:
         assert o and isinstance(o, Record)
 
     def test_required_optional(self):
-        spc = Record.spec({
+        spc = Record._spec({
             'a': Spec(Int),
             'b': Spec(Float)
         }, {
@@ -341,7 +341,7 @@ class TestRecord:
         assert 'd' not in o
 
     def test_read(self):
-        spc = Record.spec({
+        spc = Record._spec({
             'a': Spec(Int),
             'b': Spec(Float)
         }, {
@@ -359,7 +359,7 @@ class TestRecord:
         assert o == { 'a': 1337, 'b': 0.0, 'c': 0.0, 'd': 'abc'}
 
     def test_write(self):
-        spc = Record.spec({
+        spc = Record._spec({
             'a': Spec(Int),
             'b': Spec(Float)
         }, {
@@ -379,7 +379,7 @@ class TestRecord:
             + b'\x79\x7a'
 
     def test_access(self):
-        spc = Record.spec({
+        spc = Record._spec({
             'a': Spec(Int),
             'b': Spec(Float)
         }, {
@@ -396,18 +396,18 @@ class TestRecord:
 
 class TestIntMap:
     def test_instantiate(self):
-        spc = IntMap.spec([
-            ("apple", "name.a", Array.spec(Spec(Int), "x")),
-            ("banana", "name.b", Array.spec(Spec(Int), "y")),
-            ("pear", "name.c", Array.spec(Spec(Int), "z")),
+        spc = IntMap._spec([
+            ("apple", "name.a", Array._spec(Spec(Int), "x")),
+            ("banana", "name.b", Array._spec(Spec(Int), "y")),
+            ("pear", "name.c", Array._spec(Spec(Int), "z")),
         ])
         spc.make()
 
     def test_make_element(self):
-        spc = IntMap.spec([
-            ("apple", "name.a", Array.spec(Spec(Int), "x")),
-            ("banana", "name.b", Array.spec(Spec(Int), "y")),
-            ("pear", "name.c", Array.spec(Spec(Int), "z")),
+        spc = IntMap._spec([
+            ("apple", "name.a", Array._spec(Spec(Int), "x")),
+            ("banana", "name.b", Array._spec(Spec(Int), "y")),
+            ("pear", "name.c", Array._spec(Spec(Int), "z")),
         ])
 
         o = spc.make()
@@ -563,7 +563,7 @@ class TestObjectMap:
     def test_write_object(self):
         csr = Cursor()
 
-        spc = Record.spec({
+        spc = Record._spec({
             "typeface": Spec(Utf8Str),
             "line_sp": Spec(Int),
             "size": Spec(Int),

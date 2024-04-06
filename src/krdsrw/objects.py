@@ -54,7 +54,7 @@ class Array(ListBase[T], Serializable, metaclass=abc.ABCMeta):
         super().__init__(*args, **kwargs)
 
     @classmethod
-    def spec(
+    def _spec(
         cls,
         elmt: Spec[T],
         schema: None | str = None,
@@ -235,7 +235,7 @@ class Record(_TypedDict, Serializable, metaclass=abc.ABCMeta):
         super().__init__(*args, **kwargs)
 
     @classmethod
-    def spec(
+    def _spec(
         cls,
         required: dict[str, Spec | tuple[Spec, str]],
         optional: None | dict[str, Spec | tuple[Spec, str]] = None,
@@ -334,7 +334,7 @@ class IntMap(_TypedDict, Serializable):
         super().__init__(*args, **kwargs)
 
     @classmethod
-    def spec(
+    def _spec(
         cls,
         alias_schema_spec: list[tuple[str, str, Spec]],
     ) -> Spec[typing.Self]:
@@ -998,7 +998,7 @@ class ObjectMap(_TypedDict, Serializable):
         super().__init__(*args, **kwargs)
 
     @classmethod
-    def spec(cls, map_: dict[str, Spec]) -> Spec[typing.Self]:
+    def _spec(cls, map_: dict[str, Spec]) -> Spec[typing.Self]:
         fields = {}
         for key, spc in map_.items():
             fields[key] = _TypedField(spc, key, False)
