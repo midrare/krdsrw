@@ -53,6 +53,19 @@ def _write_pack(
     csr.write(struct.pack(fmt, o))
 
 
+def _explode(
+    o: typing.Any | list[typing.Any],
+    size: int = 0,
+) -> list[typing.Any]:
+    result = []
+    if isinstance(o, (tuple, list)):
+        result.extend(o)
+    else:
+        result.append(o)
+    result += [ None for _ in range(size - len(result)) ]
+    return result
+
+
 def read_byte(csr: Cursor, magic_byte: bool = True) -> int:
     from .basics import Byte
     magic_byte_ = _BYTE_MAGIC_BYTE if magic_byte else None
@@ -192,7 +205,12 @@ class Basic(metaclass=abc.ABCMeta):
 
     @classmethod
     @abc.abstractmethod
-    def _create(cls, cursor: Cursor, magic_byte: bool = True) -> typing.Self:
+    def _create(
+        cls,
+        cursor: Cursor,
+        magic_byte: bool = True,
+        _schema: None | typing.Any | list[typing.Any] = None,
+    ) -> typing.Self:
         raise NotImplementedError("Must be implemented by the subclass.")
 
     @abc.abstractmethod
@@ -232,8 +250,26 @@ class Byte(ByteBase, Basic):
     magic_byte: int = 0x07
 
     @typing.override
+    def __new__(
+        cls,
+        *args,
+        _schema: None | typing.Any | list[typing.Any] = None,
+        **kwargs,
+    ) -> typing.Self:
+        schema = _explode(_schema or [])
+        if not args and schema:
+            # schema defines default value
+            args = schema
+        return super().__new__(cls, *args, *kwargs)
+
     @classmethod
-    def _create(cls, cursor: Cursor, magic_byte: bool = True) -> typing.Self:
+    @typing.override
+    def _create(
+        cls,
+        cursor: Cursor,
+        magic_byte: bool = True,
+        _schema: None | typing.Any | list[typing.Any] = None,
+    ) -> typing.Self:
         magic_byte_ = cls.magic_byte if magic_byte else None
         return cls(cls._read_unpack(cursor, '>b', magic_byte_))
 
@@ -254,8 +290,26 @@ class Char(CharBase, Basic):
     magic_byte: int = 0x09
 
     @typing.override
+    def __new__(
+        cls,
+        *args,
+        _schema: None | typing.Any | list[typing.Any] = None,
+        **kwargs,
+    ) -> typing.Self:
+        schema = _explode(_schema or [])
+        if not args and schema:
+            # schema defines default value
+            args = schema
+        return super().__new__(cls, *args, *kwargs)
+
+    @typing.override
     @classmethod
-    def _create(cls, cursor: Cursor, magic_byte: bool = True) -> typing.Self:
+    def _create(
+        cls,
+        cursor: Cursor,
+        magic_byte: bool = True,
+        _schema: None | typing.Any | list[typing.Any] = None,
+    ) -> typing.Self:
         magic_byte_ = cls.magic_byte if magic_byte else None
         return cls(cls._read_unpack(cursor, '>B', magic_byte_))
 
@@ -276,8 +330,26 @@ class Bool(BoolBase, Basic):
     magic_byte: int = 0x00
 
     @typing.override
+    def __new__(
+        cls,
+        *args,
+        _schema: None | typing.Any | list[typing.Any] = None,
+        **kwargs,
+    ) -> typing.Self:
+        schema = _explode(_schema or [])
+        if not args and schema:
+            # schema defines default value
+            args = schema
+        return super().__new__(cls, *args, *kwargs)
+
+    @typing.override
     @classmethod
-    def _create(cls, cursor: Cursor, magic_byte: bool = True) -> typing.Self:
+    def _create(
+        cls,
+        cursor: Cursor,
+        magic_byte: bool = True,
+        _schema: None | typing.Any | list[typing.Any] = None,
+    ) -> typing.Self:
         magic_byte_ = cls.magic_byte if magic_byte else None
         return cls(cls._read_unpack(cursor, '>?', magic_byte_))
 
@@ -298,8 +370,26 @@ class Short(ShortBase, Basic):
     magic_byte: int = 0x05
 
     @typing.override
+    def __new__(
+        cls,
+        *args,
+        _schema: None | typing.Any | list[typing.Any] = None,
+        **kwargs,
+    ) -> typing.Self:
+        schema = _explode(_schema or [])
+        if not args and schema:
+            # schema defines default value
+            args = schema
+        return super().__new__(cls, *args, *kwargs)
+
+    @typing.override
     @classmethod
-    def _create(cls, cursor: Cursor, magic_byte: bool = True) -> typing.Self:
+    def _create(
+        cls,
+        cursor: Cursor,
+        magic_byte: bool = True,
+        _schema: None | typing.Any | list[typing.Any] = None,
+    ) -> typing.Self:
         magic_byte_ = cls.magic_byte if magic_byte else None
         return cls(cls._read_unpack(cursor, '>h', magic_byte_))
 
@@ -320,8 +410,26 @@ class Int(IntBase, Basic):
     magic_byte: int = 0x01
 
     @typing.override
+    def __new__(
+        cls,
+        *args,
+        _schema: None | typing.Any | list[typing.Any] = None,
+        **kwargs,
+    ) -> typing.Self:
+        schema = _explode(_schema or [])
+        if not args and schema:
+            # schema defines default value
+            args = schema
+        return super().__new__(cls, *args, *kwargs)
+
+    @typing.override
     @classmethod
-    def _create(cls, cursor: Cursor, magic_byte: bool = True) -> typing.Self:
+    def _create(
+        cls,
+        cursor: Cursor,
+        magic_byte: bool = True,
+        _schema: None | typing.Any | list[typing.Any] = None,
+    ) -> typing.Self:
         magic_byte_ = cls.magic_byte if magic_byte else None
         return cls(cls._read_unpack(cursor, '>l', magic_byte_))
 
@@ -342,8 +450,26 @@ class Long(LongBase, Basic):
     magic_byte: int = 0x02
 
     @typing.override
+    def __new__(
+        cls,
+        *args,
+        _schema: None | typing.Any | list[typing.Any] = None,
+        **kwargs,
+    ) -> typing.Self:
+        schema = _explode(_schema or [])
+        if not args and schema:
+            # schema defines default value
+            args = schema
+        return super().__new__(cls, *args, *kwargs)
+
+    @typing.override
     @classmethod
-    def _create(cls, cursor: Cursor, magic_byte: bool = True) -> typing.Self:
+    def _create(
+        cls,
+        cursor: Cursor,
+        magic_byte: bool = True,
+        _schema: None | typing.Any | list[typing.Any] = None,
+    ) -> typing.Self:
         magic_byte_ = cls.magic_byte if magic_byte else None
         return cls(cls._read_unpack(cursor, '>q', magic_byte_))
 
@@ -364,8 +490,26 @@ class Float(FloatBase, Basic):
     magic_byte: int = 0x06
 
     @typing.override
+    def __new__(
+        cls,
+        *args,
+        _schema: None | typing.Any | list[typing.Any] = None,
+        **kwargs,
+    ) -> typing.Self:
+        schema = _explode(_schema or [])
+        if not args and schema:
+            # schema defines default value
+            args = schema
+        return super().__new__(cls, *args, *kwargs)
+
+    @typing.override
     @classmethod
-    def _create(cls, cursor: Cursor, magic_byte: bool = True) -> typing.Self:
+    def _create(
+        cls,
+        cursor: Cursor,
+        magic_byte: bool = True,
+        _schema: None | typing.Any | list[typing.Any] = None,
+    ) -> typing.Self:
         magic_byte_ = cls.magic_byte if magic_byte else None
         return cls(cls._read_unpack(cursor, '>f', magic_byte_))
 
@@ -386,8 +530,26 @@ class Double(DoubleBase, Basic):
     magic_byte: int = 0x04
 
     @typing.override
+    def __new__(
+        cls,
+        *args,
+        _schema: None | typing.Any | list[typing.Any] = None,
+        **kwargs,
+    ) -> typing.Self:
+        schema = _explode(_schema or [])
+        if not args and schema:
+            # schema defines default value
+            args = schema
+        return super().__new__(cls, *args, *kwargs)
+
     @classmethod
-    def _create(cls, cursor: Cursor, magic_byte: bool = True) -> typing.Self:
+    @typing.override
+    def _create(
+        cls,
+        cursor: Cursor,
+        magic_byte: bool = True,
+        _schema: None | typing.Any | list[typing.Any] = None,
+    ) -> typing.Self:
         magic_byte_ = cls.magic_byte if magic_byte else None
         return cls(cls._read_unpack(cursor, '>d', magic_byte_))
 
@@ -412,9 +574,14 @@ class Utf8Str(Utf8StrBase, Basic):
     def __new__(
         cls,
         *args,
-        prefer_null: typing.Optional[bool] = None,
+        prefer_null: None | bool = None,
+        _schema: None | typing.Any | list[typing.Any] = None,
         **kwargs,
     ) -> typing.Self:
+        schema = _explode(_schema or [])
+        if not args and schema:
+            # schema defines default value
+            args = schema
         o = super().__new__(cls, *args, *kwargs)
         if prefer_null is None:
             for e in args:
@@ -429,9 +596,14 @@ class Utf8Str(Utf8StrBase, Basic):
         super().__init__()
         self.prefer_null: bool
 
-    @typing.override
     @classmethod
-    def _create(cls, cursor: Cursor, magic_byte: bool = True) -> typing.Self:
+    @typing.override
+    def _create(
+        cls,
+        cursor: Cursor,
+        magic_byte: bool = True,
+        _schema: None | typing.Any | list[typing.Any] = None,
+    ) -> typing.Self:
         if magic_byte and not cursor.eat(cls.magic_byte):
             raise UnexpectedBytesError(
                 cursor.tell(), cls.magic_byte, cursor.peek())

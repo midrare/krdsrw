@@ -2,11 +2,11 @@ from __future__ import annotations
 import abc
 import base64
 import copy
+import dataclasses
 import json
+import inspect
 import typing
 import warnings
-
-from . import schemas
 
 from .builtins import IntBase
 from .builtins import ListBase
@@ -15,9 +15,6 @@ from .cursor import Cursor
 from .cursor import Serializable
 from .error import UnexpectedBytesError
 from .error import UnexpectedStructureError
-from .specs import Spec
-from .specs import Field
-from .specs import Index
 from .basics import Basic
 from .basics import Byte
 from .basics import Char
@@ -36,75 +33,207 @@ from .basics import read_long
 from .basics import write_long
 from .basics import read_utf8str
 from .basics import write_utf8str
+from .constants import OBJECT_BEGIN
+from .constants import OBJECT_END
 
 K = typing.TypeVar("K", bound=int | float | str)
 T = typing.TypeVar("T", bound=Byte | Char | Bool | Short | Int | Long \
     | Float | Double | Utf8Str | Serializable)
 
 
+def _flatten(o: typing.Any, skip_null: bool = True) -> list[typing.Any]:
+    def recurse(o: typing.Any, master: list[typing.Any]):
+        if isinstance(o, (tuple, list)):
+            for e in o:
+                recurse(e, master)
+            return
+        if skip_null and o is None:
+            return
+        master.append(o)
+
+    result = []
+    recurse(o, result)
+    return result
+
+
+def _explode(o: typing.Any | list[typing.Any],
+             size: int = 0) -> list[typing.Any]:
+    result = []
+    if isinstance(o, (tuple, list)):
+        result.extend(o)
+    else:
+        result.append(o)
+    result += [ None for _ in range(size - len(result)) ]
+    return result
+
+
+def _read_object(
+    cursor: Cursor,
+    cls_: type,
+    schema: None | typing.Any = None,
+    schema_id: None | str = None,
+) -> T:
+    if schema_id:
+        if not cursor.eat(OBJECT_BEGIN):
+            raise UnexpectedBytesError(
+                cursor.tell(), OBJECT_BEGIN, cursor.peek())
+
+        schema_id_actual = read_utf8str(cursor, False)
+        if not schema_id_actual:
+            raise UnexpectedStructureError('Object has blank schema.')
+        if schema_id_actual != schema_id:
+            raise UnexpectedStructureError(
+                f"Expected object schema \"{schema_id}\""
+                + f" but got \"{schema_id_actual}\".")
+
+    result = cls_._create(cursor, _schema=schema)
+
+    if schema_id and not cursor.eat(OBJECT_END):
+        raise UnexpectedBytesError(cursor.tell(), OBJECT_END, cursor.peek())
+
+    assert result is not None, 'Failed to create object'
+    return result  # type: ignore
+
+
+def _make_object(
+    cls_: type,
+    *args,
+    schema: None | typing.Any = None,
+    **kwargs,
+) -> typing.Any:
+    if schema is not None:
+        return cls_(*args, _schema=schema, **kwargs)
+    return cls_(*args, **kwargs)
+
+
+def _write_object(
+    cursor: Cursor,
+    o: typing.Any,
+    schema_id: None | str = None,
+):
+    if schema_id:
+        cursor.write(OBJECT_BEGIN)
+        write_utf8str(cursor, schema_id, False)
+    o._write(cursor)
+    if schema_id:
+        cursor.write(OBJECT_END)
+
+
+def _is_compatible(
+    o: type | typing.Any,
+    cls_: type | typing.Iterable[type],
+) -> bool:
+    if inspect.isclass(cls_):
+        cls_ = [cls_]
+
+    for e in cls_:
+        if (inspect.isclass(o) and issubclass(o, e)) \
+                or (not inspect.isclass(o) and isinstance(o, e)):
+            return True
+
+        for t in [ bool, int, float, str, bytes, list, tuple, dict ]:
+            if issubclass(e, t) \
+                and ((inspect.isclass(o) and issubclass(o, t)) \
+                     or (not inspect.isclass(o) and isinstance(o, t))):
+                return True
+
+    return False
+
+
+@dataclasses.dataclass
+class Field:
+    cls_: type
+    schema: None | typing.Any = dataclasses.field(default=None)
+    schema_id: None | str = dataclasses.field(default=None)
+    required: None | bool = dataclasses.field(default=None)
+
+
+Index: typing.TypeAlias = Field
+Mapping: typing.TypeAlias = dict[str, Field]
+
+
+def _fix_mapping(schema: Mapping, default_required: None | bool = None):
+    for k in list(schema.keys()):
+        if schema[k] is NotImplemented:
+            del schema[k]
+            continue
+
+        if inspect.isclass(schema[k]):
+            schema[k] = Field(schema[k])  # type: ignore
+
+        if schema[k].required is None:
+            schema[k].required = default_required
+
+
 class Array(ListBase[T], Serializable, metaclass=abc.ABCMeta):
     # Array can contain Basic and other containers
 
-    _INIT_SPEC: typing.Final[str] = '_schema_init_elmt_spec'
-    _INIT_SCHEMA: typing.Final[str] = '_schema_init_elmt_schema'
+    @typing.override
+    def __init__(self, *args, _schema: Index, **kwargs):
+        assert _schema, 'schema must be provided (non-null)'
+        self.__elmt_cls: type[T] = _schema.cls_  # type: ignore
+        self.__elmt_schema: typing.Any = _schema.schema
+        self.__elmt_schema_id: None | str = _schema.schema_id or None
 
-    def __init__(self, *args, **kwargs):
-        self._elmt_spec: Spec = kwargs.pop(self._INIT_SPEC)
-        self._elmt_schema: str = kwargs.pop(self._INIT_SCHEMA)
+        # super constructor last so hooks work properly
         super().__init__(*args, **kwargs)
 
+    @property
+    def elmt_schema_cls(self) -> type[T]:
+        return self.__elmt_cls
+
+    @property
+    def elmt_schema_id(self) -> None | str:
+        return self.__elmt_schema_id
+
     @classmethod
-    def _spec(
+    def _schema(
         cls,
-        elmt: Spec[T],
-        schema: None | str = None,
-    ) -> Spec[typing.Self]:
-        return Spec(
-            cls, [], {
-                cls._INIT_SPEC: elmt,
-                cls._INIT_SCHEMA: schema
-            })  # type: ignore
+        cls_: type,
+        schema: None | typing.Any = None,
+        schema_id: None | str = None,
+    ) -> Index:
+        return Field(cls_, schema, schema_id)
 
-    @property
-    @abc.abstractmethod
-    def elmt_spec(self) -> Spec[T]:
-        self._elmt_spec
-
-    @property
-    def elmt_cls(self) -> type[T]:
-        return self._elmt_spec.cls_
-
-    @property
-    def elmt_schema(self) -> None | str:
-        return self._elmt_schema
-
-    @typing.override
     @classmethod
+    @typing.override
     def _create(cls, cursor: Cursor, *args, **kwargs) -> typing.Self:
         result = cls(*args, **kwargs)
         size = read_int(cursor)
         for _ in range(size):
-            e = result._elmt_spec.read(cursor, result.elmt_schema)
-            result.append(e)
+            result.append(
+                _read_object(
+                    cursor,
+                    result.__elmt_cls,
+                    result.__elmt_schema,
+                    result.__elmt_schema_id,
+                ))
         return result
 
     @typing.override
     def _write(self, cursor: Cursor):
         write_int(cursor, len(self))
         for e in self:
-            self._elmt_spec.write(cursor, e, self.elmt_schema)
+            _write_object(cursor, e, self.__elmt_schema_id)
 
     def make_element(self, *args, **kwargs) -> T:
-        if issubclass(self._elmt_spec.cls_, Basic) and (args or kwargs):
-            return self._elmt_spec.make(*args, **kwargs)
+        if issubclass(self.__elmt_cls, dict):
+            init = dict(*args, **kwargs)
+            return _make_object(
+                self.__elmt_cls, init, schema=self.__elmt_schema)
 
-        result = self._elmt_spec.make()
-        if isinstance(result, dict) and (args or kwargs):
-            result.update(*args, **kwargs)
-        elif isinstance(result, list) and (args or kwargs):
-            result.extend(*args, **kwargs)
+        if issubclass(self.__elmt_cls, tuple):
+            init = tuple(*args, **kwargs)
+            return _make_object(
+                self.__elmt_cls, init, schema=self.__elmt_schema)
 
-        return result
+        if issubclass(self.__elmt_cls, list):
+            init = list(*args, **kwargs)
+            return _make_object(
+                self.__elmt_cls, init, schema=self.__elmt_schema)
+
+        return _make_object(
+            self.__elmt_cls, *args, schema=self.__elmt_schema, **kwargs)
 
     def make_and_append(self, *args, **kwargs) -> T:
         result = self.make_element(*args, **kwargs)
@@ -113,47 +242,42 @@ class Array(ListBase[T], Serializable, metaclass=abc.ABCMeta):
 
     @typing.override
     def _is_allowed(self, value: typing.Any) -> bool:
-        return self._elmt_spec.is_compatible(value)
+        return _is_compatible(value, self.__elmt_cls)
 
     @typing.override
     def _transform(self, value: typing.Any) -> T:
-        return self._elmt_spec.make(value)
-
-
-class _TypedField(typing.NamedTuple):
-    spec: Spec[typing.Any]
-    schema: None | str = None
-    required: bool = True
+        return _make_object(self.__elmt_cls, value, schema=self.__elmt_schema)
 
 
 class _TypedDict(DictBase[str, T], metaclass=abc.ABCMeta):
-    def __init__(self, *args, **kwargs):
+    @typing.override
+    def __init__(self, *args, _schema: Mapping, **kwargs):
+        schema = copy.deepcopy(_schema)
+        _fix_mapping(schema, True)
+
         init = dict(*args, **kwargs)
-        for key, field in self._key_to_field.items():
+        for key, field in schema.items():
             if field.required and key not in init:
-                init[key] = field.spec.make()
+                init[key] = _make_object(field.cls_, schema=field.schema)
+
+        self.__key_to_field: Mapping = schema
 
         # call parent constructor last so that hooks will work
         super().__init__(init)
-
-    @property
-    @abc.abstractmethod
-    def _key_to_field(self) -> dict[str, _TypedField]:
-        raise NotImplementedError("Must be implemented in subclass.")
 
     @typing.override
     @typing.final
     def _is_key_readable(self, key: typing.Any) -> bool:
         if not isinstance(key, str):
             return False
-        return key in self._key_to_field
+        return key in self.__key_to_field
 
     @typing.override
     @typing.final
     def _is_key_writable(self, key: typing.Any) -> bool:
         if not isinstance(key, str):
             return False
-        return bool(self._key_to_field.get(key))
+        return bool(self.__key_to_field.get(key))
 
     @typing.override
     @typing.final
@@ -164,18 +288,18 @@ class _TypedDict(DictBase[str, T], metaclass=abc.ABCMeta):
     ) -> bool:
         if not isinstance(key, str):
             return False
-        field = self._key_to_field.get(key)
+        field = self.__key_to_field.get(key)
         if not field:
             return False
-        if value is not None and not field.spec.is_compatible(value):
+        if value is not None and not _is_compatible(value, field.cls_):
             return False
         return True
 
     @typing.override
     @typing.final
     def _is_key_deletable(self, key: typing.Any) -> bool:
-        return key not in self._key_to_field or not self._key_to_field[
-            key].required
+        return key not in self.__key_to_field \
+            or not self.__key_to_field[key].required
 
     @typing.override
     @typing.final
@@ -184,24 +308,25 @@ class _TypedDict(DictBase[str, T], metaclass=abc.ABCMeta):
         value: typing.Any,
         key: typing.Any,
     ) -> T:
-        field = self._key_to_field.get(key)
+        field = self.__key_to_field.get(key)
         if not field:
             raise KeyError(f"No template for key \"{key}\".")
-        if value is None:
-            value = field.spec.make()
-        elif isinstance(value, (bool, int, float, str, bytes)) \
-        and not isinstance(value, Basic):
-            value = field.spec.make(value)
 
+        if value is None:
+            value = _make_object(field.cls_, schema=field.schema)
+        else:
+            value = _make_object(field.cls_, value, schema=field.schema)
+
+        assert isinstance(value, field.cls_)
         return value  # type: ignore
 
     @typing.override
     @typing.final
     def _make_postulate(self, key: typing.Any) -> None | T:
-        field = self._key_to_field.get(key)
+        field = self.__key_to_field.get(key)
         if field is None:
             return None
-        return field.spec.make()
+        return _make_object(field.cls_, schema=field.schema)
 
     @typing.override
     def __eq__(self, other: typing.Any) -> bool:
@@ -214,8 +339,7 @@ class _TypedDict(DictBase[str, T], metaclass=abc.ABCMeta):
 
     @typing.override
     def __str__(self) -> str:
-        d = { k: v for k, v in self.items() if v is not None }
-        return f"{self.__class__.__name__}{d}"
+        return str({ k: v for k, v in self.items() if v is not None })
 
     @typing.override
     def __repr__(self) -> str:
@@ -228,51 +352,41 @@ class Record(_TypedDict, Serializable, metaclass=abc.ABCMeta):
     # hardcoded and knowing what value is where is determined by
     # the order of their appearance
 
-    _INIT_FIELDS: typing.Final[str] = '_schema_init_fields'
-
-    def __init__(self, *args, **kwargs):
-        self._fields: dict[str, _TypedField] = kwargs.pop(self._INIT_FIELDS)
-        super().__init__(*args, **kwargs)
-
-    @classmethod
-    def _spec(
-        cls,
-        required: dict[str, Spec | tuple[Spec, str]],
-        optional: None | dict[str, Spec | tuple[Spec, str]] = None,
-    ) -> Spec[_TypedDict]:
-        def explode(o, len_: int) -> list:
-            result = []
-            if isinstance(o, (tuple, list)):
-                result.extend(o)
-            else:
-                result.append(o)
-            result += [ None for _ in range(len_ - len(result)) ]
-            return result
-
-        fields = {}
-
-        for alias, _packed in required.items():
-            spec, schema = explode(_packed, 2)
-            fields[alias] = _TypedField(spec, schema, True)
-
-        for alias, _packed in (optional or {}).items():
-            spec, schema = explode(_packed, 2)
-            fields[alias] = _TypedField(spec, schema, False)
-
-        return Spec(Record, [], {cls._INIT_FIELDS: fields})
-
-    @property
-    @abc.abstractmethod
-    def _key_to_field(self) -> dict[str, _TypedField]:
-        return self._fields
-
     @typing.override
-    @classmethod
-    def _create(cls, cursor: Cursor, *args, **kwargs) -> typing.Self:
-        result = cls(*args, **kwargs)
+    def __init__(
+        self,
+        *args,
+        _schema: Mapping,
+        **kwargs,
+    ):
+        schema = copy.deepcopy(_schema)
+        _fix_mapping(schema, True)
 
-        for alias, field in result._key_to_field.items():
-            val = result._read_next(cursor, field.spec, field.schema)
+        self.__key_to_field: Mapping = schema
+        # super constructor last so hooks work correctly
+        super().__init__(*args, _schema=schema, **kwargs)
+
+    @classmethod
+    def _schema(cls, mapping: dict[str, type | Field]) -> Mapping:
+        return copy.deepcopy(mapping)
+
+    @classmethod
+    @typing.override
+    def _create(
+        cls,
+        cursor: Cursor,
+        *args,
+        _schema: Mapping,
+        **kwargs,
+    ) -> typing.Self:
+        schema = copy.deepcopy(_schema)
+        _fix_mapping(schema)
+
+        result = cls(*args, _schema=schema, **kwargs)
+
+        for alias, field in schema.items():
+            val = cls._read_next(
+                cursor, field.cls_, field.schema, field.schema_id)
             if val is None:
                 if field.required:
                     raise UnexpectedStructureError(
@@ -284,17 +398,20 @@ class Record(_TypedDict, Serializable, metaclass=abc.ABCMeta):
 
         return result
 
+    @classmethod
     def _read_next(
-            self,
-            cursor: Cursor,
-            spec: Spec[T],
-            schema: None | str = None) -> None | T:
+        cls,
+        cursor: Cursor,
+        cls_: type,
+        schema: typing.Any,
+        schema_id: None | str = None,
+    ) -> None | T:
         # objects in a Record have no OBJECT_BEGIN OBJECT_END demarcating
         # bytes. the demarcation is implied by the ordering of the elements
 
         cursor.save()
         try:
-            val = spec.read(cursor, schema)
+            val = _read_object(cursor, cls_, schema, schema_id)
             cursor.unsave()
             return val
         except UnexpectedBytesError:
@@ -303,74 +420,62 @@ class Record(_TypedDict, Serializable, metaclass=abc.ABCMeta):
 
     @typing.override
     def _write(self, cursor: Cursor):
-        for alias, field in self._key_to_field.items():
-            assert (not field.required and alias not in self) \
-            or isinstance(self[alias], field.spec.cls_), 'Invalid state'
-            if not alias in self:
+        for alias, field in self.__key_to_field.items():
+            if alias not in self:
                 assert not field.required, 'required field not present'
                 break
-            field.spec.write(cursor, self[alias], field.schema)
+            assert isinstance(self[alias], field.cls_), 'invalid state'
+            _write_object(cursor, self[alias], field.schema_id)
 
 
 class IntMap(_TypedDict, Serializable):
     # can contain Bool, Char, Byte, Short, Int, Long, Float, Double,
     #   Utf8Str, Object
 
-    _INIT_FIELDS: typing.Final[str] = '_schema_init_fields'
+    def __init__(self, *args, _schema: Mapping, **kwargs):
+        schema = copy.deepcopy(_schema)
+        _fix_mapping(schema, False)
 
-    def __init__(self, *args, **kwargs):
-        self._fields: dict[str, _TypedField] = kwargs.pop(self._INIT_FIELDS)
+        self.__idx_to_field: dict[int, Field] = {}
+        self.__alias_to_idx: dict[str, int] = {}
+        self.__idx_to_alias: dict[int, str] = {}
 
-        self._idx_to_field: dict[int, _TypedField] = {}
-        self._alias_to_idx: dict[str, int] = {}
-        self._idx_to_alias: dict[int, str] = {}
-
-        for i, (alias, field) in enumerate(self._fields.items()):
-            self._idx_to_field[i] = field
-            self._alias_to_idx[alias] = i
-            self._idx_to_alias[i] = alias
+        for i, (alias, field) in enumerate(schema.items()):
+            self.__idx_to_field[i] = field
+            self.__alias_to_idx[alias] = i
+            self.__idx_to_alias[i] = alias
 
         # parent constructor after schema setup so hooks run correctly
-        super().__init__(*args, **kwargs)
+        super().__init__(*args, _schema=schema, **kwargs)
 
-    @classmethod
-    def _spec(
-        cls,
-        alias_schema_spec: list[tuple[str, str, Spec]],
-    ) -> Spec[typing.Self]:
-        fields = {}
-        for alias, schema, spec in alias_schema_spec:
-            fields[alias] = _TypedField(spec, schema, False)
-
-        return Spec(IntMap, [], {cls._INIT_FIELDS: fields})  # type: ignore
-
-    def _to_idx(self, alias: int | str) -> int:
+    def __to_idx(self, alias: int | str) -> int:
         if isinstance(alias, int):
             return alias
 
-        return self._alias_to_idx[alias]
+        return self.__alias_to_idx[alias]
 
-    @property
-    @typing.override
-    def _key_to_field(self) -> dict[str, _TypedField]:
-        return self._fields
-
-    @typing.override
     @classmethod
+    def _schema(cls, mapping: dict[str, type | Field]) -> Mapping:
+        return copy.deepcopy(mapping)
+
+    @classmethod
+    @typing.override
     def _create(cls, cursor: Cursor, *args, **kwargs) -> typing.Self:
         result = cls(*args, **kwargs)
         size = read_int(cursor)
         for _ in range(size):
             idxnum = read_int(cursor)
 
-            if idxnum not in result._idx_to_field:
+            if idxnum not in result.__idx_to_field:
                 raise UnexpectedStructureError(
                     f"Object index number {idxnum} not recognized")
 
-            alias = result._idx_to_alias[idxnum]
-            schema = result._idx_to_field[idxnum].schema
-            spc = result._idx_to_field[idxnum].spec
-            result[alias] = spc.read(cursor, schema)
+            alias = result.__idx_to_alias[idxnum]
+            cls_ = result.__idx_to_field[idxnum].cls_
+            schema_id = result.__idx_to_field[idxnum].schema_id
+            schema = result.__idx_to_field[idxnum].schema
+
+            result[alias] = _read_object(cursor, cls_, schema, schema_id)
         return result
 
     @typing.override
@@ -378,17 +483,27 @@ class IntMap(_TypedDict, Serializable):
         write_int(cursor, len(self))
 
         for alias, value in self.items():
-            idx = self._to_idx(alias)
-            schema = self._idx_to_field[idx].schema
-            spc = self._idx_to_field[idx].spec
+            idx = self.__to_idx(alias)
+            schema_id = self.__idx_to_field[idx].schema_id
 
             write_int(cursor, idx)
-            spc.write(cursor, value, schema)
+            _write_object(cursor, value, schema_id)
 
 
 # can contain Bool, Char, Byte, Short, Int, Long, Float, Double, Utf8Str
 class DynamicMap(DictBase[str, typing.Any], Serializable):
+    @typing.override
     def __init__(self, *args, **kwargs):
+        args = list(args)
+        kwargs = dict(kwargs)
+
+        if args == [None]:
+            args = []
+
+        if kwargs.get('_schema') is None:
+            kwargs.pop('_schema', None)
+
+        assert '_schema' not in kwargs, 'invalid argument'
         super().__init__(*args, **kwargs)
 
     @typing.override
@@ -439,7 +554,7 @@ class DynamicMap(DictBase[str, typing.Any], Serializable):
 
     @classmethod
     def _read_basic(cls, cursor: Cursor) \
-    -> None|Bool|Char|Byte|Short|Int|Long|Float|Double|Utf8Str:
+        -> None | Bool | Char | Byte | Short | Int | Long | Float | Double | Utf8Str:
         for t in [ Bool, Byte, Char, Short, Int, Long, Float, Double, Utf8Str ]:
             if cursor._peek_raw_byte() == t.magic_byte:
                 return t._create(cursor)
@@ -469,11 +584,25 @@ class DynamicMap(DictBase[str, typing.Any], Serializable):
 
 class DateTime(IntBase, Serializable):
     @typing.override
-    def __new__(cls, *args, **kwargs) -> typing.Self:
-        init = []
-        if len(args) + len(kwargs) <= 0:
-            init = [-1]
-        return super().__new__(cls, *init, *args, **kwargs)
+    def __new__(
+        cls,
+        *args,
+        _schema: None | int = None,
+        **kwargs,
+    ) -> typing.Self:
+        args = list(args)
+        kwargs = dict(kwargs)
+
+        if args == [None]:
+            args = []
+
+        if kwargs.get('_schema') is None:
+            kwargs.pop('_schema', None)
+
+        assert '_schema' not in kwargs, 'invalid argument'
+        if not args and _schema is not None:
+            args = [_schema]
+        return super().__new__(cls, *args, **kwargs)
 
     @typing.override
     def __repr__(self) -> str:
@@ -512,9 +641,24 @@ class DateTime(IntBase, Serializable):
 
 class Json(Serializable):
     @typing.override
-    def __new__(cls, *args, **kwargs) -> typing.Self:
-        if list(args) == [None]:
+    def __new__(
+        cls,
+        *args,
+        _schema: None | bool | int | float \
+            | str | bytes | tuple | list | dict = None,
+        **kwargs,
+    ) -> Json:
+        args = list(args)
+        kwargs = dict(kwargs)
+
+        if args == [None]:
             args = []
+
+        if kwargs.get('_schema') is None:
+            kwargs.pop('_schema', None)
+
+        if not args and _schema is not None:
+            args = [_schema]
 
         if args:
             for cls_ in [ bool, int, float, str, bytes, list, tuple, dict ]:
@@ -522,13 +666,11 @@ class Json(Serializable):
                     subcls = cls._subclass(cls_)
                     return subcls.__new__(subcls, *args, **kwargs)
 
-        return super().__new__(cls, *args, **kwargs)
+        return super().__new__(cls)
 
     @typing.override
     def __init__(self, *args, **kwargs):
-        if list(args) == [None]:
-            args = []
-        super().__init__(*args, **kwargs)
+        super().__init__()
 
     def __str__(self) -> str:
         return f"{self.__class__.__name__}{{}}"
@@ -549,12 +691,18 @@ class Json(Serializable):
             dict: _JsonDict,
         }[t]
 
-    @typing.override
     @classmethod
-    def _create(cls, cursor: Cursor, *args, **kwargs) -> typing.Self:
+    @typing.override
+    def _create(
+        cls,
+        cursor: Cursor,
+        *args,
+        _schema: None | typing.Any = None,
+        **kwargs,
+    ) -> typing.Self:
         jsnstr = read_utf8str(cursor)
         value = json.loads(jsnstr) if jsnstr else None
-        return cls(value, *args, **kwargs)
+        return cls(value, *args, _schema=_schema, **kwargs)
 
     @typing.override
     def _write(self, cursor: Cursor):
@@ -614,12 +762,46 @@ class _JsonTuple(tuple, Json):  # type: ignore
 
 
 class _JsonList(list, Json):  # type: ignore
-    def __init__(self, *args, **kwargs):
+    def __init__(
+        self,
+        *args,
+        _schema: None | typing.Any = None,
+        **kwargs,
+    ):
+        args = list(args)
+        kwargs = dict(kwargs)
+
+        if args == [None]:
+            args = []
+
+        if kwargs.get('_schema') is None:
+            kwargs.pop('_schema', None)
+
+        if not args and _schema is not None:
+            args = [_schema]
+
         super().__init__(*args, **kwargs)
 
 
 class _JsonDict(dict, Json):  # type: ignore
-    def __init__(self, *args, **kwargs):
+    def __init__(
+        self,
+        *args,
+        _schema: None | typing.Any = None,
+        **kwargs,
+    ):
+        args = list(args)
+        kwargs = dict(kwargs)
+
+        if args == [None]:
+            args = []
+
+        if kwargs.get('_schema') is None:
+            kwargs.pop('_schema', None)
+
+        if not args and _schema is not None:
+            args = [_schema]
+
         super().__init__(*args, **kwargs)
 
 
@@ -629,6 +811,8 @@ class _JsonEncoder(json.JSONEncoder):
         f = getattr(o, '__json__', None)
         if f and callable(f):
             return f()
+        if dataclasses.is_dataclass(o):
+            return dataclasses.asdict(o)
         return super().default(o)
 
     @typing.override
@@ -650,19 +834,32 @@ class _JsonEncoder(json.JSONEncoder):
 
 class Position(_TypedDict, Serializable):
     _MAGIC_CHUNK_V1: typing.Final[int] = 0x01
-    _FIELDS: typing.Final[dict[str, _TypedField]] = {
-        'char_pos': _TypedField(Spec(Int), None, True),
-        'chunk_eid': _TypedField(Spec(Int, -1), None, False),
-        'chunk_pos': _TypedField(Spec(Int, -1), None, False),
+    _FIELDS: typing.Final[dict[str, Field]] = {
+        'char_pos': Field(Int),
+        'chunk_eid': Field(Int, -1, required=False),
+        'chunk_pos': Field(Int, -1, required=False),
     }
 
-    @property
     @typing.override
-    def _key_to_field(self) -> dict[str, _TypedField]:
-        return self._FIELDS
+    def __init__(
+        self,
+        *args,
+        **kwargs,
+    ):
+        args = list(args)
+        kwargs = dict(kwargs)
 
-    @typing.override
+        if args == [None]:
+            args = []
+
+        if kwargs.get('_schema') is None:
+            kwargs.pop('_schema', None)
+
+        assert '_schema' not in kwargs, 'invalid argument'
+        super().__init__(*args, _schema=self._FIELDS, **kwargs)
+
     @classmethod
+    @typing.override
     def _create(cls, cursor: Cursor, *args, **kwargs) -> typing.Self:
         result = cls(*args, **kwargs)
         s = read_utf8str(cursor)
@@ -699,19 +896,28 @@ class Position(_TypedDict, Serializable):
 
 class LPR(_TypedDict, Serializable):  # aka LPR
     _MAGIC_V2: typing.Final[int] = 2
-    _FIELDS: typing.Final[dict[str, _TypedField]] = {
-        'pos': _TypedField(Spec(Position), None, True),
-        'timestamp': _TypedField(Spec(Int, -1), None, False),
-        'lpr_version': _TypedField(Spec(Int, -1), None, False),
+    _FIELDS: typing.Final[dict[str, Field]] = {
+        'pos': Field(Position),
+        'timestamp': Field(Int, -1, required=False),
+        'lpr_version': Field(Int, -1, required=False),
     }
 
-    @property
     @typing.override
-    def _key_to_field(self) -> dict[str, _TypedField]:
-        return self._FIELDS
+    def __init__(self, *args, **kwargs):
+        args = list(args)
+        kwargs = dict(kwargs)
 
-    @typing.override
+        if args == [None]:
+            args = []
+
+        if kwargs.get('_schema') is None:
+            kwargs.pop('_schema', None)
+
+        assert '_schema' not in kwargs, 'invalid argument'
+        super().__init__(*args, _schema=self._FIELDS, **kwargs)
+
     @classmethod
+    @typing.override
     def _create(cls, cursor: Cursor, *args, **kwargs) -> typing.Self:
         init = {}
 
@@ -747,18 +953,23 @@ class LPR(_TypedDict, Serializable):  # aka LPR
 
 class TimeZoneOffset(IntBase, Serializable):
     @typing.override
-    def __new__(cls, *args, **kwargs) -> typing.Self:
-        init = []
-        if len(args) + len(kwargs) <= 0:
-            init = [-1]
-        return super().__new__(cls, *init, *args, **kwargs)
+    def __new__(
+        cls,
+        *args,
+        _schema: None | int = None,
+        **kwargs,
+    ) -> typing.Self:
+        if not args and _schema is not None:
+            args = [_schema]
+        assert '_schema' not in kwargs, 'invalid argument'
+        return super().__new__(cls, *args, **kwargs)
 
     @typing.override
     def __init__(self, *args, **kwargs):
         super().__init__()
 
-    @typing.override
     @classmethod
+    @typing.override
     def _create(cls, cursor: Cursor, *args, **kwargs) -> typing.Self:
         return cls(read_long(cursor), *args, **kwargs)
 
@@ -789,229 +1000,33 @@ class TimeZoneOffset(IntBase, Serializable):
         self._write(csr)
         return csr.dump()
 
-    def __json__(self) -> None | bool | int | float | str | tuple | list | dict:
+    def __json__(
+        self,
+    ) -> None | bool | int | float | str | tuple | list | dict:
         return int(self)
 
 
-# fpr, updated_lpr
-PageReadPos = typing.TypedDict(
-    'PageReadPos', {
-        'pos': Position,
-        'timestamp': typing.NotRequired[DateTime],
-        'timezone_offset': typing.NotRequired[TimeZoneOffset],
-        'country': typing.NotRequired[Utf8Str],
-        'device': typing.NotRequired[Utf8Str],
-    })
-
-# apnx.key
-APNXKey = typing.TypedDict(
-    'APNXKey', {
-        'asin': Utf8Str,
-        'cde_type': Utf8Str,
-        'sidecar_available': Bool,
-        'opn_to_pos': Array[Int],
-        'first': Int,
-        'unknown1': Int,
-        'unknown2': Int,
-        'page_map': Utf8Str,
-    })
-
-# fixed.layout.data
-FixedLayoutData = typing.TypedDict(
-    'FixedLayoutData', {
-        'unknown1': Bool,
-        'unknonw2': Bool,
-        'unknown3': Bool,
-    })
-
-# sharing.limits
-SharingLimits = typing.TypedDict(
-    'SharingLimits',
-    {
-        'accumulated': NotImplemented,  # TODO structure for sharing.limits
-    })
-
-# language.store
-LanguageStore = typing.TypedDict(
-    'LanguageStore', {
-        'language': Utf8Str,
-        'unknown1': Int,
-    })
-
-# periodicals.view.state
-PeriodicalsViewState = typing.TypedDict(
-    'PeriodicalsViewState', {
-        'unknown1': Utf8Str,
-        'unknown2': Int,
-    })
-
-# purchase.state.data
-PurchaseStateData = typing.TypedDict(
-    'PurchaseStateData', {
-        'state': Int,
-        'time': DateTime,
-    })
-
-# timer.average.calculator.distribution.normal
-TimerAverageCalculatorDistributionNormal = typing.TypedDict(
-    'TimerAverageCalculatorDistributionNormal', {
-        'count': Long,
-        'sum': Double,
-        'sum_of_squares': Double,
-    })
-
-# timer.average.calculator.outliers
-TimerAverageCalculatorOutliers = Array[Double]
-
-# timer.model[average_calculator]
-TimerAverageCalculator = typing.TypedDict(
-    'TimerAverageCalculator',
-    {
-        'samples1': Array[Double],
-        'samples2': Array[Double],
-        'normal_distributions':
-        Array[TimerAverageCalculatorDistributionNormal],  # type: ignore
-        'outliers': Array[TimerAverageCalculatorOutliers],
-    })
-
-# timer.model
-TimerModel = typing.TypedDict(
-    'TimerModel', {
-        'version': Long,
-        'total_time': Long,
-        'total_words': Long,
-        'total_percent': Double,
-        'average_calculator': TimerAverageCalculator,
-    })
-
-# timer.data.store
-TimerDataStore = typing.TypedDict(
-    'TimerDataStore', {
-        'on': Bool,
-        'reading_timer_model': TimerModel,
-        'version': Int,
-    })
-
-# timer.data.store.v2
-TimerDataStoreV2 = typing.TypedDict(
-    'TimerDataStoreV2', {
-        'on': Bool,
-        'reading_timer_model': TimerModel,
-        'version': Int,
-        'last_option': Int,
-    })
-
-# book.info.store
-BookInfoStore = typing.TypedDict(
-    'BookInfoStore', {
-        'num_words': Long,
-        'percent_of_book': Double,
-    })
-
-# page.history.store (array element)
-PageHistoryStoreElement = typing.TypedDict(
-    'PageHistoryStoreElement', {
-        'pos': Position,
-        'time': DateTime,
-    })
-
-# font.prefs
-FontPrefs = typing.TypedDict(
-    'FontPrefs', {
-        'typeface': Utf8Str,
-        'line_sp': Int,
-        'size': Int,
-        'align': Int,
-        'inset_top': Int,
-        'inset_left': Int,
-        'inset_bottom': Int,
-        'inset_right': Int,
-        'unknown1': Int,
-        'bold': typing.NotRequired[Int],
-        'user_sideloadable_font': typing.NotRequired[Utf8Str],
-        'custom_font_index': typing.NotRequired[Int],
-        'mobi7_system_font': typing.NotRequired[Utf8Str],
-        'mobi7_restore_font': typing.NotRequired[Utf8Str],
-        'reading_preset_selected': typing.NotRequired[Utf8Str],
-    })
-
-# reader.state.preferences
-ReaderStatePreferences = typing.TypedDict(
-    'ReaderStatePreferences', {
-        'font_preferences': FontPrefs,
-        'left_margin': Int,
-        'right_margin': Int,
-        'top_margin': Int,
-        'bottom_margin': Int,
-        'unknown1': Bool,
-    })
-
-# annotation.personal.bookmark
-# annotation.personal.highlight
-# annotation.personal.note
-# annotation.personal.clip_article
-AnnotationPersonalElement = typing.TypedDict(
-    'AnnotationPersonalElement', {
-        'start_pos': Position,
-        'end_pos': Position,
-        'creation_time': DateTime,
-        'last_modification_time': DateTime,
-        'template': Utf8Str,
-        'note': typing.NotRequired[Utf8Str],
-    })
-
-# annotation.cache.object
-AnnotationCacheObject = typing.TypedDict(
-    'AnnotationCacheObject',
-    {
-        'bookmarks': Array[AnnotationPersonalElement],  # type: ignore
-        'highlights': Array[AnnotationPersonalElement],  # type: ignore
-        'notes': Array[AnnotationPersonalElement],  # type: ignore
-        'clip_articles': Array[AnnotationPersonalElement],  # type: ignore
-    })
-
-# whisperstore.migration.status
-WhisperstoreMigrationStatus = typing.TypedDict(
-    'WhisperstoreMigrationStatus', {
-        'unknown1': Bool,
-        'unknown2': Bool,
-    })
-
-
-# can contain Bool, Char, Byte, Short, Int, Long, Float, Double, Utf8Str, Object
+# can contain Bool, Char, Byte, Short, Int, Long, Float, Double,
+#   Utf8Str, Object
 class ObjectMap(_TypedDict, Serializable):
     _MAGIC_STR: typing.Final[bytes] = b"\x00\x00\x00\x00\x00\x1A\xB1\x26"
-    _FIXED_MYSTERY_NUM: typing.Final[int] = (
+    _FIXED_MYSTERY_NUM: typing.Final[int] = \
         1  # present after the signature; unknown what this number means
-    )
-    _INIT_FIELDS: typing.Final[str] = '_schema_init_fields'
 
-    # named object data structure (schema utf8str + data)
-    _OBJECT_BEGIN: typing.Final[int] = 0xfe
-    # end of data for object
-    _OBJECT_END: typing.Final[int] = 0xff
+    def __init__(self, *args, _schema: Mapping, **kwargs):
+        schema = copy.deepcopy(_schema)
+        _fix_mapping(schema, False)
 
-    def __init__(self, *args, **kwargs):
-        assert self._INIT_FIELDS in kwargs, \
-            f"{self.__class__.__name__} cannot be instantiated directly"
-        self._fields: dict[str, _TypedField] = kwargs.pop(self._INIT_FIELDS)
-        super().__init__(*args, **kwargs)
+        self.__key_to_field: Mapping = schema
+        # super constructor last so hooks work correctly
+        super().__init__(*args, _schema=schema, **kwargs)
 
     @classmethod
-    def _spec(cls, map_: dict[str, Spec]) -> Spec[typing.Self]:
-        fields = {}
-        for key, spc in map_.items():
-            fields[key] = _TypedField(spc, key, False)
-
-        return Spec(ObjectMap, [], {cls._INIT_FIELDS: fields})  # type: ignore
-
-    @property
-    @typing.override
-    def _key_to_field(self) -> dict[str, _TypedField]:
-        return self._fields
+    def _schema(cls, mapping: dict[str, type | Field]) -> Mapping:
+        return copy.deepcopy(mapping)
 
     @classmethod
-    def _eat_signature_or_error(cls, cursor: Cursor):
+    def __eat_signature_or_error(cls, cursor: Cursor):
         if not cursor.eat(cls._MAGIC_STR):
             raise UnexpectedBytesError(
                 cursor.tell(),
@@ -1020,7 +1035,7 @@ class ObjectMap(_TypedDict, Serializable):
             )
 
     @classmethod
-    def _eat_fixed_mystery_num_or_error(cls, cursor: Cursor):
+    def __eat_fixed_mystery_num_or_error(cls, cursor: Cursor):
         cursor.save()
         value = read_long(cursor)
         if value != cls._FIXED_MYSTERY_NUM:
@@ -1033,84 +1048,69 @@ class ObjectMap(_TypedDict, Serializable):
         cursor.unsave()
 
     @classmethod
-    def _peek_object_type(
-        cls,
-        csr: Cursor,
-        magic_byte: bool = True,
-    ) -> None | type:
-        from . import schemas
-        cls_ = None
-        csr.save()
-
-        if not magic_byte or csr.eat(cls._OBJECT_BEGIN):
-            schema = read_utf8str(csr, False)
-            fct = schemas.get_factory_by_schema(schema)
-            assert fct, f'Unsupported schema \"{schema}\".'
-            cls_ = fct.cls_
-
-        csr.restore()
-        return cls_
-
-    @classmethod
-    def _peek_object_schema(
+    def __peek_object_schema_id(
         cls,
         csr: Cursor,
         magic_byte: bool = True,
     ) -> None | str:
-        schema = None
+        schema_id = None
         csr.save()
-        if not magic_byte or csr.eat(cls._OBJECT_BEGIN):
-            schema = read_utf8str(csr, False)
+        if not magic_byte or csr.eat(OBJECT_BEGIN):
+            schema_id = read_utf8str(csr, False)
         csr.restore()
-        return schema
+        return schema_id
 
     @classmethod
-    def _read_object(
+    def __read_object(
         cls,
         csr: Cursor,
-        schema: None | str = None,
+        cls_: type,
+        schema: None | typing.Any = None,
+        schema_id: None | str = None,
     ) -> tuple[typing.Any, str]:
-        assert schema is None or schema, 'expected either null or non-empty schema'
-        from . import schemas
-
-        schema_ = cls._peek_object_schema(csr)
-        if not schema_:
+        assert schema_id is None or schema_id, 'expected either null or non-empty schema'
+        schema_id_actual = cls.__peek_object_schema_id(csr)
+        if not schema_id_actual:
             raise UnexpectedStructureError('Failed to read schema for object.')
-        if schema is not None and schema_ != schema:
+        if schema_id is not None and schema_id_actual != schema_id:
             raise UnexpectedStructureError(
-                f'Object schema "{schema_}" does not match expected schema "{schema}"'
+                f'Object schema "{schema_id_actual}" does not match expected schema "{schema_id}"'
             )
-        maker = schemas.get_factory_by_schema(schema_)
-        if not maker:
-            raise UnexpectedStructureError(f'Unsupported schema \"{schema_}\".')
-        o = maker.read(csr, schema_)
-        return o, schema_
+        o = _read_object(csr, cls_, schema, schema_id_actual)
+        return o, schema_id_actual
 
     @classmethod
-    def _write_object(
+    def __write_object(
         cls,
         csr: Cursor,
         o: typing.Any,
-        schema: str,
+        schema_id: str,
     ):
-        assert schema, 'expected non-empty schema'
-        csr.write(cls._OBJECT_BEGIN)
-        write_utf8str(csr, schema, False)
+        assert schema_id, 'expected non-empty schema'
+        csr.write(OBJECT_BEGIN)
+        write_utf8str(csr, schema_id, False)
         o._write(csr)
-        csr.write(cls._OBJECT_END)
+        csr.write(OBJECT_END)
 
-    @typing.override
     @classmethod
+    @typing.override
     def _create(cls, cursor: Cursor, *args, **kwargs) -> typing.Self:
         result = cls(*args, **kwargs)
-        result._eat_signature_or_error(cursor)
-        result._eat_fixed_mystery_num_or_error(cursor)
+        result.__eat_signature_or_error(cursor)
+        result.__eat_fixed_mystery_num_or_error(cursor)
 
         size = read_int(cursor)
         for _ in range(size):
-            value, schema = cls._read_object(cursor)
-            assert schema, 'Object has blank schema.'
-            result[schema] = value
+            schema_id = cls.__peek_object_schema_id(cursor)
+            schema = result.__key_to_field[schema_id]
+            value, schema_id_actual = result.__read_object(
+                cursor,
+                schema.cls_,
+                schema.schema,
+                schema_id,
+            )
+            assert schema_id_actual, 'Object has blank schema.'
+            result[schema_id_actual] = value
         return result
 
     @typing.override
@@ -1118,11 +1118,259 @@ class ObjectMap(_TypedDict, Serializable):
         cursor.write(self._MAGIC_STR)
         write_long(cursor, self._FIXED_MYSTERY_NUM)
         write_int(cursor, len(self))
-        for schema, value in self.items():
-            self._write_object(cursor, value, schema)
+        for schema_id, value in self.items():
+            self.__write_object(cursor, value, schema_id)
 
     def __str__(self) -> str:
         return f"{self.__class__.__name__}{dict(self)}"
+
+
+# @formatter:off
+# fmt: off
+# autopep8: off
+# yapf: disable
+
+_timer_average_calculator_outliers = Array._schema(Double)
+_timer_average_calculator_distribution_normal = Record._schema({
+    "count": Long,
+    "sum": Double,
+    "sum_of_squares": Double,
+})
+
+_timer_average_calculator = Record._schema({
+    "samples1": Field(Array, Array._schema(Double)),
+    "samples2": Field(Array, Array._schema(Double)),
+    "normal_distributions": Field(Array, Array._schema(
+        Record,
+        _timer_average_calculator_distribution_normal,
+        "timer.average.calculator.distribution.normal",
+    )),
+    "outliers": Field(Array, Array._schema(
+        Array,
+        _timer_average_calculator_outliers,
+        "timer.average.calculator.outliers",
+    )),
+})
+
+_timer_model = Record._schema({
+    "version": Long,
+    "total_time": Long,
+    "total_words": Long,
+    "total_percent": Double,
+    "average_calculator": Field(
+        Record,
+        _timer_average_calculator,
+        "timer.average.calculator",
+    ),
+})
+
+_font_prefs = Record._schema({
+    "typeface": Utf8Str,
+    "line_sp": Int,
+    "size": Int,
+    "align": Int,
+    "inset_top": Int,
+    "inset_left": Int,
+    "inset_bottom": Int,
+    "inset_right": Int,
+    "unknown1": Int,
+    "bold": Field(Int, required=False),
+    "user_sideloadable_font": Field(Utf8Str, required=False),
+    "custom_font_index": Field(Int, required=False),
+    "mobi7_system_font": Field(Utf8Str, required=False),
+    "mobi7_restore_font": Field(Bool, required=False),
+    "reading_preset_selected": Field(Utf8Str, required=False),
+})
+
+_reader_state_preferences = Record._schema({
+    "font_preferences": Field(Record, _font_prefs),
+    "left_margin": Int,
+    "right_margin": Int,
+    "top_margin": Int,
+    "bottom_margin": Int,
+    "unknown1": Bool,
+})
+
+_annotation_personal_element = Record._schema({
+    "start_pos": Position,
+    "end_pos": Position,
+    "creation_time": DateTime,
+    "last_modification_time": DateTime,
+    "template": Utf8Str,
+    "note": Field(Utf8Str, required=False),
+})
+
+_annotation_cache_object = IntMap._schema({
+    "bookmarks": Field(
+        Array,
+        Array._schema(
+            Record,
+            _annotation_personal_element,
+            "annotation.personal.bookmark",
+        ),
+        "saved.avl.interval.tree",
+    ),
+    "highlights": Field(
+        Array,
+        Array._schema(
+            Record,
+            _annotation_personal_element,
+            "annotation.personal.highlight",
+        ),
+        "saved.avl.interval.tree",
+    ),
+    "notes": Field(
+        Array,
+        Array._schema(
+            Record,
+            _annotation_personal_element,
+            "annotation.personal.note",
+        ),
+        "saved.avl.interval.tree",
+    ),
+    "clip_articles": Field(
+        Array,
+        Array._schema(
+            Record,
+            _annotation_personal_element,
+            "annotation.personal.clip_article",
+        ),
+        "saved.avl.interval.tree",
+    ),
+})
+
+# NOTE if you update this schema map update the type hints too
+_schema_id_to_schema: dict[str, type | NotImplemented | Field] = {
+    "clock.data.store": NotImplemented,
+    "dictionary": Utf8Str,
+    "lpu": NotImplemented,
+    "pdf.contrast": NotImplemented,
+    "sync_lpr": Bool,
+    "tpz.line.spacing": NotImplemented,
+    "XRAY_OTA_UPDATE_STATE": NotImplemented,
+    "XRAY_SHOWING_SPOILERS": NotImplemented,
+    "XRAY_SORTING_STATE": NotImplemented,
+    "XRAY_TAB_STATE": NotImplemented,
+    "dict.prefs.v2": DynamicMap,
+    "EndActions": DynamicMap,
+    "ReaderMetrics": DynamicMap,
+    "StartActions": DynamicMap,
+    "Translator": DynamicMap,
+    "Wikipedia": DynamicMap,
+    "buy.asin.response.data": Json,
+    "next.in.series.info.data": Json,
+    "price.info.data": Json,
+    "erl": Position,
+    "lpr": LPR,
+    "fpr": Field(Record, Record._schema({
+        "pos": Position,
+        "timestamp": Field(DateTime, required=False),
+        "timezone_offset": Field(TimeZoneOffset, required=False),
+        "country": Field(Utf8Str, required=False),
+        "device": Field(Utf8Str, required=False),
+    })),
+    "updated_lpr": Field(Record, Record._schema({
+        "pos": Position,
+        "timestamp": Field(DateTime, required=False),
+        "timezone_offset": Field(TimeZoneOffset, required=False),
+        "country": Field(Utf8Str, required=False),
+        "device": Field(Utf8Str, required=False),
+    })),
+    # amzn page num xref (i.e. page num map)
+    "apnx.key": Field(Record, Record._schema({
+        "asin": Utf8Str,
+        "cde_type": Utf8Str,
+        "sidecar_available": Bool,
+        "opn_to_pos": Field(Array, Array._schema(Int)),
+        "first": Int,
+        "unknown1": Int,
+        "unknown2": Int,
+        "page_map": Utf8Str,
+    })),
+    "fixed.layout.data": Field(Record, Record._schema({
+        "unknown1": Bool,
+        "unknown2": Bool,
+        "unknown3": Bool,
+    })),
+    "sharing.limits": Field(Record, Record._schema({
+        # TODO discover structure for sharing.limits
+        "accumulated": NotImplemented
+    })),
+    "language.store": Field(Record, Record._schema({
+        "language": Utf8Str,
+        "unknown1": Int,
+    })),
+    "periodicals.view.state": Field(Record, Record._schema({
+        "unknown1": Utf8Str,
+        "unknown2": Int,
+    })),
+    "purchase.state.data": Field(Record, Record._schema({
+        "state": Int,
+        "time": DateTime,
+    })),
+    "timer.model": Field(Record, _timer_model),
+    "timer.data.store": Field(Record, Record._schema({
+        "on": Bool,
+        "reading_timer_model": Field(Record, _timer_model),
+        "version": Int,
+    })),
+    "timer.data.store.v2": Field(Record, Record._schema({
+        "on": Bool,
+        "reading_timer_model": Field(Record, _timer_model),
+        "version": Int,
+        "last_option": Int,
+    })),
+    "book.info.store": Field(Record, Record._schema({
+        "num_words": Long,
+        "percent_of_book": Double,
+    })),
+    "page.history.store": Field(Array, Array._schema(
+        Record,
+        Record._schema({"pos": Position, "time": DateTime}),
+        "page.history.record",
+    )),
+    "reader.state.preferences": Field(Record, _reader_state_preferences),
+    "font.prefs": Field(Record, _font_prefs),
+    "annotation.cache.object": Field(IntMap, _annotation_cache_object),
+    "annotation.personal.bookmark":
+        Field(Record, _annotation_personal_element),
+    "annotation.personal.highlight":
+        Field(Record, _annotation_personal_element),
+    "annotation.personal.note":
+        Field(Record, _annotation_personal_element),
+    "annotation.personal.clip_article":
+        Field(Record, _annotation_personal_element),
+    "whisperstore.migration.status": Field(Record, Record._schema({
+        "unknown1": Bool,
+        "unknown2": Bool,
+    })),
+    "timer.average.calculator.distribution.normal": Field(
+        Record,
+        _timer_average_calculator_distribution_normal,
+    ),
+    "timer.average.calculator.outliers": Field(
+        Array,
+        _timer_average_calculator_outliers,
+    ),
+}
+
+# autopep8: on
+# yapf: enable
+# fmt: on
+# @formatter:on
+
+
+class Store(ObjectMap):
+    @typing.override
+    def __init__(self, *args, **kwargs):
+        assert kwargs.get('_schema') is None, 'invalid argument'
+        super().__init__(*args, _schema=_schema_id_to_schema, **kwargs,)
+
+    @classmethod
+    @typing.override
+    def _create(cls, cursor: Cursor, *args, **kwargs) -> typing.Self:
+        assert kwargs.get('_schema') is None, 'invalid argument'
+        return super()._create(cursor, *args, **kwargs,)
 
 
 ALL_OBJECT_TYPES: typing.Final[tuple[type, ...]] = (

@@ -11,9 +11,6 @@ from krdsrw.basics import Long
 from krdsrw.basics import Float
 from krdsrw.basics import Double
 from krdsrw.basics import Utf8Str
-from krdsrw.specs import Spec
-from krdsrw.specs import Index
-from krdsrw.specs import Field
 from krdsrw.objects import Array
 from krdsrw.objects import LPR
 from krdsrw.objects import ObjectMap
@@ -21,9 +18,14 @@ from krdsrw.objects import DynamicMap
 from krdsrw.objects import IntMap
 from krdsrw.objects import Json
 from krdsrw.objects import Record
+from krdsrw.objects import Store
 from krdsrw.objects import Position
 from krdsrw.objects import _TypedDict
-from krdsrw.objects import _TypedField
+from krdsrw.objects import Field
+from krdsrw.objects import Index
+from krdsrw.objects import Mapping
+from krdsrw.objects import _make_object
+from krdsrw.objects import _read_object
 
 TEMPEST_EPUB: typing.Final[
     pathlib.Path] = pathlib.Path(__file__).parent / "the-tempest.epub"
@@ -136,73 +138,73 @@ class TestJson:
 
 
 class TestArray:
-    def test_init(self):
-        spc = Array._spec(Spec(Int))
-        o = spc.make()
-        assert o.elmt_cls == Int
+    def test_instantiate(self):
+        sch = Array._schema(Int)
+        o = Array(_schema=sch)  # no error
+        assert o is not None
 
     def test_append_type_check_allow(self):
-        spc = Array._spec(Spec(Int))
-        o = spc.make()
+        sch = Array._schema(Int)
+        o = Array(_schema=sch)
         o.append(1337)
         assert o[0] == 1337
 
     def test_append_type_check_disallow(self):
-        spc = Array._spec(Spec(Int))
-        o = spc.make()
+        sch = Array._schema(Int)
+        o = Array(_schema=sch)
         with pytest.raises(ValueError):
             o.append("foo")
 
     def test_insert_type_check_allow(self):
-        spc = Array._spec(Spec(Int))
-        o = spc.make()
+        sch = Array._schema(Int)
+        o = Array(_schema=sch)
         o.insert(0, 1337)
         assert o[0] == 1337
 
     def test_insert_type_check_disallow(self):
-        spc = Array._spec(Spec(Int))
-        o = spc.make()
+        sch = Array._schema(Int)
+        o = Array(_schema=sch)
         with pytest.raises(ValueError):
             o.insert(0, "foo")
 
     def test_extend_type_check_allow(self):
-        spc = Array._spec(Spec(Int))
-        o = spc.make()
+        sch = Array._schema(Int)
+        o = Array(_schema=sch)
         o.extend([ 0, 1, 2, 3, 4 ])
         assert o == [ 0, 1, 2, 3, 4 ]
 
     def test_extend_type_check_disallow(self):
-        spc = Array._spec(Spec(Int))
-        o = spc.make()
+        sch = Array._schema(Int)
+        o = Array(_schema=sch)
         with pytest.raises(ValueError):
             o.extend([ "a", "b", "c", "d", "e"])
 
     def test_copy_contents(self):
-        spc = Array._spec(Spec(Int))
-        o = spc.make()
+        sch = Array._schema(Int)
+        o = Array(_schema=sch)
         o.extend([ 0, 1, 2, 3, 4 ])
         o2 = o.copy()
         assert isinstance(o2, Array) and o2 == o
 
     def test_count(self):
-        spc = Array._spec(Spec(Int))
-        o = spc.make()
+        sch = Array._schema(Int)
+        o = Array(_schema=sch)
         o.extend([ 0, 1, 2, 3, 4 ])
         assert o.count(2) == 1
 
     def test_read(self):
-        spc = Array._spec(Spec(Int))
         csr = Cursor(
             b'\x01\x00\x00\x00\x03' \
             + b'\x01\x00\x00\x00\x0a' \
             + b'\x01\x00\x00\x00\x0b' \
             + b'\x01\x00\x00\x00\x0c')
-        o = spc.read(csr)
+        sch = Array._schema(Int)
+        o = Array._create(csr, _schema=sch)
         assert o == [ 0x0a, 0x0b, 0x0c ]
 
     def test_write(self):
-        spc = Array._spec(Spec(Int))
-        o = spc.make()
+        sch = Array._schema(Int)
+        o = Array(_schema=sch)
         o.extend([ 0x0a, 0x0b, 0x0c ])
         csr = Cursor()
         o._write(csr)
@@ -213,24 +215,24 @@ class TestArray:
             + b'\x01\x00\x00\x00\x0c'
 
     def test_elmt_cls(self):
-        spc = Array._spec(Spec(Int))
-        o = spc.make()
-        assert o.elmt_cls == Int
+        sch = Array._schema(Int)
+        o = Array(_schema=sch)
+        assert o.elmt_schema_cls == Int
 
     def test_elmt_schema(self):
-        spc = Array._spec(Spec(Int), 'abc')
-        o = spc.make()
-        assert o.elmt_schema == 'abc'
+        sch = Array._schema(Int, schema_id='abc')
+        o = Array(_schema=sch)
+        assert o.elmt_schema_id == 'abc'
 
     def test_make_element(self):
-        spc = Array._spec(Spec(Int))
-        arr = spc.make()
+        sch = Array._schema(Int)
+        arr = Array(_schema=sch)
         o = arr.make_element(1337)
         assert o == 1337
 
     def test_make_and_append(self):
-        spc = Array._spec(Spec(Int))
-        arr = spc.make()
+        sch = Array._schema(Int)
+        arr = Array(_schema=sch)
         o = arr.make_and_append(1337)
         assert o == 1337
         assert arr == [1337]
@@ -239,17 +241,16 @@ class TestArray:
 class TestTypedDict:
     def test_instantiate(self):
         class Custom(_TypedDict):
-            @property
-            @typing.override
-            def _key_to_field(self) -> dict[str, _TypedField]:
-                return {
-                    'a': _TypedField(Spec(Bool), None, True),
-                    'b': _TypedField(Spec(Int), None, True),
-                    'c': _TypedField(Spec(Utf8Str), None, True),
-                    'x': _TypedField(Spec(Bool), None, False),
-                    'y': _TypedField(Spec(Int), None, False),
-                    'z': _TypedField(Spec(Utf8Str), None, False),
+            def __init__(self, *args, **kwargs):
+                schema = {
+                    'a': Field(Bool),
+                    'b': Field(Int),
+                    'c': Field(Utf8Str),
+                    'x': Field(Bool, required=False),
+                    'y': Field(Int, required=False),
+                    'z': Field(Utf8Str, required=False),
                 }
+                super().__init__(*args, _schema=schema, **kwargs)
 
         o = Custom()  # no error
         assert o is not None
@@ -259,17 +260,16 @@ class TestTypedDict:
 
     def test_delete_required(self):
         class Custom(_TypedDict):
-            @property
-            @typing.override
-            def _key_to_field(self) -> dict[str, _TypedField]:
-                return {
-                    'a': _TypedField(Spec(Bool), None, True),
-                    'b': _TypedField(Spec(Int), None, True),
-                    'c': _TypedField(Spec(Utf8Str), None, True),
-                    'x': _TypedField(Spec(Bool), None, False),
-                    'y': _TypedField(Spec(Int), None, False),
-                    'z': _TypedField(Spec(Utf8Str), None, False),
+            def __init__(self, *args, **kwargs):
+                schema = {
+                    'a': Field(Bool),
+                    'b': Field(Int),
+                    'c': Field(Utf8Str),
+                    'x': Field(Bool, required=False),
+                    'y': Field(Int, required=False),
+                    'z': Field(Utf8Str, required=False),
                 }
+                super().__init__(*args, _schema=schema, **kwargs)
 
         o = Custom()
         with pytest.raises(KeyError):
@@ -298,55 +298,79 @@ class TestTypedDict:
 
 class TestRecord:
     def test_instantiate(self):
-        spc = Record._spec({
-            'a': Spec(Int),
-            'b': Spec(Float)
-        }, {
-            'c': Spec(Double),
-            'd': Spec(Utf8Str)
+        sch = Record._schema({
+            'a': Int,
+            'b': Float,
+            'c': Field(Double, required=False),
+            'd': Field(Utf8Str, required=False),
         })
 
-        o = spc.make({
-            'a': 123,
-            'b': 4.56,
-            'c': 7.89,
-            'd': 'hello',
-        })  # no error
-
+        o = _make_object(
+            Record, {
+                'a': 123,
+                'b': 4.56,
+                'c': 7.89,
+                'd': 'hello',
+            },
+            schema=sch)  # no error
         assert o and isinstance(o, Record)
 
     def test_required_optional(self):
-        spc = Record._spec({
-            'a': Spec(Int),
-            'b': Spec(Float)
-        }, {
-            'c': Spec(Double),
-            'd': Spec(Utf8Str)
+        sch = Record._schema({
+            'a': Int,
+            'b': Float,
+            'c': Field(Double, required=False),
+            'd': Field(Utf8Str, required=False),
         })
 
         with pytest.raises(KeyError):
-            o = spc.make({ 'a': 123, 'b': 4.56, 'c': 7.89, 'd': 'hello'})
+            o = _make_object(
+                Record, {
+                    'a': 123,
+                    'b': 4.56,
+                    'c': 7.89,
+                    'd': 'hello'
+                },
+                schema=sch)
             del o['a']  # no error
 
         with pytest.raises(KeyError):
-            o = spc.make({ 'a': 123, 'b': 4.56, 'c': 7.89, 'd': 'hello'})
+            o = _make_object(
+                Record, {
+                    'a': 123,
+                    'b': 4.56,
+                    'c': 7.89,
+                    'd': 'hello'
+                },
+                schema=sch)
             del o['b']  # no error
 
-        o = spc.make({ 'a': 123, 'b': 4.56, 'c': 7.89, 'd': 'hello'})
+        o = _make_object(
+            Record, {
+                'a': 123,
+                'b': 4.56,
+                'c': 7.89,
+                'd': 'hello'
+            }, schema=sch)
         del o['c']  # no error
         assert 'c' not in o
 
-        o = spc.make({ 'a': 123, 'b': 4.56, 'c': 7.89, 'd': 'hello'})
+        o = _make_object(
+            Record, {
+                'a': 123,
+                'b': 4.56,
+                'c': 7.89,
+                'd': 'hello'
+            }, schema=sch)
         del o['d']  # no error
         assert 'd' not in o
 
     def test_read(self):
-        spc = Record._spec({
-            'a': Spec(Int),
-            'b': Spec(Float)
-        }, {
-            'c': Spec(Double),
-            'd': Spec(Utf8Str)
+        sch = Record._schema({
+            'a': Int,
+            'b': Float,
+            'c': Field(Double, required=False),
+            'd': Field(Utf8Str, required=False),
         })
 
         csr = Cursor(
@@ -355,19 +379,27 @@ class TestRecord:
             + b'\x00\x00\x00\x03\x00\x00\x03\x61' \
             + b'\x62\x63')
 
-        o = spc.read(csr)
+        o = _read_object(csr, Record, sch)
         assert o == { 'a': 1337, 'b': 0.0, 'c': 0.0, 'd': 'abc'}
 
     def test_write(self):
-        spc = Record._spec({
-            'a': Spec(Int),
-            'b': Spec(Float)
-        }, {
-            'c': Spec(Double),
-            'd': Spec(Utf8Str)
+        sch = Record._schema({
+            'a': Int,
+            'b': Float,
+            'c': Field(Double, required=False),
+            'd': Field(Utf8Str, required=False),
         })
 
-        o = spc.make({ 'a': 123, 'b': 4.56, 'c': 7.89, 'd': 'xyz'})
+        o = _make_object(
+            Record,
+            {
+                'a': 123,
+                'b': 4.56,
+                'c': 7.89,
+                'd': 'xyz'
+            },
+            schema=sch,
+        )
 
         csr = Cursor()
         o._write(csr)
@@ -379,15 +411,23 @@ class TestRecord:
             + b'\x79\x7a'
 
     def test_access(self):
-        spc = Record._spec({
-            'a': Spec(Int),
-            'b': Spec(Float)
-        }, {
-            'c': Spec(Double),
-            'd': Spec(Utf8Str)
+        sch = Record._schema({
+            'a': Int,
+            'b': Float,
+            'c': Field(Double, required=False),
+            'd': Field(Utf8Str, required=False),
         })
 
-        o = spc.make({ 'a': 123, 'b': 4.56, 'c': 7.89, 'd': 'hello'})
+        o = _make_object(
+            Record,
+            {
+                'a': 123,
+                'b': 4.56,
+                'c': 7.89,
+                'd': 'hello'
+            },
+            schema=sch,
+        )
         assert o['a'] == 123
         assert o['b'] == 4.56
         assert o['c'] == 7.89
@@ -396,24 +436,31 @@ class TestRecord:
 
 class TestIntMap:
     def test_instantiate(self):
-        spc = IntMap._spec([
-            ("apple", "name.a", Array._spec(Spec(Int), "x")),
-            ("banana", "name.b", Array._spec(Spec(Int), "y")),
-            ("pear", "name.c", Array._spec(Spec(Int), "z")),
-        ])
-        spc.make()
+        sch = IntMap._schema({
+            "apple":
+            Field(Array, Array._schema(Int, schema_id="x"), "name.a"),
+            "banana":
+            Field(Array, Array._schema(Int, schema_id="y"), "name.b"),
+            "pear":
+            Field(Array, Array._schema(Int, schema_id="z"), "name.c"),
+        })
+        o = _make_object(IntMap, schema=sch)  # no error
+        assert o is not None
 
     def test_make_element(self):
-        spc = IntMap._spec([
-            ("apple", "name.a", Array._spec(Spec(Int), "x")),
-            ("banana", "name.b", Array._spec(Spec(Int), "y")),
-            ("pear", "name.c", Array._spec(Spec(Int), "z")),
-        ])
+        sch = IntMap._schema({
+            "apple":
+            Field(Array, Array._schema(Int, schema_id="x"), "name.a"),
+            "banana":
+            Field(Array, Array._schema(Int, schema_id="y"), "name.b"),
+            "pear":
+            Field(Array, Array._schema(Int, schema_id="z"), "name.c"),
+        })
 
-        o = spc.make()
-        o['apple'].make_and_append(111)
-        o['banana'].make_and_append(222)
-        o['pear'].make_and_append(333)
+        o = _make_object(IntMap, schema=sch)
+        o['apple'].make_and_append(111)  # no error
+        o['banana'].make_and_append(222)  # no error
+        o['pear'].make_and_append(333)  # no error
 
 
 class TestDynamicMap:
@@ -480,21 +527,21 @@ class TestLPR:
         assert o == { 'pos': { 'char_pos': 12345 } }
 
 
-class TestObjectMap:
+class TestStore:
     def test_instantiate(self):
-        spc = ObjectMap.spec({})
-        root = spc.make()  # no error
-        assert root is not None
+        o = _make_object(Store)  # no error
+        assert o is not None
 
     def test_read(self):
         csr = Cursor(TEMPEST_YJR.read_bytes())
-        root = ObjectMap._create(csr)
+        root = Store._create(csr)  # no error
+        assert root is not None
 
     def test_read_write(self):
         orig_data = TEMPEST_YJR.read_bytes()
 
         csr = Cursor(orig_data)
-        root = ObjectMap._create(csr)
+        root = Store._create(csr)
 
         csr = Cursor()
         root._write(csr)
@@ -503,12 +550,12 @@ class TestObjectMap:
 
     def test_annotation_cache_object_len(self):
         csr = Cursor(TEMPEST_YJR.read_bytes())
-        root = ObjectMap._create(csr)
+        root = Store._create(csr)
         assert len(root["annotation.cache.object"]) == 3
 
     def test_bookmark(self):
         csr = Cursor(TEMPEST_YJR.read_bytes())
-        root = ObjectMap._create(csr)
+        root = Store._create(csr)
 
         o = root["annotation.cache.object"]["bookmarks"][0]
         assert o["start_pos"]['chunk_eid'] == 5525
@@ -520,99 +567,76 @@ class TestObjectMap:
         assert o["creation_time"] == 1701332599082
         assert o["last_modification_time"] == 1701332599082
 
-    def test_peek_object_schema(self):
-        csr = Cursor(
-            b'\xfe\x00\x00\x0a\x66\x6F\x6E\x74\x2E\x70\x72\x65\x66\x73')
-        assert ObjectMap._peek_object_schema(csr) == 'font.prefs'
-        assert csr.tell() == 0
-
-    def test_peek_object_type(self):
-        csr = Cursor(
-            b'\xfe\x00\x00\x0a\x66\x6F\x6E\x74\x2E\x70\x72\x65\x66\x73')
-        t = ObjectMap._peek_object_type(csr)
-        assert t is not None and issubclass(t, Record)
-
     def test_read_object(self):
         csr = Cursor(
-            b'\xFE\x00\x00\x1D\x61\x6E\x6E\x6F' \
-            + b'\x74\x61\x74\x69\x6F\x6E\x2E\x70' \
-            + b'\x65\x72\x73\x6F\x6E\x61\x6C\x2E' \
-            + b'\x68\x69\x67\x68\x6C\x69\x67\x68'
-            + b'\x74\x03\x00\x00\x12\x41\x65\x51' \
-            + b'\x4B\x41\x41\x41\x6D\x41\x41\x41' \
-            + b'\x41\x3A\x31\x35\x32\x38\x38\x03' \
-            + b'\x00\x00\x12\x41\x58\x38\x4D\x41' \
-            + b'\x41\x41\x63\x41\x41\x41\x41\x3A' \
-            + b'\x31\x35\x33\x33\x30\x02\x00\x00' \
-            + b'\x01\x8C\x02\xDF\x5A\xC1\x02\x00' \
-            + b'\x00\x01\x8C\x02\xDF\x5A\xC1\x03' \
-            + b'\x00\x00\x05\x30\xEF\xBF\xBC\x30' \
-            + b'\xFF')
-        o, n = ObjectMap._read_object(csr, 'annotation.personal.highlight')
-        assert n == 'annotation.personal.highlight'
-        assert o['start_pos']['chunk_eid'] == 2788
-        assert o['start_pos']['chunk_pos'] == 38
-        assert o['start_pos']['char_pos'] == 15288
-        assert o['end_pos']['chunk_eid'] == 3199
-        assert o['end_pos']['chunk_pos'] == 28
-        assert o['end_pos']['char_pos'] == 15330
-        assert o['creation_time'] == 1700855241409
-        assert o['last_modification_time'] == 1700855241409
-        assert o['template'] == "0￼0"
+            b'\x00\x00\x00\x00\x00\x1A\xB1\x26' \
+            + b'\x02\x00\x00\x00\x00\x00\x00\x00' \
+            + b'\x01\x01\x00\x00\x00\x01\xFE\x00' \
+            + b'\x00\x1D\x61\x6E\x6E\x6F\x74\x61' \
+            + b'\x74\x69\x6F\x6E\x2E\x70\x65\x72' \
+            + b'\x73\x6F\x6E\x61\x6C\x2E\x68\x69' \
+            + b'\x67\x68\x6C\x69\x67\x68\x74\x03' \
+            + b'\x00\x00\x12\x41\x65\x51\x4B\x41' \
+            + b'\x41\x41\x6D\x41\x41\x41\x41\x3A' \
+            + b'\x31\x35\x32\x38\x38\x03\x00\x00' \
+            + b'\x12\x41\x58\x38\x4D\x41\x41\x41' \
+            + b'\x63\x41\x41\x41\x41\x3A\x31\x35' \
+            + b'\x33\x33\x30\x02\x00\x00\x01\x8C' \
+            + b'\x02\xDF\x5A\xC1\x02\x00\x00\x01' \
+            + b'\x8C\x02\xDF\x5A\xC1\x03\x00\x00' \
+            + b'\x05\x30\xEF\xBF\xBC\x30\xFF')
+        store = Store._create(csr)
+        n = store['annotation.personal.highlight']
+        assert n['start_pos']['chunk_eid'] == 2788
+        assert n['start_pos']['chunk_pos'] == 38
+        assert n['start_pos']['char_pos'] == 15288
+        assert n['end_pos']['chunk_eid'] == 3199
+        assert n['end_pos']['chunk_pos'] == 28
+        assert n['end_pos']['char_pos'] == 15330
+        assert n['creation_time'] == 1700855241409
+        assert n['last_modification_time'] == 1700855241409
+        assert n['template'] == "0￼0"
 
     def test_write_object(self):
+        o = _make_object(
+            Store, {
+                "font.prefs": {
+                    "typeface": '_INVALID_,und:helvetica neue lt',
+                    "line_sp": 1,
+                    "size": 0,
+                    "align": 1,
+                    "inset_top": 63,
+                    "inset_left": 80,
+                    "inset_bottom": 0,
+                    "inset_right": 80,
+                    "unknown1": 0,
+                    "bold": 1,
+                    "user_sideloadable_font": '',
+                    "custom_font_index": -1,
+                    "mobi7_system_font": '',
+                    "mobi7_restore_font": False,
+                    "reading_preset_selected": '',
+                }
+            })
+
         csr = Cursor()
+        o._write(csr)
 
-        spc = Record._spec({
-            "typeface": Spec(Utf8Str),
-            "line_sp": Spec(Int),
-            "size": Spec(Int),
-            "align": Spec(Int),
-            "inset_top": Spec(Int),
-            "inset_left": Spec(Int),
-            "inset_bottom": Spec(Int),
-            "inset_right": Spec(Int),
-            "unknown1": Spec(Int),
-        }, {
-            "bold": Spec(Int),
-            "user_sideloadable_font": Spec(Utf8Str),
-            "custom_font_index": Spec(Int),
-            "mobi7_system_font": Spec(Utf8Str),
-            "mobi7_restore_font": Spec(Bool),
-            "reading_preset_selected": Spec(Utf8Str),
-        })
-
-        o = spc.make({
-            "typeface": '_INVALID_,und:helvetica neue lt',
-            "line_sp": 1,
-            "size": 0,
-            "align": 1,
-            "inset_top": 63,
-            "inset_left": 80,
-            "inset_bottom": 0,
-            "inset_right": 80,
-            "unknown1": 0,
-            "bold": 1,
-            "user_sideloadable_font": '',
-            "custom_font_index": -1,
-            "mobi7_system_font": '',
-            "mobi7_restore_font": False,
-            "reading_preset_selected": '',
-        })
-
-        ObjectMap._write_object(csr, o, "font.prefs")
         assert csr.dump() == (
-            b'\xFE\x00\x00\x0A\x66\x6F\x6E\x74'
-            + b'\x2E\x70\x72\x65\x66\x73\x03\x00' \
-            + b'\x00\x1F\x5F\x49\x4E\x56\x41\x4C' \
-            + b'\x49\x44\x5F\x2C\x75\x6E\x64\x3A' \
-            + b'\x68\x65\x6C\x76\x65\x74\x69\x63' \
-            + b'\x61\x20\x6E\x65\x75\x65\x20\x6C' \
-            + b'\x74\x01\x00\x00\x00\x01\x01\x00' \
-            + b'\x00\x00\x00\x01\x00\x00\x00\x01' \
-            + b'\x01\x00\x00\x00\x3F\x01\x00\x00' \
+            b'\x00\x00\x00\x00\x00\x1A\xB1\x26' \
+            + b'\x02\x00\x00\x00\x00\x00\x00\x00' \
+            + b'\x01\x01\x00\x00\x00\x01\xFE\x00' \
+            + b'\x00\x0A\x66\x6F\x6E\x74\x2E\x70' \
+            + b'\x72\x65\x66\x73\x03\x00\x00\x1F' \
+            + b'\x5F\x49\x4E\x56\x41\x4C\x49\x44' \
+            + b'\x5F\x2C\x75\x6E\x64\x3A\x68\x65' \
+            + b'\x6C\x76\x65\x74\x69\x63\x61\x20' \
+            + b'\x6E\x65\x75\x65\x20\x6C\x74\x01' \
+            + b'\x00\x00\x00\x01\x01\x00\x00\x00' \
+            + b'\x00\x01\x00\x00\x00\x01\x01\x00' \
+            + b'\x00\x00\x3F\x01\x00\x00\x00\x50' \
+            + b'\x01\x00\x00\x00\x00\x01\x00\x00' \
             + b'\x00\x50\x01\x00\x00\x00\x00\x01' \
-            + b'\x00\x00\x00\x50\x01\x00\x00\x00' \
-            + b'\x00\x01\x00\x00\x00\x01\x03\x01' \
-            + b'\x01\xFF\xFF\xFF\xFF\x03\x01\x00' \
-            + b'\x00\x03\x01\xFF')
+            + b'\x00\x00\x00\x01\x03\x01\x01\xFF' \
+            + b'\xFF\xFF\xFF\x03\x01\x00\x00\x03' \
+            + b'\x01\xFF')

@@ -25,6 +25,6 @@ BYTE_TYPE_INDICATOR: typing.Final[int] = 7  # signed byte
 CHAR_TYPE_INDICATOR: typing.Final[int] = 9  # single character
 
 # named object data structure (name utf8str + data)
-OBJECT_BEGIN_INDICATOR: typing.Final[int] = 254
+OBJECT_BEGIN: typing.Final[int] = 254
 # end of data for object
-OBJECT_END_INDICATOR: typing.Final[int] = 255
+OBJECT_END: typing.Final[int] = 255
