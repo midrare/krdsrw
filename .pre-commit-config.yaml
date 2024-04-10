@@ -15,8 +15,7 @@ repos:
         stages: [ commit-msg ]
       - id: commitizen-branch
         stages: [ push ]
-  - repo: https://github.com/google/yapf
-    rev: v0.40.2
+  - repo: https://github.com/psf/black
+    rev: 24.3.0
     hooks:
-      - id: yapf
-        args: [ -i ]
+      - id: black

@@ -1290,7 +1290,7 @@ class Utf8StrBase(str):
 
     @typing.override
     def __repr__(self) -> str:
-        return f"{self.__class__.__name__}{{\"{str(self)}\"}}"
+        return f'{self.__class__.__name__}{{"{str(self)}"}}'
 
     @typing.override
     def __add__(self, other: str) -> typing.Self:
@@ -1340,8 +1340,9 @@ class ListBase(list[T], _Observable, metaclass=abc.ABCMeta):
         return value
 
     def _add_postulate(self, child: typing.Any):
-        if any(e is child for e in self._postulates) \
-        or any(e is child for e in self):
+        if any(e is child for e in self._postulates) or any(
+            e is child for e in self
+        ):
             return
         self._postulates.append(child)
         if isinstance(child, _Observable):
@@ -1349,14 +1350,15 @@ class ListBase(list[T], _Observable, metaclass=abc.ABCMeta):
 
     @typing.override
     def _add_observer(self, receiver: typing.Any):
-        if not isinstance(receiver, _Observable) \
-        or any(e() is receiver for e in self._parents):
+        if not isinstance(receiver, _Observable) or any(
+            e() is receiver for e in self._parents
+        ):
             return
         self._parents.append(weakref.ref(receiver))
 
     @typing.override
     def _remove_observer(self, receiver: typing.Any):
-        self._parents[:] = [ e for e in self._parents if e() is not receiver ]
+        self._parents[:] = [e for e in self._parents if e() is not receiver]
 
     def _notify_observers(self):
         while self._parents:
@@ -1370,9 +1372,10 @@ class ListBase(list[T], _Observable, metaclass=abc.ABCMeta):
 
     @typing.override
     def _on_observed(self, sender: typing.Any):
-        assert self._is_allowed(sender), \
-            f"Invalid value \"{sender}\" " \
+        assert self._is_allowed(sender), (
+            f'Invalid value "{sender}" '
             + "(should have been screened out before this point)"
+        )
 
         found = False
         for i, e in reversed(list(enumerate(self._postulates))):
@@ -1390,39 +1393,47 @@ class ListBase(list[T], _Observable, metaclass=abc.ABCMeta):
         self,
         i: typing.SupportsIndex,
         o: int | float | str | T,
-    ):
-        ...
+    ): ...
 
     @typing.overload
     def __setitem__(
         self,
         i: slice,
         o: typing.Iterable[int | float | str | T],
-    ):
-        ...
+    ): ...
 
     @typing.override
     def __setitem__(
         self,
         i: typing.SupportsIndex | slice,
-        o: bool | int | float | str | bytes | T | \
-        typing.Iterable[bool | int | float | str | bytes | T],
+        o: (
+            bool
+            | int
+            | float
+            | str
+            | bytes
+            | T
+            | typing.Iterable[bool | int | float | str | bytes | T]
+        ),
     ):
         if isinstance(i, slice):
-            assert isinstance(o, collections.abc.Iterable), \
-                'when index is slice the value must be iterable'
+            assert isinstance(
+                o, collections.abc.Iterable
+            ), "when index is slice the value must be iterable"
 
             o = list(o)
             for e in o:
                 if not self._is_allowed(e):
                     raise ValueError(
-                        f"The value \"{e}\" is invalid for this container.")
+                        f'The value "{e}" is invalid for this container.'
+                    )
 
             super().__setitem__(i, list(self._transform(e) for e in o))
         else:
             if not self._is_allowed(o):
                 raise ValueError(
-                    f"The value \"{o}\" is invalid for this container.")
+                    f'The value "{o}" is invalid for this container.'
+                )
 
             super().__setitem__(i, self._transform(o))
 
@@ -1438,11 +1449,13 @@ class ListBase(list[T], _Observable, metaclass=abc.ABCMeta):
         for e in other:
             if not self._is_allowed(e):
                 raise ValueError(
-                    f"The value \"{e}\" is invalid for this container.")
+                    f'The value "{e}" is invalid for this container.'
+                )
 
         result = self.copy()
-        super(result.__class__, result).extend( \
-            self._transform(e) for e in other)
+        super(result.__class__, result).extend(
+            self._transform(e) for e in other
+        )
         return result
 
     @typing.override
@@ -1454,7 +1467,8 @@ class ListBase(list[T], _Observable, metaclass=abc.ABCMeta):
         for e in other:
             if not self._is_allowed(e):
                 raise ValueError(
-                    f"The value \"{e}\" is invalid for this container.")
+                    f'The value "{e}" is invalid for this container.'
+                )
 
         result = super().__iadd__(self._transform(e) for e in other)
         self._modified = True
@@ -1466,7 +1480,8 @@ class ListBase(list[T], _Observable, metaclass=abc.ABCMeta):
     def append(self, o: int | float | str | T):
         if not self._is_allowed(o):
             raise ValueError(
-                f"The value \"{o}\" is invalid for this container.")
+                f'The value "{o}" is invalid for this container.'
+            )
 
         super().append(self._transform(o))
         self._modified = True
@@ -1476,7 +1491,8 @@ class ListBase(list[T], _Observable, metaclass=abc.ABCMeta):
     def insert(self, i: typing.SupportsIndex, o: int | float | str | T):
         if not self._is_allowed(o):
             raise ValueError(
-                f"The value \"{o}\" is invalid for this container.")
+                f'The value "{o}" is invalid for this container.'
+            )
 
         super().insert(i, self._transform(o))
         self._modified = True
@@ -1492,7 +1508,8 @@ class ListBase(list[T], _Observable, metaclass=abc.ABCMeta):
         for e in other:
             if not self._is_allowed(e):
                 raise ValueError(
-                    f"The value \"{e}\" is invalid for this container.")
+                    f'The value "{e}" is invalid for this container.'
+                )
 
         super().extend(self._transform(e) for e in other)
         self._modified = True
@@ -1528,7 +1545,7 @@ class ListBase(list[T], _Observable, metaclass=abc.ABCMeta):
             except ValueError:
                 pass
 
-            raise ValueError(f"Value \"{value}\" not in container.")
+            raise ValueError(f'Value "{value}" not in container.')
 
     @typing.override
     def clear(self):
@@ -1572,24 +1589,26 @@ class DictBase(dict[K, T], _Observable):
         return None
 
     def _add_postulate(self, key: typing.Any, child: typing.Any):
-        assert key not in self.keys(), \
-            f"Cannot create postulate for key-value ({key}, {child}) " \
-            + "that already exists (should have been screened out " \
+        assert key not in self.keys(), (
+            f"Cannot create postulate for key-value ({key}, {child}) "
+            + "that already exists (should have been screened out "
             + "before this point)"
+        )
         self._key_to_postulate[key] = child
         if isinstance(child, _Observable):
             child._add_observer(self)
 
     @typing.override
     def _add_observer(self, receiver: typing.Any):
-        if not isinstance(receiver, _Observable) \
-        or any(e() is receiver for e in self._parents):
+        if not isinstance(receiver, _Observable) or any(
+            e() is receiver for e in self._parents
+        ):
             return
         self._parents.append(weakref.ref(receiver))
 
     @typing.override
     def _remove_observer(self, receiver: typing.Any):
-        self._parents[:] = [ e for e in self._parents if e() is not receiver ]
+        self._parents[:] = [e for e in self._parents if e() is not receiver]
 
     def _notify_observers(self):
         while self._parents:
@@ -1610,15 +1629,18 @@ class DictBase(dict[K, T], _Observable):
             self._key_to_postulate.pop(k)
             if k in self.keys():
                 continue
-            assert self._is_key_readable(k), \
-                f"Key \"{k}\" is not readable " \
+            assert self._is_key_readable(k), (
+                f'Key "{k}" is not readable '
                 + "(should have been screened out before this point)."
-            assert self._is_key_writable(k), \
-                f"Key \"{k}\" is not writable " \
+            )
+            assert self._is_key_writable(k), (
+                f'Key "{k}" is not writable '
                 + "(should have been screened out before this point)."
-            assert self._is_value_writable(sender, k), \
-                f"Key-value pair ({k}, {sender}) is not writable " \
+            )
+            assert self._is_value_writable(sender, k), (
+                f"Key-value pair ({k}, {sender}) is not writable "
                 + "(should have been screened out before this point)."
+            )
             super().__setitem__(k, sender)
             found = True
 
@@ -1645,18 +1667,23 @@ class DictBase(dict[K, T], _Observable):
                 return super().setdefault(key_, default)  # type: ignore
 
         if not self._is_key_readable(key):
-            raise KeyError(f"The key \"{key}\" is " \
-                + "not readable (in addition to writable) " \
-                + "for this container.")
+            raise KeyError(
+                f'The key "{key}" is '
+                + "not readable (in addition to writable) "
+                + "for this container."
+            )
 
         if not self._is_key_writable(key):
-            raise KeyError(f"The key \"{key}\" is " \
-                + "not writable for this container.")
+            raise KeyError(
+                f'The key "{key}" is ' + "not writable for this container."
+            )
 
         if not self._is_value_writable(default, key):
-            raise ValueError(f"The key-value pair "\
-                + f"({key}, {default}) "\
-                + f"is invalid for this container.")
+            raise ValueError(
+                f"The key-value pair "
+                + f"({key}, {default}) "
+                + f"is invalid for this container."
+            )
 
         default_ = self._transform_value(default, key)
         key_ = self._transform_key(key)
@@ -1670,16 +1697,22 @@ class DictBase(dict[K, T], _Observable):
         result = {}  # deliberate plain dict
         for key, value in other.items():
             if not self._is_key_readable(key):
-                raise KeyError(f"The key \"{key}\" is " \
-                    + "not readable (in addition to writable) " \
-                    + "for this container.")
+                raise KeyError(
+                    f'The key "{key}" is '
+                    + "not readable (in addition to writable) "
+                    + "for this container."
+                )
             if not self._is_key_writable(key):
-                raise KeyError(f"The key \"{key}\" is " \
-                    + "not writable for this container.")
+                raise KeyError(
+                    f'The key "{key}" is '
+                    + "not writable for this container."
+                )
             if not self._is_value_writable(value, key):
-                raise ValueError(f"The key-value pair "\
-                + f"({key}, {value}) "\
-                + f"is invalid for this container.")
+                raise ValueError(
+                    f"The key-value pair "
+                    + f"({key}, {value}) "
+                    + f"is invalid for this container."
+                )
 
             value_ = self._transform_value(value, key)
             key_ = self._transform_key(key)
@@ -1687,7 +1720,7 @@ class DictBase(dict[K, T], _Observable):
         return result
 
     @typing.override
-    def update( # type: ignore
+    def update(  # type: ignore
         self,
         *args: typing.Mapping[K, T],
         **kwargs: T,
@@ -1713,8 +1746,10 @@ class DictBase(dict[K, T], _Observable):
     @typing.override
     def __delitem__(self, key: K):
         if not self._is_key_deletable(key):
-            raise KeyError(f"The key \"{key}\" is required "\
-            + "for this container and cannot be deleted.")
+            raise KeyError(
+                f'The key "{key}" is required '
+                + "for this container and cannot be deleted."
+            )
 
         key_ = self._transform_key(key)
         is_contained = super().__contains__(key_)
@@ -1726,7 +1761,7 @@ class DictBase(dict[K, T], _Observable):
     @typing.override
     def __getitem__(self, key: K) -> T:
         if not self._is_key_readable(key):
-            raise KeyError(f"Key \"{key}\" is invalid for this container.")
+            raise KeyError(f'Key "{key}" is invalid for this container.')
 
         key_ = self._transform_key(key)
         if super().__contains__(key_):
@@ -1740,22 +1775,27 @@ class DictBase(dict[K, T], _Observable):
             self._add_postulate(key_, value)
             return value
 
-        raise KeyError(f"Key \"{key}\" not found.")
+        raise KeyError(f'Key "{key}" not found.')
 
     @typing.override
     def __setitem__(self, key: K, item: int | float | str | T):
         if not self._is_key_readable(key):
-            raise KeyError(f"The key \"{key}\" is " \
-                + "not readable (in addition to writable) " \
-                + "for this container.")
+            raise KeyError(
+                f'The key "{key}" is '
+                + "not readable (in addition to writable) "
+                + "for this container."
+            )
         if not self._is_key_writable(key):
-            raise KeyError(f"The key \"{key}\" is " \
-                + "not writable for this container.")
+            raise KeyError(
+                f'The key "{key}" is ' + "not writable for this container."
+            )
 
         if not self._is_value_writable(item, key):
-            raise ValueError(f"The key-value pair "\
-                + f"({key}, {item}) "\
-                + f"is invalid for this container.")
+            raise ValueError(
+                f"The key-value pair "
+                + f"({key}, {item}) "
+                + f"is invalid for this container."
+            )
 
         item_ = self._transform_value(item, key)
         key_ = self._transform_key(key)
@@ -1784,15 +1824,17 @@ class DictBase(dict[K, T], _Observable):
         key_ = self._transform_key(key)
         if not super().__contains__(key_):
             if default is _VOID:
-                raise KeyError(f"Key \"{key}\" not found.")
+                raise KeyError(f'Key "{key}" not found.')
             return default
 
         if not self._is_key_readable(key):
-            raise KeyError(f"The key \"{key}\" is invalid for this container.")
+            raise KeyError(f'The key "{key}" is invalid for this container.')
 
         if not self._is_key_deletable(key):
-            raise KeyError(f"The key \"{key}\" is required "\
-            + "for this container and cannot be deleted.")
+            raise KeyError(
+                f'The key "{key}" is required '
+                + "for this container and cannot be deleted."
+            )
 
         result = super().pop(key_)
         self._modified = True
@@ -1828,7 +1870,7 @@ class DictBase(dict[K, T], _Observable):
 
         if children:
             for value in list(self.values()):
-                if (clr := getattr(value, 'clear', None)) and callable(clr):
+                if (clr := getattr(value, "clear", None)) and callable(clr):
                     clr()
 
         if self._key_to_postulate:
@@ -1848,7 +1890,7 @@ class DictBase(dict[K, T], _Observable):
         self,
         other: typing.Mapping[typing.Any, typing.Any],
     ) -> typing.Self:
-        return self.__class__({ **self, **dict(other) })
+        return self.__class__({**self, **dict(other)})
 
     @typing.override
     def __ior__(  # type: ignore

@@ -35,19 +35,16 @@ _CHAR_MAGIC_BYTE: typing.Final[int] = 9
 
 
 def _read_unpack(
-        csr: Cursor,
-        fmt: str,
-        magic_byte: None | int = None) -> int | float | str | bytes:
+    csr: Cursor, fmt: str, magic_byte: None | int = None
+) -> int | float | str | bytes:
     if magic_byte is not None and not csr.eat(magic_byte):
         raise UnexpectedBytesError(csr.tell(), magic_byte, csr.peek())
     return struct.unpack_from(fmt, csr.read(struct.calcsize(fmt)))[0]
 
 
 def _write_pack(
-        csr: Cursor,
-        o: int | float | str,
-        fmt: str,
-        magic_byte: None | int = None):
+    csr: Cursor, o: int | float | str, fmt: str, magic_byte: None | int = None
+):
     if magic_byte is not None:
         csr.write(magic_byte)
     csr.write(struct.pack(fmt, o))
@@ -62,106 +59,117 @@ def _explode(
         result.extend(o)
     else:
         result.append(o)
-    result += [ None for _ in range(size - len(result)) ]
+    result += [None for _ in range(size - len(result))]
     return result
 
 
 def read_byte(csr: Cursor, magic_byte: bool = True) -> int:
     from .basics import Byte
+
     magic_byte_ = _BYTE_MAGIC_BYTE if magic_byte else None
-    return Byte(_read_unpack(csr, '>b', magic_byte_))
+    return Byte(_read_unpack(csr, ">b", magic_byte_))
 
 
 def write_byte(csr: Cursor, value: int, magic_byte: bool = True):
     magic_byte_ = _BYTE_MAGIC_BYTE if magic_byte else None
-    _write_pack(csr, value, '>b', magic_byte_)
+    _write_pack(csr, value, ">b", magic_byte_)
 
 
 def read_char(csr: Cursor, magic_byte: bool = True) -> int:
     from .basics import Char
+
     magic_byte_ = _CHAR_MAGIC_BYTE if magic_byte else None
-    return Char(_read_unpack(csr, '>B', magic_byte_))
+    return Char(_read_unpack(csr, ">B", magic_byte_))
 
 
 def write_char(csr: Cursor, value: int, magic_byte: bool = True):
     magic_byte_ = _CHAR_MAGIC_BYTE if magic_byte else None
-    _write_pack(csr, value, '>B', magic_byte_)
+    _write_pack(csr, value, ">B", magic_byte_)
 
 
 def read_bool(csr: Cursor, magic_byte: bool = True) -> bool | int:
     from .basics import Bool
+
     magic_byte_ = _BOOL_MAGIC_BYTE if magic_byte else None
-    return Bool(_read_unpack(csr, '>?', magic_byte_))
+    return Bool(_read_unpack(csr, ">?", magic_byte_))
 
 
 def write_bool(csr: Cursor, value: bool | int, magic_byte: bool = True):
     magic_byte_ = _BOOL_MAGIC_BYTE if magic_byte else None
-    _write_pack(csr, value, '>?', magic_byte_)
+    _write_pack(csr, value, ">?", magic_byte_)
 
 
 def read_int(csr: Cursor, magic_byte: bool = True) -> int:
     from .basics import Int
+
     magic_byte_ = _INT_MAGIC_BYTE if magic_byte else None
-    return Int(_read_unpack(csr, '>l', magic_byte_))
+    return Int(_read_unpack(csr, ">l", magic_byte_))
 
 
 def write_int(csr: Cursor, value: int, magic_byte: bool = True):
     magic_byte_ = _INT_MAGIC_BYTE if magic_byte else None
-    _write_pack(csr, value, '>l', magic_byte_)
+    _write_pack(csr, value, ">l", magic_byte_)
 
 
 def read_long(csr: Cursor, magic_byte: bool = True) -> int:
     from .basics import Long
+
     magic_byte_ = _LONG_MAGIC_BYTE if magic_byte else None
-    return Long(_read_unpack(csr, '>q', magic_byte_))
+    return Long(_read_unpack(csr, ">q", magic_byte_))
 
 
 def write_long(csr: Cursor, value: int, magic_byte: bool = True):
     magic_byte_ = _LONG_MAGIC_BYTE if magic_byte else None
-    _write_pack(csr, value, '>q', magic_byte_)
+    _write_pack(csr, value, ">q", magic_byte_)
 
 
 def read_short(csr: Cursor, magic_byte: bool = True) -> int:
     from .basics import Short
+
     magic_byte_ = _SHORT_MAGIC_BYTE if magic_byte else None
-    return Short(_read_unpack(csr, '>h', magic_byte_))
+    return Short(_read_unpack(csr, ">h", magic_byte_))
 
 
 def write_short(csr: Cursor, value: int, magic_byte: bool = True):
     magic_byte_ = _SHORT_MAGIC_BYTE if magic_byte else None
-    _write_pack(csr, value, '>h', magic_byte_)
+    _write_pack(csr, value, ">h", magic_byte_)
 
 
 def read_float(csr: Cursor, magic_byte: bool = True) -> float:
     from .basics import Float
+
     magic_byte_ = _FLOAT_MAGIC_BYTE if magic_byte else None
-    return Float(_read_unpack(csr, '>f', magic_byte_))
+    return Float(_read_unpack(csr, ">f", magic_byte_))
 
 
 def write_float(csr: Cursor, value: float, magic_byte: bool = True):
     magic_byte_ = _FLOAT_MAGIC_BYTE if magic_byte else None
-    _write_pack(csr, value, '>f', magic_byte_)
+    _write_pack(csr, value, ">f", magic_byte_)
 
 
 def read_double(csr: Cursor, magic_byte: bool = True) -> float:
     from .basics import Double
+
     magic_byte_ = _DOUBLE_MAGIC_BYTE if magic_byte else None
-    return Double(_read_unpack(csr, '>d', magic_byte_))
+    return Double(_read_unpack(csr, ">d", magic_byte_))
 
 
 def write_double(csr: Cursor, value: float, magic_byte: bool = True):
     magic_byte_ = _DOUBLE_MAGIC_BYTE if magic_byte else None
-    _write_pack(csr, value, '>d', magic_byte_)
+    _write_pack(csr, value, ">d", magic_byte_)
 
 
 def read_utf8str(csr: Cursor, magic_byte: bool = True) -> str:
     if magic_byte and not csr.eat(_UTF8STR_MAGIC_BYTE):
-        raise UnexpectedBytesError(csr.tell(), _UTF8STR_MAGIC_BYTE, csr.peek())
+        raise UnexpectedBytesError(
+            csr.tell(), _UTF8STR_MAGIC_BYTE, csr.peek()
+        )
 
     if csr.read() > 0:  # true if empty string
-        return ''
+        return ""
 
     from .basics import Utf8Str
+
     # NOTE even if the is_empty byte is false, the actual str
     #   length can still be 0
     read_len = struct.unpack_from(">H", csr.read(struct.calcsize(">H")))[0]
@@ -190,9 +198,10 @@ def peek_basic_type(csr) -> None | type:
     from .basics import Float
     from .basics import Double
     from .basics import Utf8Str
+
     b = csr.peek()
 
-    for t in [ Bool, Byte, Char, Short, Int, Long, Float, Double, Utf8Str ]:
+    for t in [Bool, Byte, Char, Short, Int, Long, Float, Double, Utf8Str]:
         if b == t.magic_byte:
             return t
 
@@ -219,21 +228,22 @@ class Basic(metaclass=abc.ABCMeta):
 
     @classmethod
     def _read_unpack(
-            cls,
-            cursor: Cursor,
-            fmt: str,
-            magic_byte: None | int = None) -> int | float | str | bytes:
+        cls, cursor: Cursor, fmt: str, magic_byte: None | int = None
+    ) -> int | float | str | bytes:
         if magic_byte is not None and not cursor.eat(magic_byte):
-            raise UnexpectedBytesError(cursor.tell(), magic_byte, cursor.peek())
+            raise UnexpectedBytesError(
+                cursor.tell(), magic_byte, cursor.peek()
+            )
         return struct.unpack_from(fmt, cursor.read(struct.calcsize(fmt)))[0]
 
     @classmethod
     def _write_pack(
-            cls,
-            cursor: Cursor,
-            o: int | float | str,
-            fmt: str,
-            magic_byte: None | int = None):
+        cls,
+        cursor: Cursor,
+        o: int | float | str,
+        fmt: str,
+        magic_byte: None | int = None,
+    ):
         if magic_byte is not None:
             cursor.write(magic_byte)
         cursor.write(struct.pack(fmt, o))
@@ -246,7 +256,7 @@ class Basic(metaclass=abc.ABCMeta):
 class Byte(ByteBase, Basic):
     # signed byte
     builtin: type[int | float | str] = int
-    size: int = struct.calcsize('>b')
+    size: int = struct.calcsize(">b")
     magic_byte: int = 0x07
 
     @typing.override
@@ -271,22 +281,22 @@ class Byte(ByteBase, Basic):
         _schema: None | typing.Any | list[typing.Any] = None,
     ) -> typing.Self:
         magic_byte_ = cls.magic_byte if magic_byte else None
-        return cls(cls._read_unpack(cursor, '>b', magic_byte_))
+        return cls(cls._read_unpack(cursor, ">b", magic_byte_))
 
     @typing.override
     def _write(self, cursor: Cursor, magic_byte: bool = True):
         magic_byte_ = self.magic_byte if magic_byte else None
-        self._write_pack(cursor, self, '>b', magic_byte_)
+        self._write_pack(cursor, self, ">b", magic_byte_)
 
     @typing.override
     def __bytes__(self) -> bytes:
-        return struct.pack('>b', self)
+        return struct.pack(">b", self)
 
 
 class Char(CharBase, Basic):
     # unsigned (?) char
     builtin: type[int | float | str] = int
-    size: int = struct.calcsize('>B')
+    size: int = struct.calcsize(">B")
     magic_byte: int = 0x09
 
     @typing.override
@@ -311,22 +321,22 @@ class Char(CharBase, Basic):
         _schema: None | typing.Any | list[typing.Any] = None,
     ) -> typing.Self:
         magic_byte_ = cls.magic_byte if magic_byte else None
-        return cls(cls._read_unpack(cursor, '>B', magic_byte_))
+        return cls(cls._read_unpack(cursor, ">B", magic_byte_))
 
     @typing.override
     def _write(self, cursor: Cursor, magic_byte: bool = True):
         magic_byte_ = self.magic_byte if magic_byte else None
-        self._write_pack(cursor, self, '>B', magic_byte_)
+        self._write_pack(cursor, self, ">B", magic_byte_)
 
     @typing.override
     def __bytes__(self) -> bytes:
-        return struct.pack('>B', self)
+        return struct.pack(">B", self)
 
 
 class Bool(BoolBase, Basic):
     # 1-byte bool 0=false, 1=true
     builtin: type[int | float | str] = int
-    size: int = struct.calcsize('>?')
+    size: int = struct.calcsize(">?")
     magic_byte: int = 0x00
 
     @typing.override
@@ -351,22 +361,22 @@ class Bool(BoolBase, Basic):
         _schema: None | typing.Any | list[typing.Any] = None,
     ) -> typing.Self:
         magic_byte_ = cls.magic_byte if magic_byte else None
-        return cls(cls._read_unpack(cursor, '>?', magic_byte_))
+        return cls(cls._read_unpack(cursor, ">?", magic_byte_))
 
     @typing.override
     def _write(self, cursor: Cursor, magic_byte: bool = True):
         magic_byte_ = self.magic_byte if magic_byte else None
-        self._write_pack(cursor, int(self), '>?', magic_byte_)
+        self._write_pack(cursor, int(self), ">?", magic_byte_)
 
     @typing.override
     def __bytes__(self) -> bytes:
-        return struct.pack('>?', self)
+        return struct.pack(">?", self)
 
 
 class Short(ShortBase, Basic):
     # 2 byte signed integer
     builtin: type[int | float | str] = int
-    size: int = struct.calcsize('>h')
+    size: int = struct.calcsize(">h")
     magic_byte: int = 0x05
 
     @typing.override
@@ -391,22 +401,22 @@ class Short(ShortBase, Basic):
         _schema: None | typing.Any | list[typing.Any] = None,
     ) -> typing.Self:
         magic_byte_ = cls.magic_byte if magic_byte else None
-        return cls(cls._read_unpack(cursor, '>h', magic_byte_))
+        return cls(cls._read_unpack(cursor, ">h", magic_byte_))
 
     @typing.override
     def _write(self, cursor: Cursor, magic_byte: bool = True):
         magic_byte_ = self.magic_byte if magic_byte else None
-        self._write_pack(cursor, self, '>h', magic_byte_)
+        self._write_pack(cursor, self, ">h", magic_byte_)
 
     @typing.override
     def __bytes__(self) -> bytes:
-        return struct.pack('>h', self)
+        return struct.pack(">h", self)
 
 
 class Int(IntBase, Basic):
     # 4-byte signed integer
     builtin: type[int | float | str] = int
-    size: int = struct.calcsize('>l')
+    size: int = struct.calcsize(">l")
     magic_byte: int = 0x01
 
     @typing.override
@@ -431,22 +441,22 @@ class Int(IntBase, Basic):
         _schema: None | typing.Any | list[typing.Any] = None,
     ) -> typing.Self:
         magic_byte_ = cls.magic_byte if magic_byte else None
-        return cls(cls._read_unpack(cursor, '>l', magic_byte_))
+        return cls(cls._read_unpack(cursor, ">l", magic_byte_))
 
     @typing.override
     def _write(self, cursor: Cursor, magic_byte: bool = True):
         magic_byte_ = self.magic_byte if magic_byte else None
-        self._write_pack(cursor, self, '>l', magic_byte_)
+        self._write_pack(cursor, self, ">l", magic_byte_)
 
     @typing.override
     def __bytes__(self) -> bytes:
-        return struct.pack('>l', self)
+        return struct.pack(">l", self)
 
 
 class Long(LongBase, Basic):
     # 8-byte signed integer
     builtin: type[int | float | str] = int
-    size: int = struct.calcsize('>q')
+    size: int = struct.calcsize(">q")
     magic_byte: int = 0x02
 
     @typing.override
@@ -471,22 +481,22 @@ class Long(LongBase, Basic):
         _schema: None | typing.Any | list[typing.Any] = None,
     ) -> typing.Self:
         magic_byte_ = cls.magic_byte if magic_byte else None
-        return cls(cls._read_unpack(cursor, '>q', magic_byte_))
+        return cls(cls._read_unpack(cursor, ">q", magic_byte_))
 
     @typing.override
     def _write(self, cursor: Cursor, magic_byte: bool = True):
         magic_byte_ = self.magic_byte if magic_byte else None
-        self._write_pack(cursor, self, '>q', magic_byte_)
+        self._write_pack(cursor, self, ">q", magic_byte_)
 
     @typing.override
     def __bytes__(self) -> bytes:
-        return struct.pack('>q', self)
+        return struct.pack(">q", self)
 
 
 class Float(FloatBase, Basic):
     # 4-byte float
     builtin: type[int | float | str] = float
-    size: int = struct.calcsize('>f')
+    size: int = struct.calcsize(">f")
     magic_byte: int = 0x06
 
     @typing.override
@@ -511,22 +521,22 @@ class Float(FloatBase, Basic):
         _schema: None | typing.Any | list[typing.Any] = None,
     ) -> typing.Self:
         magic_byte_ = cls.magic_byte if magic_byte else None
-        return cls(cls._read_unpack(cursor, '>f', magic_byte_))
+        return cls(cls._read_unpack(cursor, ">f", magic_byte_))
 
     @typing.override
     def _write(self, cursor: Cursor, magic_byte: bool = True):
         magic_byte_ = self.magic_byte if magic_byte else None
-        self._write_pack(cursor, self, '>f', magic_byte_)
+        self._write_pack(cursor, self, ">f", magic_byte_)
 
     @typing.override
     def __bytes__(self) -> bytes:
-        return struct.pack('>f', self)
+        return struct.pack(">f", self)
 
 
 class Double(DoubleBase, Basic):
     # 8-byte float
     builtin: type[int | float | str] = float
-    size: int = struct.calcsize('>d')
+    size: int = struct.calcsize(">d")
     magic_byte: int = 0x04
 
     @typing.override
@@ -551,16 +561,16 @@ class Double(DoubleBase, Basic):
         _schema: None | typing.Any | list[typing.Any] = None,
     ) -> typing.Self:
         magic_byte_ = cls.magic_byte if magic_byte else None
-        return cls(cls._read_unpack(cursor, '>d', magic_byte_))
+        return cls(cls._read_unpack(cursor, ">d", magic_byte_))
 
     @typing.override
     def _write(self, cursor: Cursor, magic_byte: bool = True):
         magic_byte_ = self.magic_byte if magic_byte else None
-        self._write_pack(cursor, self, '>d', magic_byte_)
+        self._write_pack(cursor, self, ">d", magic_byte_)
 
     @typing.override
     def __bytes__(self) -> bytes:
-        return struct.pack('>d', self)
+        return struct.pack(">d", self)
 
 
 class Utf8Str(Utf8StrBase, Basic):
@@ -606,9 +616,10 @@ class Utf8Str(Utf8StrBase, Basic):
     ) -> typing.Self:
         if magic_byte and not cursor.eat(cls.magic_byte):
             raise UnexpectedBytesError(
-                cursor.tell(), cls.magic_byte, cursor.peek())
+                cursor.tell(), cls.magic_byte, cursor.peek()
+            )
 
-        value = ''
+        value = ""
         prefer_null = True
 
         if cursor.read() > 0:  # 1-byte bool, true if str is empty
@@ -616,7 +627,8 @@ class Utf8Str(Utf8StrBase, Basic):
 
         # NOTE actual str length can still be 0
         string_len = struct.unpack_from(
-            ">H", cursor.read(struct.calcsize(">H")))[0]
+            ">H", cursor.read(struct.calcsize(">H"))
+        )[0]
         value = cursor.read(string_len).decode("utf-8")
 
         if string_len <= 0:

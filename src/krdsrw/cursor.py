@@ -6,17 +6,22 @@ import typing
 
 
 class Cursor:
-    def __init__(self, data: None | typing.ByteString | typing.BinaryIO = None):
+    def __init__(
+        self, data: None | typing.ByteString | typing.BinaryIO = None
+    ):
         self._saved_positions: typing.List[int] = []
         self._data: io.BytesIO = io.BytesIO()
 
         if isinstance(data, io.BytesIO):
             self._data = data
-        elif isinstance(data, (
+        elif isinstance(
+            data,
+            (
                 collections.abc.Buffer,
                 collections.abc.Sequence,
                 collections.abc.MutableSequence,
-        )):
+            ),
+        ):
             self._data = io.BytesIO(data)
 
     def load(self, data: typing.ByteString):
@@ -49,16 +54,17 @@ class Cursor:
             b = bytearray()
             step = item.step if item.step is not None else 1
             self.seek((item.start if item.start is not None else 0) + step)
-            while (item.stop is None or self._data.tell()
-                   < item.stop) and self._data.tell() < len(
-                       self._data.getbuffer()):
+            while (
+                item.stop is None or self._data.tell() < item.stop
+            ) and self._data.tell() < len(self._data.getbuffer()):
                 b.extend(self._data.read(1))
                 self._data.seek(step, io.SEEK_CUR)
             self._data.seek(old_pos, io.SEEK_SET)
             return b
 
         raise IndexError(
-            'index of class "' + str(type(item)) + '" not supported')
+            'index of class "' + str(type(item)) + '" not supported'
+        )
 
     def __str__(self) -> str:
         return "%s{@%d of %db}" % (
@@ -80,19 +86,18 @@ class Cursor:
         if b is None or len(b) <= 0:
             raise IndexError(
                 "Cannot read next byte; buffer of length %d has reached its end"
-                % len(self._data.getbuffer()))
+                % len(self._data.getbuffer())
+            )
         return b[0]
 
     def _read_raw_bytes(self, length: int) -> bytes:
         return self._data.read(length)
 
     @typing.overload
-    def read(self, length: None = None) -> int:
-        ...
+    def read(self, length: None = None) -> int: ...
 
     @typing.overload
-    def read(self, length: int) -> bytes:
-        ...
+    def read(self, length: int) -> bytes: ...
 
     def read(self, length: None | int = None) -> int | bytes:
         if length is None:
@@ -129,7 +134,8 @@ class Cursor:
         if len(b) <= 0:
             raise IndexError(
                 "Cannot peek next byte; buffer of length %d has reached its end"
-                % len(self._data.getbuffer()))
+                % len(self._data.getbuffer())
+            )
         return b[0]
 
     def _peek_raw_bytes(self, length: int) -> bytes:
@@ -139,12 +145,10 @@ class Cursor:
         return b
 
     @typing.overload
-    def peek(self, length: None = None) -> int:
-        ...
+    def peek(self, length: None = None) -> int: ...
 
     @typing.overload
-    def peek(self, length: int) -> bytes:
-        ...
+    def peek(self, length: int) -> bytes: ...
 
     def peek(self, length: None | int = None) -> None | int | bytes:
         if length is None:

@@ -37,8 +37,19 @@ from .constants import OBJECT_BEGIN
 from .constants import OBJECT_END
 
 K = typing.TypeVar("K", bound=int | float | str)
-T = typing.TypeVar("T", bound=Byte | Char | Bool | Short | Int | Long \
-    | Float | Double | Utf8Str | Serializable)
+T = typing.TypeVar(
+    "T",
+    bound=Byte
+    | Char
+    | Bool
+    | Short
+    | Int
+    | Long
+    | Float
+    | Double
+    | Utf8Str
+    | Serializable,
+)
 
 
 def _flatten(o: typing.Any, skip_null: bool = True) -> list[typing.Any]:
@@ -56,14 +67,15 @@ def _flatten(o: typing.Any, skip_null: bool = True) -> list[typing.Any]:
     return result
 
 
-def _explode(o: typing.Any | list[typing.Any],
-             size: int = 0) -> list[typing.Any]:
+def _explode(
+    o: typing.Any | list[typing.Any], size: int = 0
+) -> list[typing.Any]:
     result = []
     if isinstance(o, (tuple, list)):
         result.extend(o)
     else:
         result.append(o)
-    result += [ None for _ in range(size - len(result)) ]
+    result += [None for _ in range(size - len(result))]
     return result
 
 
@@ -76,22 +88,24 @@ def _read_object(
     if schema_id:
         if not cursor.eat(OBJECT_BEGIN):
             raise UnexpectedBytesError(
-                cursor.tell(), OBJECT_BEGIN, cursor.peek())
+                cursor.tell(), OBJECT_BEGIN, cursor.peek()
+            )
 
         schema_id_actual = read_utf8str(cursor, False)
         if not schema_id_actual:
-            raise UnexpectedStructureError('Object has blank schema.')
+            raise UnexpectedStructureError("Object has blank schema.")
         if schema_id_actual != schema_id:
             raise UnexpectedStructureError(
-                f"Expected object schema \"{schema_id}\""
-                + f" but got \"{schema_id_actual}\".")
+                f'Expected object schema "{schema_id}"'
+                + f' but got "{schema_id_actual}".'
+            )
 
     result = cls_._create(cursor, _schema=schema)
 
     if schema_id and not cursor.eat(OBJECT_END):
         raise UnexpectedBytesError(cursor.tell(), OBJECT_END, cursor.peek())
 
-    assert result is not None, 'Failed to create object'
+    assert result is not None, "Failed to create object"
     return result  # type: ignore
 
 
@@ -127,14 +141,16 @@ def _is_compatible(
         cls_ = [cls_]
 
     for e in cls_:
-        if (inspect.isclass(o) and issubclass(o, e)) \
-                or (not inspect.isclass(o) and isinstance(o, e)):
+        if (inspect.isclass(o) and issubclass(o, e)) or (
+            not inspect.isclass(o) and isinstance(o, e)
+        ):
             return True
 
-        for t in [ bool, int, float, str, bytes, list, tuple, dict ]:
-            if issubclass(e, t) \
-                and ((inspect.isclass(o) and issubclass(o, t)) \
-                     or (not inspect.isclass(o) and isinstance(o, t))):
+        for t in [bool, int, float, str, bytes, list, tuple, dict]:
+            if issubclass(e, t) and (
+                (inspect.isclass(o) and issubclass(o, t))
+                or (not inspect.isclass(o) and isinstance(o, t))
+            ):
                 return True
 
     return False
@@ -170,7 +186,7 @@ class Array(ListBase[T], Serializable, metaclass=abc.ABCMeta):
 
     @typing.override
     def __init__(self, *args, _schema: Index, **kwargs):
-        assert _schema, 'schema must be provided (non-null)'
+        assert _schema, "schema must be provided (non-null)"
         self.__elmt_cls: type[T] = _schema.cls_  # type: ignore
         self.__elmt_schema: typing.Any = _schema.schema
         self.__elmt_schema_id: None | str = _schema.schema_id or None
@@ -207,7 +223,8 @@ class Array(ListBase[T], Serializable, metaclass=abc.ABCMeta):
                     result.__elmt_cls,
                     result.__elmt_schema,
                     result.__elmt_schema_id,
-                ))
+                )
+            )
         return result
 
     @typing.override
@@ -220,20 +237,24 @@ class Array(ListBase[T], Serializable, metaclass=abc.ABCMeta):
         if issubclass(self.__elmt_cls, dict):
             init = dict(*args, **kwargs)
             return _make_object(
-                self.__elmt_cls, init, schema=self.__elmt_schema)
+                self.__elmt_cls, init, schema=self.__elmt_schema
+            )
 
         if issubclass(self.__elmt_cls, tuple):
             init = tuple(*args, **kwargs)
             return _make_object(
-                self.__elmt_cls, init, schema=self.__elmt_schema)
+                self.__elmt_cls, init, schema=self.__elmt_schema
+            )
 
         if issubclass(self.__elmt_cls, list):
             init = list(*args, **kwargs)
             return _make_object(
-                self.__elmt_cls, init, schema=self.__elmt_schema)
+                self.__elmt_cls, init, schema=self.__elmt_schema
+            )
 
         return _make_object(
-            self.__elmt_cls, *args, schema=self.__elmt_schema, **kwargs)
+            self.__elmt_cls, *args, schema=self.__elmt_schema, **kwargs
+        )
 
     def make_and_append(self, *args, **kwargs) -> T:
         result = self.make_element(*args, **kwargs)
@@ -298,8 +319,10 @@ class _TypedDict(DictBase[str, T], metaclass=abc.ABCMeta):
     @typing.override
     @typing.final
     def _is_key_deletable(self, key: typing.Any) -> bool:
-        return key not in self.__key_to_field \
+        return (
+            key not in self.__key_to_field
             or not self.__key_to_field[key].required
+        )
 
     @typing.override
     @typing.final
@@ -310,7 +333,7 @@ class _TypedDict(DictBase[str, T], metaclass=abc.ABCMeta):
     ) -> T:
         field = self.__key_to_field.get(key)
         if not field:
-            raise KeyError(f"No template for key \"{key}\".")
+            raise KeyError(f'No template for key "{key}".')
 
         if value is None:
             value = _make_object(field.cls_, schema=field.schema)
@@ -334,12 +357,13 @@ class _TypedDict(DictBase[str, T], metaclass=abc.ABCMeta):
             return (
                 self._required_spec == other._required_spec  # type: ignore
                 and self._optional_spec == other._optional_spec  # type: ignore
-                and dict(self) == dict(other))
+                and dict(self) == dict(other)
+            )
         return super().__eq__(other)
 
     @typing.override
     def __str__(self) -> str:
-        return str({ k: v for k, v in self.items() if v is not None })
+        return str({k: v for k, v in self.items() if v is not None})
 
     @typing.override
     def __repr__(self) -> str:
@@ -386,12 +410,14 @@ class Record(_TypedDict, Serializable, metaclass=abc.ABCMeta):
 
         for alias, field in schema.items():
             val = cls._read_next(
-                cursor, field.cls_, field.schema, field.schema_id)
+                cursor, field.cls_, field.schema, field.schema_id
+            )
             if val is None:
                 if field.required:
                     raise UnexpectedStructureError(
                         f'Value for field "{alias}" but was not found',
-                        pos=cursor.tell())
+                        pos=cursor.tell(),
+                    )
                 else:
                     break
             result[alias] = val
@@ -422,9 +448,9 @@ class Record(_TypedDict, Serializable, metaclass=abc.ABCMeta):
     def _write(self, cursor: Cursor):
         for alias, field in self.__key_to_field.items():
             if alias not in self:
-                assert not field.required, 'required field not present'
+                assert not field.required, "required field not present"
                 break
-            assert isinstance(self[alias], field.cls_), 'invalid state'
+            assert isinstance(self[alias], field.cls_), "invalid state"
             _write_object(cursor, self[alias], field.schema_id)
 
 
@@ -468,7 +494,8 @@ class IntMap(_TypedDict, Serializable):
 
             if idxnum not in result.__idx_to_field:
                 raise UnexpectedStructureError(
-                    f"Object index number {idxnum} not recognized")
+                    f"Object index number {idxnum} not recognized"
+                )
 
             alias = result.__idx_to_alias[idxnum]
             cls_ = result.__idx_to_field[idxnum].cls_
@@ -500,10 +527,10 @@ class DynamicMap(DictBase[str, typing.Any], Serializable):
         if args == [None]:
             args = []
 
-        if kwargs.get('_schema') is None:
-            kwargs.pop('_schema', None)
+        if kwargs.get("_schema") is None:
+            kwargs.pop("_schema", None)
 
-        assert '_schema' not in kwargs, 'invalid argument'
+        assert "_schema" not in kwargs, "invalid argument"
         super().__init__(*args, **kwargs)
 
     @typing.override
@@ -532,30 +559,46 @@ class DynamicMap(DictBase[str, typing.Any], Serializable):
             if isinstance(value, bool):
                 warnings.warn(
                     f"Implicit type conversion "
-                    + f"from {value} to Bool({value})")
+                    + f"from {value} to Bool({value})"
+                )
                 value = Bool(value)
             elif isinstance(value, int):
                 warnings.warn(
                     f"Implicit type conversion "
-                    + f"from {value} to Int({value})")
+                    + f"from {value} to Int({value})"
+                )
                 value = Int(value)
             elif isinstance(value, float):
                 warnings.warn(
                     f"Implicit type conversion "
-                    + f"from {value} to Double({value})")
+                    + f"from {value} to Double({value})"
+                )
                 value = Double(value)
             elif isinstance(value, str):
                 warnings.warn(
                     f"Implicit type conversion "
-                    + f"from \"{value}\" to Utf8Str({value})")
+                    + f'from "{value}" to Utf8Str({value})'
+                )
                 value = Utf8Str(value)
 
         return value
 
     @classmethod
-    def _read_basic(cls, cursor: Cursor) \
-        -> None | Bool | Char | Byte | Short | Int | Long | Float | Double | Utf8Str:
-        for t in [ Bool, Byte, Char, Short, Int, Long, Float, Double, Utf8Str ]:
+    def _read_basic(
+        cls, cursor: Cursor
+    ) -> (
+        None
+        | Bool
+        | Char
+        | Byte
+        | Short
+        | Int
+        | Long
+        | Float
+        | Double
+        | Utf8Str
+    ):
+        for t in [Bool, Byte, Char, Short, Int, Long, Float, Double, Utf8Str]:
             if cursor._peek_raw_byte() == t.magic_byte:
                 return t._create(cursor)
 
@@ -569,7 +612,7 @@ class DynamicMap(DictBase[str, typing.Any], Serializable):
         for _ in range(size):
             key = read_utf8str(cursor)
             value = cls._read_basic(cursor)
-            assert value is not None, 'Value not found'
+            assert value is not None, "Value not found"
             result[key] = value
         return result
 
@@ -596,10 +639,10 @@ class DateTime(IntBase, Serializable):
         if args == [None]:
             args = []
 
-        if kwargs.get('_schema') is None:
-            kwargs.pop('_schema', None)
+        if kwargs.get("_schema") is None:
+            kwargs.pop("_schema", None)
 
-        assert '_schema' not in kwargs, 'invalid argument'
+        assert "_schema" not in kwargs, "invalid argument"
         if not args and _schema is not None:
             args = [_schema]
         return super().__new__(cls, *args, **kwargs)
@@ -635,7 +678,9 @@ class DateTime(IntBase, Serializable):
             return int(self) == int(other)
         return False
 
-    def __json__(self) -> None | bool | int | float | str | tuple | list | dict:
+    def __json__(
+        self,
+    ) -> None | bool | int | float | str | tuple | list | dict:
         return int(self)
 
 
@@ -644,8 +689,9 @@ class Json(Serializable):
     def __new__(
         cls,
         *args,
-        _schema: None | bool | int | float \
-            | str | bytes | tuple | list | dict = None,
+        _schema: (
+            None | bool | int | float | str | bytes | tuple | list | dict
+        ) = None,
         **kwargs,
     ) -> Json:
         args = list(args)
@@ -654,14 +700,14 @@ class Json(Serializable):
         if args == [None]:
             args = []
 
-        if kwargs.get('_schema') is None:
-            kwargs.pop('_schema', None)
+        if kwargs.get("_schema") is None:
+            kwargs.pop("_schema", None)
 
         if not args and _schema is not None:
             args = [_schema]
 
         if args:
-            for cls_ in [ bool, int, float, str, bytes, list, tuple, dict ]:
+            for cls_ in [bool, int, float, str, bytes, list, tuple, dict]:
                 if isinstance(args[0], cls_):
                     subcls = cls._subclass(cls_)
                     return subcls.__new__(subcls, *args, **kwargs)
@@ -707,8 +753,8 @@ class Json(Serializable):
     @typing.override
     def _write(self, cursor: Cursor):
         jsnstr = json.dumps(self, cls=_JsonEncoder)
-        if jsnstr == 'null':
-            jsnstr = ''
+        if jsnstr == "null":
+            jsnstr = ""
         write_utf8str(cursor, jsnstr)
 
     def __bytes__(self) -> bytes:
@@ -720,7 +766,7 @@ class Json(Serializable):
         return False
 
     def __json__(
-            self
+        self,
     ) -> None | bool | int | float | str | bytes | tuple | list | dict:
         return None
 
@@ -774,8 +820,8 @@ class _JsonList(list, Json):  # type: ignore
         if args == [None]:
             args = []
 
-        if kwargs.get('_schema') is None:
-            kwargs.pop('_schema', None)
+        if kwargs.get("_schema") is None:
+            kwargs.pop("_schema", None)
 
         if not args and _schema is not None:
             args = [_schema]
@@ -796,8 +842,8 @@ class _JsonDict(dict, Json):  # type: ignore
         if args == [None]:
             args = []
 
-        if kwargs.get('_schema') is None:
-            kwargs.pop('_schema', None)
+        if kwargs.get("_schema") is None:
+            kwargs.pop("_schema", None)
 
         if not args and _schema is not None:
             args = [_schema]
@@ -808,7 +854,7 @@ class _JsonDict(dict, Json):  # type: ignore
 class _JsonEncoder(json.JSONEncoder):
     @typing.override
     def default(self, o: typing.Any) -> typing.Any:
-        f = getattr(o, '__json__', None)
+        f = getattr(o, "__json__", None)
         if f and callable(f):
             return f()
         if dataclasses.is_dataclass(o):
@@ -835,9 +881,9 @@ class _JsonEncoder(json.JSONEncoder):
 class Position(_TypedDict, Serializable):
     _MAGIC_CHUNK_V1: typing.Final[int] = 0x01
     _FIELDS: typing.Final[dict[str, Field]] = {
-        'char_pos': Field(Int),
-        'chunk_eid': Field(Int, -1, required=False),
-        'chunk_pos': Field(Int, -1, required=False),
+        "char_pos": Field(Int),
+        "chunk_eid": Field(Int, -1, required=False),
+        "chunk_pos": Field(Int, -1, required=False),
     }
 
     @typing.override
@@ -852,10 +898,10 @@ class Position(_TypedDict, Serializable):
         if args == [None]:
             args = []
 
-        if kwargs.get('_schema') is None:
-            kwargs.pop('_schema', None)
+        if kwargs.get("_schema") is None:
+            kwargs.pop("_schema", None)
 
-        assert '_schema' not in kwargs, 'invalid argument'
+        assert "_schema" not in kwargs, "invalid argument"
         super().__init__(*args, _schema=self._FIELDS, **kwargs)
 
     @classmethod
@@ -868,38 +914,43 @@ class Position(_TypedDict, Serializable):
             b = base64.b64decode(split[0])
             version = b[0]
             if version == result._MAGIC_CHUNK_V1:
-                result['chunk_eid'] = int.from_bytes(b[1:5], "little")
-                result['chunk_pos'] = int.from_bytes(b[5:9], "little")
+                result["chunk_eid"] = int.from_bytes(b[1:5], "little")
+                result["chunk_pos"] = int.from_bytes(b[5:9], "little")
             else:
                 # TODO throw a proper exception
                 raise Exception(
-                    "Unrecognized position version 0x%02x" % version)
-            result['char_pos'] = int(split[1])
+                    "Unrecognized position version 0x%02x" % version
+                )
+            result["char_pos"] = int(split[1])
         else:
-            result['char_pos'] = int(s)
+            result["char_pos"] = int(s)
         return result
 
     @typing.override
     def _write(self, cursor: Cursor):
         s = ""
-        if self['chunk_eid'] >= 0 and self['chunk_pos'] >= 0:
-            b_version = self._MAGIC_CHUNK_V1.to_bytes(1, "little", signed=False)
-            b_eid = self['chunk_eid'].to_bytes(4, "little", signed=False)
-            b_pos = self['chunk_pos'].to_bytes(4, "little", signed=False)
+        if self["chunk_eid"] >= 0 and self["chunk_pos"] >= 0:
+            b_version = self._MAGIC_CHUNK_V1.to_bytes(
+                1, "little", signed=False
+            )
+            b_eid = self["chunk_eid"].to_bytes(4, "little", signed=False)
+            b_pos = self["chunk_pos"].to_bytes(4, "little", signed=False)
             s += base64.b64encode(b_version + b_eid + b_pos).decode("ascii")
             s += ":"
         s += str(
-            int(self['char_pos'])
-            if self['char_pos'] is not None and self['char_pos'] >= 0 else -1)
+            int(self["char_pos"])
+            if self["char_pos"] is not None and self["char_pos"] >= 0
+            else -1
+        )
         write_utf8str(cursor, s)
 
 
 class LPR(_TypedDict, Serializable):  # aka LPR
     _MAGIC_V2: typing.Final[int] = 2
     _FIELDS: typing.Final[dict[str, Field]] = {
-        'pos': Field(Position),
-        'timestamp': Field(Int, -1, required=False),
-        'lpr_version': Field(Int, -1, required=False),
+        "pos": Field(Position),
+        "timestamp": Field(Int, -1, required=False),
+        "lpr_version": Field(Int, -1, required=False),
     }
 
     @typing.override
@@ -910,10 +961,10 @@ class LPR(_TypedDict, Serializable):  # aka LPR
         if args == [None]:
             args = []
 
-        if kwargs.get('_schema') is None:
-            kwargs.pop('_schema', None)
+        if kwargs.get("_schema") is None:
+            kwargs.pop("_schema", None)
 
-        assert '_schema' not in kwargs, 'invalid argument'
+        assert "_schema" not in kwargs, "invalid argument"
         super().__init__(*args, _schema=self._FIELDS, **kwargs)
 
     @classmethod
@@ -924,15 +975,18 @@ class LPR(_TypedDict, Serializable):  # aka LPR
         type_byte = cursor.peek()
         if type_byte == Utf8Str.magic_byte:
             # old LPR version'
-            init['pos'] = Position._create(cursor)
+            init["pos"] = Position._create(cursor)
         elif type_byte == Byte.magic_byte:
             # new LPR version
-            init['lpr_version'] = read_byte(cursor)
-            init['pos'] = Position._create(cursor)
-            init['timestamp'] = int(read_long(cursor))
+            init["lpr_version"] = read_byte(cursor)
+            init["pos"] = Position._create(cursor)
+            init["timestamp"] = int(read_long(cursor))
         else:
             raise UnexpectedBytesError(
-                cursor.tell(), [Utf8Str.magic_byte, Byte.magic_byte], type_byte)
+                cursor.tell(),
+                [Utf8Str.magic_byte, Byte.magic_byte],
+                type_byte,
+            )
 
         return cls(*args, **init, **kwargs)
 
@@ -940,15 +994,15 @@ class LPR(_TypedDict, Serializable):  # aka LPR
     def _write(self, cursor: Cursor):
         # XXX may cause problems if kindle expects the original LPR format
         #   version when datastore file is re-written
-        if self['timestamp'] < 0:
+        if self["timestamp"] < 0:
             # old LPR version
-            self['pos']._write(cursor)
+            self["pos"]._write(cursor)
         else:
             # new LPR version
-            lpr_version = max(self._MAGIC_V2, self['lpr_version'])
+            lpr_version = max(self._MAGIC_V2, self["lpr_version"])
             write_byte(cursor, lpr_version)
-            self['pos']._write(cursor)
-            write_long(cursor, self['timestamp'])
+            self["pos"]._write(cursor)
+            write_long(cursor, self["timestamp"])
 
 
 class TimeZoneOffset(IntBase, Serializable):
@@ -961,7 +1015,7 @@ class TimeZoneOffset(IntBase, Serializable):
     ) -> typing.Self:
         if not args and _schema is not None:
             args = [_schema]
-        assert '_schema' not in kwargs, 'invalid argument'
+        assert "_schema" not in kwargs, "invalid argument"
         return super().__new__(cls, *args, **kwargs)
 
     @typing.override
@@ -1010,8 +1064,9 @@ class TimeZoneOffset(IntBase, Serializable):
 #   Utf8Str, Object
 class ObjectMap(_TypedDict, Serializable):
     _MAGIC_STR: typing.Final[bytes] = b"\x00\x00\x00\x00\x00\x1A\xB1\x26"
-    _FIXED_MYSTERY_NUM: typing.Final[int] = \
+    _FIXED_MYSTERY_NUM: typing.Final[int] = (
         1  # present after the signature; unknown what this number means
+    )
 
     def __init__(self, *args, _schema: Mapping, **kwargs):
         schema = copy.deepcopy(_schema)
@@ -1068,10 +1123,14 @@ class ObjectMap(_TypedDict, Serializable):
         schema: None | typing.Any = None,
         schema_id: None | str = None,
     ) -> tuple[typing.Any, str]:
-        assert schema_id is None or schema_id, 'expected either null or non-empty schema'
+        assert (
+            schema_id is None or schema_id
+        ), "expected either null or non-empty schema"
         schema_id_actual = cls.__peek_object_schema_id(csr)
         if not schema_id_actual:
-            raise UnexpectedStructureError('Failed to read schema for object.')
+            raise UnexpectedStructureError(
+                "Failed to read schema for object."
+            )
         if schema_id is not None and schema_id_actual != schema_id:
             raise UnexpectedStructureError(
                 f'Object schema "{schema_id_actual}" does not match expected schema "{schema_id}"'
@@ -1086,7 +1145,7 @@ class ObjectMap(_TypedDict, Serializable):
         o: typing.Any,
         schema_id: str,
     ):
-        assert schema_id, 'expected non-empty schema'
+        assert schema_id, "expected non-empty schema"
         csr.write(OBJECT_BEGIN)
         write_utf8str(csr, schema_id, False)
         o._write(csr)
@@ -1109,7 +1168,7 @@ class ObjectMap(_TypedDict, Serializable):
                 schema.schema,
                 schema_id,
             )
-            assert schema_id_actual, 'Object has blank schema.'
+            assert schema_id_actual, "Object has blank schema."
             result[schema_id_actual] = value
         return result
 
@@ -1363,14 +1422,22 @@ _schema_id_to_schema: dict[str, type | NotImplemented | Field] = {
 class Store(ObjectMap):
     @typing.override
     def __init__(self, *args, **kwargs):
-        assert kwargs.get('_schema') is None, 'invalid argument'
-        super().__init__(*args, _schema=_schema_id_to_schema, **kwargs,)
+        assert kwargs.get("_schema") is None, "invalid argument"
+        super().__init__(
+            *args,
+            _schema=_schema_id_to_schema,
+            **kwargs,
+        )
 
     @classmethod
     @typing.override
     def _create(cls, cursor: Cursor, *args, **kwargs) -> typing.Self:
-        assert kwargs.get('_schema') is None, 'invalid argument'
-        return super()._create(cursor, *args, **kwargs,)
+        assert kwargs.get("_schema") is None, "invalid argument"
+        return super()._create(
+            cursor,
+            *args,
+            **kwargs,
+        )
 
 
 ALL_OBJECT_TYPES: typing.Final[tuple[type, ...]] = (

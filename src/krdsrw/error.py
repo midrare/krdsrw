@@ -34,8 +34,11 @@ class UnexpectedBytesError(KRDSRWError):
         super().__init__(s)
 
         self._pos: int = pos
-        self._expected: list[int | bytes] = list(expected) \
-                if isinstance(expected, (list, tuple)) else [expected]
+        self._expected: list[int | bytes] = (
+            list(expected)
+            if isinstance(expected, (list, tuple))
+            else [expected]
+        )
         self._actual: None | int | bytes = actual
 
     @classmethod
@@ -50,9 +53,9 @@ class UnexpectedBytesError(KRDSRWError):
 
     @staticmethod
     def _bytes_to_hex(data: bytes, prefix: bool = True) -> str:
-        s = ''
+        s = ""
         if prefix:
-            s += '0x'
+            s += "0x"
         for b in data:
             s += f"{b:02x}"
         return s
