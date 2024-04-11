@@ -54,14 +54,14 @@ T = typing.TypeVar(
 
 
 def _flatten(o: typing.Any, skip_null: bool = True) -> list[typing.Any]:
-    def recurse(o: typing.Any, master: list[typing.Any]):
-        if isinstance(o, (tuple, list)):
-            for e in o:
+    def recurse(oo: typing.Any, master: list[typing.Any]):
+        if isinstance(oo, (tuple, list)):
+            for e in oo:
                 recurse(e, master)
             return
-        if skip_null and o is None:
+        if skip_null and oo is None:
             return
-        master.append(o)
+        master.append(oo)
 
     result = []
     recurse(o, result)
@@ -101,7 +101,8 @@ def _read_object(
                 + f' but got "{schema_id_actual}".'
             )
 
-    result = cls_._create(cursor, _schema=schema)
+    # noinspection PyProtectedMember
+    result = cls_._create(cursor, _schema=schema)  # type: ignore
 
     if schema_id and not cursor.eat(OBJECT_END):
         raise UnexpectedBytesError(cursor.tell(), OBJECT_END, cursor.peek())
@@ -129,6 +130,7 @@ def _write_object(
     if schema_id:
         cursor.write(OBJECT_BEGIN)
         write_utf8str(cursor, schema_id, False)
+    # noinspection PyProtectedMember
     o._write(cursor)
     if schema_id:
         cursor.write(OBJECT_END)
@@ -355,10 +357,17 @@ class _TypedDict(DictBase[str, T], metaclass=abc.ABCMeta):
     @typing.override
     def __eq__(self, other: typing.Any) -> bool:
         if isinstance(other, self.__class__):
+            # noinspection PyProtectedMember
             return (
-                self._required_spec == other._required_spec  # type: ignore
-                and self._optional_spec == other._optional_spec  # type: ignore
-                and dict(self) == dict(other)
+                (
+                    self._required_spec  # type: ignore
+                    == other._required_spec  # type: ignore
+                )
+                and (
+                    self._optional_spec  # type: ignore
+                    == other._optional_spec  # type: ignore
+                )
+                and (dict(self) == dict(other))
             )
         return super().__eq__(other)
 
@@ -600,13 +609,14 @@ class DynamicMap(DictBase[str, typing.Any], Serializable):
         | Utf8Str
     ):
         for t in [Bool, Byte, Char, Short, Int, Long, Float, Double, Utf8Str]:
-            if cursor._peek_raw_byte() == t.magic_byte:
+            if cursor.peek() == t.magic_byte:
+                # noinspection PyProtectedMember
                 return t._create(cursor)
 
         return None
 
-    @typing.override
     @classmethod
+    @typing.override
     def _create(cls, cursor: Cursor, *args, **kwargs) -> typing.Self:
         result = cls(*args, **kwargs)
         size = read_int(cursor)
@@ -623,7 +633,7 @@ class DynamicMap(DictBase[str, typing.Any], Serializable):
         for key, value in self.items():
             assert isinstance(key, str)
             write_utf8str(cursor, key)
-            value._write(cursor)
+            _write_object(cursor, value)
 
 
 class DateTime(IntBase, Serializable):
@@ -715,6 +725,7 @@ class Json(Serializable):
 
         return super().__new__(cls)
 
+    # noinspection PyUnusedLocal
     @typing.override
     def __init__(self, *args, **kwargs):
         super().__init__()
@@ -773,6 +784,7 @@ class Json(Serializable):
 
 
 class _JsonBool(int, Json):  # type: ignore
+    # noinspection PyUnusedLocal
     def __init__(self, *args, **kwargs):
         super().__init__()
 
@@ -784,26 +796,31 @@ class _JsonBool(int, Json):  # type: ignore
 
 
 class _JsonInt(int, Json):  # type: ignore
+    # noinspection PyUnusedLocal
     def __init__(self, *args, **kwargs):
         super().__init__()
 
 
 class _JsonFloat(float, Json):  # type: ignore
+    # noinspection PyUnusedLocal
     def __init__(self, *args, **kwargs):
         super().__init__()
 
 
 class _JsonStr(str, Json):  # type: ignore
+    # noinspection PyUnusedLocal
     def __init__(self, *args, **kwargs):
         super().__init__()
 
 
 class _JsonBytes(bytes, Json):  # type: ignore
+    # noinspection PyUnusedLocal
     def __init__(self, *args, **kwargs):
         super().__init__()
 
 
 class _JsonTuple(tuple, Json):  # type: ignore
+    # noinspection PyUnusedLocal
     def __init__(self, *args, **kwargs):
         super().__init__()
 
@@ -976,11 +993,11 @@ class LPR(_TypedDict, Serializable):  # aka LPR
         type_byte = cursor.peek()
         if type_byte == Utf8Str.magic_byte:
             # old LPR version'
-            init["pos"] = Position._create(cursor)
+            init["pos"] = _read_object(cursor, Position)
         elif type_byte == Byte.magic_byte:
             # new LPR version
             init["lpr_version"] = read_byte(cursor)
-            init["pos"] = Position._create(cursor)
+            init["pos"] = _read_object(cursor, Position)
             init["timestamp"] = int(read_long(cursor))
         else:
             raise UnexpectedBytesError(
@@ -997,12 +1014,12 @@ class LPR(_TypedDict, Serializable):  # aka LPR
         #   version when datastore file is re-written
         if self["timestamp"] < 0:
             # old LPR version
-            self["pos"]._write(cursor)
+            _write_object(cursor, self["pos"])
         else:
             # new LPR version
             lpr_version = max(self._MAGIC_V2, self["lpr_version"])
             write_byte(cursor, lpr_version)
-            self["pos"]._write(cursor)
+            _write_object(cursor, self["pos"])
             write_long(cursor, self["timestamp"])
 
 
@@ -1019,6 +1036,7 @@ class TimeZoneOffset(IntBase, Serializable):
         assert "_schema" not in kwargs, "invalid argument"
         return super().__new__(cls, *args, **kwargs)
 
+    # noinspection PyUnusedLocal
     @typing.override
     def __init__(self, *args, **kwargs):
         super().__init__()
@@ -1152,6 +1170,7 @@ class ObjectMap(_TypedDict, Serializable):
         assert schema_id, "expected non-empty schema"
         csr.write(OBJECT_BEGIN)
         write_utf8str(csr, schema_id, False)
+        # noinspection PyProtectedMember
         o._write(csr)
         csr.write(OBJECT_END)
 
@@ -1193,13 +1212,16 @@ class ObjectMap(_TypedDict, Serializable):
 # autopep8: off
 # yapf: disable
 
+# noinspection PyProtectedMember
 _timer_average_calculator_outliers = Array._schema(Double)
+# noinspection PyProtectedMember
 _timer_average_calculator_distribution_normal = Record._schema({
     "count": Long,
     "sum": Double,
     "sum_of_squares": Double,
 })
 
+# noinspection PyProtectedMember
 _timer_average_calculator = Record._schema({
     "samples1": Field(Array, Array._schema(Double)),
     "samples2": Field(Array, Array._schema(Double)),
@@ -1215,6 +1237,7 @@ _timer_average_calculator = Record._schema({
     )),
 })
 
+# noinspection PyProtectedMember
 _timer_model = Record._schema({
     "version": Long,
     "total_time": Long,
@@ -1227,6 +1250,7 @@ _timer_model = Record._schema({
     ),
 })
 
+# noinspection PyProtectedMember
 _font_prefs = Record._schema({
     "typeface": Utf8Str,
     "line_sp": Int,
@@ -1245,6 +1269,7 @@ _font_prefs = Record._schema({
     "reading_preset_selected": Field(Utf8Str, required=False),
 })
 
+# noinspection PyProtectedMember
 _reader_state_preferences = Record._schema({
     "font_preferences": Field(Record, _font_prefs),
     "left_margin": Int,
@@ -1254,6 +1279,7 @@ _reader_state_preferences = Record._schema({
     "unknown1": Bool,
 })
 
+# noinspection PyProtectedMember
 _annotation_personal_element = Record._schema({
     "start_pos": Position,
     "end_pos": Position,
@@ -1263,6 +1289,7 @@ _annotation_personal_element = Record._schema({
     "note": Field(Utf8Str, required=False),
 })
 
+# noinspection PyProtectedMember
 _annotation_cache_object = IntMap._schema({
     "bookmarks": Field(
         Array,
@@ -1302,6 +1329,7 @@ _annotation_cache_object = IntMap._schema({
     ),
 })
 
+# noinspection PyProtectedMember
 # NOTE if you update this schema map update the type hints too
 _store_key_to_field: \
 dict[str, type | NotImplemented | Field] \
