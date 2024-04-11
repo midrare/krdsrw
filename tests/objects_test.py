@@ -3,27 +3,28 @@ import pathlib
 
 import pytest
 
-from krdsrw.cursor import Cursor
 from krdsrw.basics import Basic
 from krdsrw.basics import Bool
+from krdsrw.basics import Double
+from krdsrw.basics import Float
 from krdsrw.basics import Int
 from krdsrw.basics import Long
-from krdsrw.basics import Float
-from krdsrw.basics import Double
 from krdsrw.basics import Utf8Str
+from krdsrw.cursor import Cursor
 from krdsrw.objects import Array
-from krdsrw.objects import LPR
-from krdsrw.objects import ObjectMap
 from krdsrw.objects import DynamicMap
-from krdsrw.objects import IntMap
-from krdsrw.objects import Json
-from krdsrw.objects import Record
-from krdsrw.objects import Store
-from krdsrw.objects import Position
-from krdsrw.objects import _TypedDict
 from krdsrw.objects import Field
 from krdsrw.objects import Index
+from krdsrw.objects import IntMap
+from krdsrw.objects import Json
+from krdsrw.objects import LPR
 from krdsrw.objects import Mapping
+from krdsrw.objects import ObjectMap
+from krdsrw.objects import Position
+from krdsrw.objects import Protoform
+from krdsrw.objects import Record
+from krdsrw.objects import Store
+from krdsrw.objects import _TypedDict
 from krdsrw.objects import _make_object
 from krdsrw.objects import _read_object
 
@@ -253,12 +254,12 @@ class TestTypedDict:
         class Custom(_TypedDict):
             def __init__(self, *args, **kwargs):
                 schema = {
-                    "a": Field(Bool),
-                    "b": Field(Int),
-                    "c": Field(Utf8Str),
-                    "x": Field(Bool, required=False),
-                    "y": Field(Int, required=False),
-                    "z": Field(Utf8Str, required=False),
+                    "a": Field(Protoform(Bool)),
+                    "b": Field(Protoform(Int)),
+                    "c": Field(Protoform(Utf8Str)),
+                    "x": Field(Protoform(Bool), required=False),
+                    "y": Field(Protoform(Int), required=False),
+                    "z": Field(Protoform(Utf8Str), required=False),
                 }
                 super().__init__(*args, _schema=schema, **kwargs)
 
@@ -272,12 +273,12 @@ class TestTypedDict:
         class Custom(_TypedDict):
             def __init__(self, *args, **kwargs):
                 schema = {
-                    "a": Field(Bool),
-                    "b": Field(Int),
-                    "c": Field(Utf8Str),
-                    "x": Field(Bool, required=False),
-                    "y": Field(Int, required=False),
-                    "z": Field(Utf8Str, required=False),
+                    "a": Field(Protoform(Bool)),
+                    "b": Field(Protoform(Int)),
+                    "c": Field(Protoform(Utf8Str)),
+                    "x": Field(Protoform(Bool), required=False),
+                    "y": Field(Protoform(Int), required=False),
+                    "z": Field(Protoform(Utf8Str), required=False),
                 }
                 super().__init__(*args, _schema=schema, **kwargs)
 
@@ -312,8 +313,8 @@ class TestRecord:
             {
                 "a": Int,
                 "b": Float,
-                "c": Field(Double, required=False),
-                "d": Field(Utf8Str, required=False),
+                "c": Field(Protoform(Double), required=False),
+                "d": Field(Protoform(Utf8Str), required=False),
             }
         )
 
@@ -334,8 +335,8 @@ class TestRecord:
             {
                 "a": Int,
                 "b": Float,
-                "c": Field(Double, required=False),
-                "d": Field(Utf8Str, required=False),
+                "c": Field(Protoform(Double), required=False),
+                "d": Field(Protoform(Utf8Str), required=False),
             }
         )
 
@@ -372,8 +373,8 @@ class TestRecord:
             {
                 "a": Int,
                 "b": Float,
-                "c": Field(Double, required=False),
-                "d": Field(Utf8Str, required=False),
+                "c": Field(Protoform(Double), required=False),
+                "d": Field(Protoform(Utf8Str), required=False),
             }
         )
 
@@ -392,8 +393,8 @@ class TestRecord:
             {
                 "a": Int,
                 "b": Float,
-                "c": Field(Double, required=False),
-                "d": Field(Utf8Str, required=False),
+                "c": Field(Protoform(Double), required=False),
+                "d": Field(Protoform(Utf8Str), required=False),
             }
         )
 
@@ -417,13 +418,15 @@ class TestRecord:
             {
                 "a": Int,
                 "b": Float,
-                "c": Field(Double, required=False),
-                "d": Field(Utf8Str, required=False),
+                "c": Field(Protoform(Double), required=False),
+                "d": Field(Protoform(Utf8Str), required=False),
             }
         )
 
         o = _make_object(
-            Record, {"a": 123, "b": 4.56, "c": 7.89, "d": "hello"}, schema=sch
+            Record,
+            {"a": 123, "b": 4.56, "c": 7.89, "d": "hello"},
+            schema=sch,
         )
         assert o["a"] == 123
         assert o["b"] == 4.56
@@ -436,13 +439,16 @@ class TestIntMap:
         sch = IntMap._schema(
             {
                 "apple": Field(
-                    Array, Array._schema(Int, schema_id="x"), "name.a"
+                    Protoform(Array, Array._schema(Int, schema_id="x")),
+                    "name.a",
                 ),
                 "banana": Field(
-                    Array, Array._schema(Int, schema_id="y"), "name.b"
+                    Protoform(Array, Array._schema(Int, schema_id="y")),
+                    "name.b",
                 ),
                 "pear": Field(
-                    Array, Array._schema(Int, schema_id="z"), "name.c"
+                    Protoform(Array, Array._schema(Int, schema_id="z")),
+                    "name.c",
                 ),
             }
         )
@@ -453,13 +459,16 @@ class TestIntMap:
         sch = IntMap._schema(
             {
                 "apple": Field(
-                    Array, Array._schema(Int, schema_id="x"), "name.a"
+                    Protoform(Array, Array._schema(Int, schema_id="x")),
+                    "name.a",
                 ),
                 "banana": Field(
-                    Array, Array._schema(Int, schema_id="y"), "name.b"
+                    Protoform(Array, Array._schema(Int, schema_id="y")),
+                    "name.b",
                 ),
                 "pear": Field(
-                    Array, Array._schema(Int, schema_id="z"), "name.c"
+                    Protoform(Array, Array._schema(Int, schema_id="z")),
+                    "name.c",
                 ),
             }
         )
