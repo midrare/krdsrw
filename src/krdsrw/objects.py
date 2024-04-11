@@ -1,40 +1,41 @@
 from __future__ import annotations
+
 import abc
 import base64
 import copy
 import dataclasses
-import json
 import inspect
+import json
 import typing
 import warnings
 
+from .basics import Basic
+from .basics import Bool
+from .basics import Byte
+from .basics import Char
+from .basics import Double
+from .basics import Float
+from .basics import Int
+from .basics import Long
+from .basics import Short
+from .basics import Utf8Str
+from .basics import read_byte
+from .basics import read_int
+from .basics import read_long
+from .basics import read_utf8str
+from .basics import write_byte
+from .basics import write_int
+from .basics import write_long
+from .basics import write_utf8str
+from .builtins import DictBase
 from .builtins import IntBase
 from .builtins import ListBase
-from .builtins import DictBase
+from .constants import OBJECT_BEGIN
+from .constants import OBJECT_END
 from .cursor import Cursor
 from .cursor import Serializable
 from .error import UnexpectedBytesError
 from .error import UnexpectedStructureError
-from .basics import Basic
-from .basics import Byte
-from .basics import Char
-from .basics import Bool
-from .basics import Short
-from .basics import Int
-from .basics import Long
-from .basics import Float
-from .basics import Double
-from .basics import Utf8Str
-from .basics import read_byte
-from .basics import write_byte
-from .basics import read_int
-from .basics import write_int
-from .basics import read_long
-from .basics import write_long
-from .basics import read_utf8str
-from .basics import write_utf8str
-from .constants import OBJECT_BEGIN
-from .constants import OBJECT_END
 
 K = typing.TypeVar("K", bound=int | float | str)
 T = typing.TypeVar(
@@ -1078,7 +1079,9 @@ class ObjectMap(_TypedDict, Serializable):
 
     @classmethod
     def _schema(cls, mapping: dict[str, type | Field]) -> Mapping:
-        return copy.deepcopy(mapping)
+        result = copy.deepcopy(mapping)
+        _fix_mapping(result, False)
+        return result
 
     @classmethod
     def __eat_signature_or_error(cls, cursor: Cursor):
@@ -1133,7 +1136,8 @@ class ObjectMap(_TypedDict, Serializable):
             )
         if schema_id is not None and schema_id_actual != schema_id:
             raise UnexpectedStructureError(
-                f'Object schema "{schema_id_actual}" does not match expected schema "{schema_id}"'
+                f'Object schema "{schema_id_actual}"'
+                + f' does not match expected schema "{schema_id}"'
             )
         o = _read_object(csr, cls_, schema, schema_id_actual)
         return o, schema_id_actual
@@ -1299,7 +1303,9 @@ _annotation_cache_object = IntMap._schema({
 })
 
 # NOTE if you update this schema map update the type hints too
-_schema_id_to_schema: dict[str, type | NotImplemented | Field] = {
+_store_key_to_field: \
+dict[str, type | NotImplemented | Field] \
+= ObjectMap._schema({  # noqa
     "clock.data.store": NotImplemented,
     "dictionary": Utf8Str,
     "lpu": NotImplemented,
@@ -1411,7 +1417,7 @@ _schema_id_to_schema: dict[str, type | NotImplemented | Field] = {
         Array,
         _timer_average_calculator_outliers,
     ),
-}
+})
 
 # autopep8: on
 # yapf: enable
@@ -1425,7 +1431,7 @@ class Store(ObjectMap):
         assert kwargs.get("_schema") is None, "invalid argument"
         super().__init__(
             *args,
-            _schema=_schema_id_to_schema,
+            _schema=_store_key_to_field,
             **kwargs,
         )
 
