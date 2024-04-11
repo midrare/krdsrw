@@ -85,8 +85,9 @@ class Cursor:
         b = self._data.read(1)
         if b is None or len(b) <= 0:
             raise IndexError(
-                "Cannot read next byte; buffer of length %d has reached its end"
-                % len(self._data.getbuffer())
+                "Cannot read next byte; buffer of length "
+                + f"{len(self._data.getbuffer())} "
+                + "has reached its end"
             )
         return b[0]
 
@@ -133,8 +134,9 @@ class Cursor:
         self._data.seek(old_pos, io.SEEK_SET)
         if len(b) <= 0:
             raise IndexError(
-                "Cannot peek next byte; buffer of length %d has reached its end"
-                % len(self._data.getbuffer())
+                "Cannot peek next byte; buffer of length "
+                + f"{len(self._data.getbuffer())} "
+                + "has reached its end"
             )
         return b[0]
 
