@@ -162,22 +162,26 @@ def _is_compatible(
 @dataclasses.dataclass
 class Protoform:
     cls_: type
-    schema: typing.Any | None = dataclasses.field(default=None)
-    name: None | str = dataclasses.field(default=None)
+    schema: typing.Any | None = None
+    name: None | str = None
 
 
 @dataclasses.dataclass
 class Field:
-    proto: Protoform = dataclasses.field()
-    schema_id: None | str = dataclasses.field(default=None)
-    required: None | bool = dataclasses.field(default=None)
+    proto: Protoform
+    schema_id: None | str = None
+    required: None | bool = None
 
 
 Index: typing.TypeAlias = Field
 Mapping: typing.TypeAlias = dict[str, Field]
 
 
-def _fix_mapping(schema: Mapping, default_required: None | bool = None):
+def _fix_mapping(
+    schema: Mapping,
+    default_required: None | bool = None,
+    recurse: bool = False,
+):
     for k in list(schema.keys()):
         if schema[k] is NotImplemented:
             del schema[k]
@@ -190,6 +194,13 @@ def _fix_mapping(schema: Mapping, default_required: None | bool = None):
 
         if schema[k].required is None:
             schema[k].required = default_required
+
+        if (
+            recurse
+            and issubclass(schema[k].proto.cls_, dict)
+            and schema[k].proto.schema
+        ):
+            _fix_mapping(schema[k].proto.schema)
 
 
 class Array(ListBase[T], Serializable, metaclass=abc.ABCMeta):
@@ -216,11 +227,10 @@ class Array(ListBase[T], Serializable, metaclass=abc.ABCMeta):
     @classmethod
     def _schema(
         cls,
-        cls_: type,
-        schema: typing.Any | None = None,
+        proto: Protoform,
         schema_id: None | str = None,
     ) -> Index:
-        return Index(Protoform(cls_, schema), schema_id)
+        return Index(proto, schema_id)
 
     @classmethod
     @typing.override
@@ -1232,32 +1242,37 @@ class ObjectMap(_TypedDict, Serializable):
 # yapf: disable
 
 # noinspection PyProtectedMember
-_timer_average_calculator_outliers = Array._schema(Double)
-# noinspection PyProtectedMember
-_timer_average_calculator_distribution_normal = Record._schema({
-    "count": Long,
-    "sum": Double,
-    "sum_of_squares": Double,
-})
+_timer_average_calculator_outliers = Protoform(
+    Array,
+    Array._schema(Protoform(Double)),
+)
 
 # noinspection PyProtectedMember
-_timer_average_calculator = Record._schema({
-    "samples1": Field(Protoform(Array, Array._schema(Double))),
-    "samples2": Field(Protoform(Array, Array._schema(Double))),
+_timer_average_calculator_distribution_normal = Protoform(
+    Record,
+    Record._schema({
+        "count": Long,
+        "sum": Double,
+        "sum_of_squares": Double,
+    }),
+)
+
+# noinspection PyProtectedMember
+_timer_average_calculator = Protoform(Record, Record._schema({
+    "samples1": Field(Protoform(Array, Array._schema(Protoform(Double)))),
+    "samples2": Field(Protoform(Array, Array._schema(Protoform(Double)))),
     "normal_distributions": Field(Protoform(Array, Array._schema(
-        Record,
         _timer_average_calculator_distribution_normal,
         "timer.average.calculator.distribution.normal",
     ))),
     "outliers": Field(Protoform(Array, Array._schema(
-        Array,
         _timer_average_calculator_outliers,
         "timer.average.calculator.outliers",
     ))),
-})
+}))
 
 # noinspection PyProtectedMember
-_timer_model = Record._schema({
+_timer_model = Protoform(Record, Record._schema({
     "version": Long,
     "total_time": Long,
     "total_words": Long,
@@ -1266,10 +1281,10 @@ _timer_model = Record._schema({
         Protoform(Record, _timer_average_calculator),
         "timer.average.calculator",
     ),
-})
+}))
 
 # noinspection PyProtectedMember
-_font_prefs = Record._schema({
+_font_prefs = Protoform(Record, Record._schema({
     "typeface": Utf8Str,
     "line_sp": Int,
     "size": Int,
@@ -1285,33 +1300,32 @@ _font_prefs = Record._schema({
     "mobi7_system_font": Field(Protoform(Utf8Str), required=False),
     "mobi7_restore_font": Field(Protoform(Bool), required=False),
     "reading_preset_selected": Field(Protoform(Utf8Str), required=False),
-})
+}), name="FontPrefs")
 
 # noinspection PyProtectedMember
-_reader_state_preferences = Record._schema({
-    "font_preferences": Field(Protoform(Record, _font_prefs)),
+_reader_state_preferences = Protoform(Record, Record._schema({
+    "font_preferences": Field(_font_prefs),
     "left_margin": Int,
     "right_margin": Int,
     "top_margin": Int,
     "bottom_margin": Int,
     "unknown1": Bool,
-})
+}))
 
 # noinspection PyProtectedMember
-_annotation_personal_element = Record._schema({
+_annotation_personal_element = Protoform(Record, Record._schema({
     "start_pos": Position,
     "end_pos": Position,
     "creation_time": DateTime,
     "last_modification_time": DateTime,
     "template": Utf8Str,
     "note": Field(Protoform(Utf8Str), required=False),
-})
+}), name='Annotation')
 
 # noinspection PyProtectedMember
-_annotation_cache_object = IntMap._schema({
+_annotation_cache_object = Protoform(IntMap, IntMap._schema({
     "bookmarks": Field(
         Protoform(Array, Array._schema(
-            Record,
             _annotation_personal_element,
             "annotation.personal.bookmark",
         )),
@@ -1319,7 +1333,6 @@ _annotation_cache_object = IntMap._schema({
     ),
     "highlights": Field(
         Protoform(Array, Array._schema(
-            Record,
             _annotation_personal_element,
             "annotation.personal.highlight",
         )),
@@ -1327,7 +1340,6 @@ _annotation_cache_object = IntMap._schema({
     ),
     "notes": Field(
         Protoform(Array, Array._schema(
-            Record,
             _annotation_personal_element,
             "annotation.personal.note",
         )),
@@ -1335,13 +1347,37 @@ _annotation_cache_object = IntMap._schema({
     ),
     "clip_articles": Field(
         Protoform(Array, Array._schema(
-            Record,
             _annotation_personal_element,
             "annotation.personal.clip_article",
         )),
         "saved.avl.interval.tree",
     ),
-})
+}), name='Annotations')
+
+# noinspection PyProtectedMember
+_fpr = Protoform(
+    Record,
+    Record._schema({
+        "pos": Position,
+        "timestamp": Field(Protoform(DateTime), required=False),
+        "timezone_offset": Field(Protoform(TimeZoneOffset), required=False),
+        "country": Field(Protoform(Utf8Str), required=False),
+        "device": Field(Protoform(Utf8Str), required=False),
+    }),
+    name='FPR',
+)
+
+# noinspection PyProtectedMember
+_apnx = Protoform(Record, Record._schema({
+    "asin": Utf8Str,
+    "cde_type": Utf8Str,
+    "sidecar_available": Bool,
+    "opn_to_pos": Field(Protoform(Array, Array._schema(Protoform(Int)))),
+    "first": Int,
+    "unknown1": Int,
+    "unknown2": Int,
+    "page_map": Utf8Str,
+}))
 
 # noinspection PyProtectedMember
 # NOTE if you update this schema map update the type hints too
@@ -1369,31 +1405,10 @@ dict[str, type | NotImplemented | Field] \
     "price.info.data": Json,
     "erl": Position,
     "lpr": LPR,
-    "fpr": Field(Protoform(Record, Record._schema({
-        "pos": Position,
-        "timestamp": Field(Protoform(DateTime), required=False),
-        "timezone_offset": Field(Protoform(TimeZoneOffset), required=False),
-        "country": Field(Protoform(Utf8Str), required=False),
-        "device": Field(Protoform(Utf8Str), required=False),
-    }))),
-    "updated_lpr": Field(Protoform(Record, Record._schema({
-        "pos": Position,
-        "timestamp": Field(Protoform(DateTime), required=False),
-        "timezone_offset": Field(Protoform(TimeZoneOffset), required=False),
-        "country": Field(Protoform(Utf8Str), required=False),
-        "device": Field(Protoform(Utf8Str), required=False),
-    }))),
+    "fpr": Field(_fpr),
+    "updated_lpr": Field(_fpr),
     # amzn page num xref (i.e. page num map)
-    "apnx.key": Field(Protoform(Record, Record._schema({
-        "asin": Utf8Str,
-        "cde_type": Utf8Str,
-        "sidecar_available": Bool,
-        "opn_to_pos": Field(Protoform(Array, Array._schema(Int))),
-        "first": Int,
-        "unknown1": Int,
-        "unknown2": Int,
-        "page_map": Utf8Str,
-    }))),
+    "apnx.key": Field(_apnx),
     "fixed.layout.data": Field(Protoform(Record, Record._schema({
         "unknown1": Bool,
         "unknown2": Bool,
@@ -1415,15 +1430,15 @@ dict[str, type | NotImplemented | Field] \
         "state": Int,
         "time": DateTime,
     }))),
-    "timer.model": Field(Protoform(Record, _timer_model)),
+    "timer.model": Field(_timer_model),
     "timer.data.store": Field(Protoform(Record, Record._schema({
         "on": Bool,
-        "reading_timer_model": Field(Protoform(Record, _timer_model)),
+        "reading_timer_model": Field(_timer_model),
         "version": Int,
     }))),
     "timer.data.store.v2": Field(Protoform(Record, Record._schema({
         "on": Bool,
-        "reading_timer_model": Field(Protoform(Record, _timer_model)),
+        "reading_timer_model": Field(_timer_model),
         "version": Int,
         "last_option": Int,
     }))),
@@ -1431,36 +1446,31 @@ dict[str, type | NotImplemented | Field] \
         "num_words": Long,
         "percent_of_book": Double,
     }))),
-    "page.history.store": Field(Protoform(Array, Array._schema(
-        Record,
-        Record._schema({"pos": Position, "time": DateTime}),
+    "page.history.store": Field(Protoform(Array, Array._schema(Protoform(
+            Record,
+            Record._schema({"pos": Position, "time": DateTime})),
+        )),
         "page.history.record",
-    ))),
-    "reader.state.preferences": Field(
-        Protoform(Record, _reader_state_preferences)),
-    "font.prefs": Field(
-        Protoform(Record, _font_prefs)),
-    "annotation.cache.object": Field(
-        Protoform(IntMap, _annotation_cache_object)),
-    "annotation.personal.bookmark": Field(
-        Protoform(Record, _annotation_personal_element)),
-    "annotation.personal.highlight": Field(
-        Protoform(Record, _annotation_personal_element)),
-    "annotation.personal.note": Field(
-        Protoform(Record, _annotation_personal_element)),
-    "annotation.personal.clip_article": Field(
-        Protoform(Record, _annotation_personal_element)),
+    ),
+    "reader.state.preferences": Field(_reader_state_preferences),
+    "font.prefs": Field(_font_prefs),
+    "annotation.cache.object": Field(_annotation_cache_object),
+    "annotation.personal.bookmark": Field(_annotation_personal_element),
+    "annotation.personal.highlight": Field(_annotation_personal_element),
+    "annotation.personal.note": Field(_annotation_personal_element),
+    "annotation.personal.clip_article": Field(_annotation_personal_element),
     "whisperstore.migration.status": Field(
         Protoform(Record, Record._schema({
         "unknown1": Bool,
         "unknown2": Bool,
     }))),
     "timer.average.calculator.distribution.normal": Field(
-        Protoform(Record, _timer_average_calculator_distribution_normal)),
+        _timer_average_calculator_distribution_normal),
     "timer.average.calculator.outliers": Field(
-        Protoform(Array, _timer_average_calculator_outliers),
+        _timer_average_calculator_outliers,
     ),
 })
+_fix_mapping(_store_key_to_field, recurse=True)
 
 # autopep8: on
 # yapf: enable
