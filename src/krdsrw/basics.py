@@ -372,6 +372,9 @@ class Bool(BoolBase, Basic):
     def __bytes__(self) -> bytes:
         return struct.pack(">?", self)
 
+    def __json__(self) -> bool:
+        return self != 0
+
 
 class Short(ShortBase, Basic):
     # 2 byte signed integer

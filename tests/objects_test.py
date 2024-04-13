@@ -1,3 +1,5 @@
+import dataclasses
+import json
 import pathlib
 import typing
 
@@ -13,7 +15,6 @@ from krdsrw.objects import Array
 from krdsrw.objects import DynamicMap
 from krdsrw.objects import Field
 from krdsrw.objects import IntMap
-from krdsrw.objects import Json
 from krdsrw.objects import LPR
 from krdsrw.objects import Position
 from krdsrw.objects import Protoform
@@ -35,109 +36,6 @@ TEMPEST_YJF: typing.Final[pathlib.Path] = (
 TEMPEST_YJR: typing.Final[pathlib.Path] = (
     pathlib.Path(__file__).parent / "the-tempest.yjr"
 )
-
-
-class TestJson:
-    def test_instantiate(self):
-        o = Json()  # no error
-        assert o is not None
-
-        o = Json(True)  # no error
-        assert isinstance(o, int) and isinstance(o, Json)
-        assert o
-        assert o == True
-
-        o = Json(False)  # no error
-        assert isinstance(o, int) and isinstance(o, Json)
-        assert not o
-        assert o == False
-
-        o = Json(0)  # no error
-        assert isinstance(o, int) and isinstance(o, Json)
-
-        o = Json(1.0)  # no error
-        assert isinstance(o, float) and isinstance(o, Json)
-
-        o = Json("hello")  # no error
-        assert isinstance(o, str) and isinstance(o, Json)
-
-        o = Json(b"abc")  # no error
-        assert isinstance(o, bytes) and isinstance(o, Json)
-
-        o = Json(("a", "b", "c"))  # no error
-        assert isinstance(o, tuple) and isinstance(o, Json)
-
-        o = Json(["a", "b", "c"])  # no error
-        assert isinstance(o, list) and isinstance(o, Json)
-
-        o = Json({"a": 1, "b": 2, "c": 3})  # no error
-        assert isinstance(o, dict) and isinstance(o, Json)
-
-    def test_eq_operator(self):
-        o = Json()  # no error
-        assert bool(o) is False
-        assert not o
-
-        o = Json(True)  # no error
-        assert o
-
-        o = Json(False)  # no error
-        assert not o
-
-        o = Json(0)  # no error
-        assert o == 0
-
-        o = Json(1.0)  # no error
-        assert o == 1.0
-
-        o = Json("hello")  # no error
-        assert o == "hello"
-
-        o = Json(b"abc")  # no error
-        assert o == b"abc"
-
-        o = Json(("a", "b", "c"))  # no error
-        assert o == ("a", "b", "c")
-
-        o = Json(["a", "b", "c"])  # no error
-        assert o == ["a", "b", "c"]
-
-        o = Json({"a": 1, "b": 2, "c": 3})  # no error
-        assert o == {"a": 1, "b": 2, "c": 3}
-
-    def test_read_null(self):
-        csr = Cursor(b"\x03\x01")
-        o = Json._create(csr)
-        assert not o
-        assert isinstance(o, Json) and not isinstance(
-            o, (bool, int, float, str, bytes, tuple, list, dict)
-        )
-
-    def test_read(self):
-        csr = Cursor(
-            b"\x03\x00\x00\xeF\x5B\x22\x61\x22"
-            + b"\x2C\x20\x22\x62\x22\x2C\x20\x22"
-            + b"\x63\x22\x5D"
-        )
-        o = Json._create(csr)
-        assert isinstance(o, list) and isinstance(o, Json)
-        assert o == ["a", "b", "c"]
-
-    def test_write_null(self):
-        csr = Cursor()
-        o = Json()
-        o._write(csr)
-        assert csr.dump() in [b"\x03\x01", b"\x03\x00\x00\x00"]
-
-    def test_write(self):
-        csr = Cursor()
-        o = Json(["a", "b", "c"])
-        o._write(csr)
-        assert csr.dump() == (
-            b"\x03\x00\x00\x0F\x5B\x22\x61\x22"
-            + b"\x2C\x20\x22\x62\x22\x2C\x20\x22"
-            + b"\x63\x22\x5D"
-        )
 
 
 class TestArray:
@@ -488,10 +386,13 @@ class TestIntMap:
 
 class TestDynamicMap:
     def test_put_key(self):
+        class Unsupported:
+            pass
+
         o = DynamicMap()
         o["a"] = Int(0x0A)
         with pytest.raises(ValueError):
-            o["a"] = 0x0A  # type: ignore
+            o["a"] = Unsupported()  # type: ignore
 
 
 class TestPosition:
@@ -671,3 +572,62 @@ class TestStore:
             + b"\xFF\xFF\xFF\x03\x01\x00\x00\x03"
             + b"\x01\xFF"
         )
+
+    def test_json(self):
+        class Encoder(json.JSONEncoder):
+            _VOID: object = object()
+
+            @typing.override
+            def default(self, o: typing.Any) -> typing.Any:
+                if dataclasses.is_dataclass(o):
+                    return dataclasses.asdict(o)
+                return super().default(o)
+
+            def _encode(self, o: typing.Any) -> typing.Any:
+                f = getattr(o, "__json__", None)
+                if f and callable(f):
+                    return f()
+                return self._VOID
+
+            def _recurse(self, o: typing.Any):
+                pass
+
+            @typing.override
+            def encode(self, o: typing.Any) -> typing.Any:
+                if (o2 := self._encode(o)) is not self._VOID:
+                    return o2
+                return super().encode(o)
+
+            @typing.override
+            def iterencode(
+                self,
+                o,
+                _one_shot=False,
+            ) -> typing.Iterable[typing.Any]:
+                print("ITERENCODEEDEEEEEEEEEEEEEEEEEEEEEEEE")
+                return super().iterencode(o, _one_shot)
+
+        jso = {
+            "font.prefs": {
+                "typeface": "_INVALID_,und:helvetica neue lt",
+                "line_sp": 1,
+                "size": 0,
+                "align": 1,
+                "inset_top": 63,
+                "inset_left": 80,
+                "inset_bottom": 0,
+                "inset_right": 80,
+                "unknown1": 0,
+                "bold": 1,
+                "user_sideloadable_font": "",
+                "custom_font_index": -1,
+                "mobi7_system_font": "",
+                "mobi7_restore_font": False,
+                "reading_preset_selected": "",
+            }
+        }
+
+        o = _make_object(Store, jso)  # no error
+
+        print(json.dumps(jso, cls=Encoder))
+        print(json.dumps(o, cls=Encoder))

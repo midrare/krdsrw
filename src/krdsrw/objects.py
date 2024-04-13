@@ -585,7 +585,9 @@ class DynamicMap(DictBase[str, typing.Any], Serializable):
         value: typing.Any,
         key: typing.Any,
     ) -> bool:
-        return isinstance(key, str) and isinstance(value, Basic)
+        return isinstance(key, str) and isinstance(
+            value, (bool, int, float, str, bytes)
+        )
 
     @typing.override
     def _transform_value(
@@ -723,182 +725,6 @@ class DateTime(IntBase, Serializable):
         return int(self)
 
 
-class Json(Serializable):
-    @typing.override
-    def __new__(
-        cls,
-        *args,
-        _schema: (
-            None | bool | int | float | str | bytes | tuple | list | dict
-        ) = None,
-        **kwargs,
-    ) -> Json:
-        args = list(args)
-        kwargs = dict(kwargs)
-
-        if args == [None]:
-            args = []
-
-        if kwargs.get("_schema") is None:
-            kwargs.pop("_schema", None)
-
-        if not args and _schema is not None:
-            args = [_schema]
-
-        if args:
-            for cls_ in [bool, int, float, str, bytes, list, tuple, dict]:
-                if isinstance(args[0], cls_):
-                    subcls = cls._subclass(cls_)
-                    return subcls.__new__(subcls, *args, **kwargs)
-
-        return super().__new__(cls)
-
-    # noinspection PyUnusedLocal
-    @typing.override
-    def __init__(self, *args, **kwargs):
-        super().__init__()
-
-    def __str__(self) -> str:
-        return f"{self.__class__.__name__}{{}}"
-
-    def __repr__(self) -> str:
-        return f"{self.__class__.__name__}{{}}"
-
-    @classmethod
-    def _subclass(cls, t: type) -> type[typing.Self]:
-        return {
-            bool: _JsonBool,
-            int: _JsonInt,
-            float: _JsonFloat,
-            str: _JsonStr,
-            bytes: _JsonBytes,
-            tuple: _JsonTuple,
-            list: _JsonList,
-            dict: _JsonDict,
-        }[
-            t
-        ]  # type: ignore
-
-    @classmethod
-    @typing.override
-    def _create(
-        cls,
-        cursor: Cursor,
-        *args,
-        _schema: typing.Any | None = None,
-        **kwargs,
-    ) -> typing.Self:
-        jsnstr = read_utf8str(cursor)
-        value = json.loads(jsnstr) if jsnstr else None
-        return cls(value, *args, _schema=_schema, **kwargs)
-
-    @typing.override
-    def _write(self, cursor: Cursor):
-        jsnstr = json.dumps(self, cls=_JsonEncoder)
-        if jsnstr == "null":
-            jsnstr = ""
-        write_utf8str(cursor, jsnstr)
-
-    def __bytes__(self) -> bytes:
-        csr = Cursor()
-        self._write(csr)
-        return csr.dump()
-
-    def __bool__(self) -> bool:
-        return False
-
-    def __json__(
-        self,
-    ) -> None | bool | int | float | str | bytes | tuple | list | dict:
-        return None
-
-
-class _JsonBool(int, Json):  # type: ignore
-    # noinspection PyUnusedLocal
-    def __init__(self, *args, **kwargs):
-        super().__init__()
-
-    def __bool__(self) -> bool:
-        return int(self) != 0
-
-    def __json__(self) -> bool:
-        return int(self) != 0
-
-
-class _JsonInt(int, Json):  # type: ignore
-    # noinspection PyUnusedLocal
-    def __init__(self, *args, **kwargs):
-        super().__init__()
-
-
-class _JsonFloat(float, Json):  # type: ignore
-    # noinspection PyUnusedLocal
-    def __init__(self, *args, **kwargs):
-        super().__init__()
-
-
-class _JsonStr(str, Json):  # type: ignore
-    # noinspection PyUnusedLocal
-    def __init__(self, *args, **kwargs):
-        super().__init__()
-
-
-class _JsonBytes(bytes, Json):  # type: ignore
-    # noinspection PyUnusedLocal
-    def __init__(self, *args, **kwargs):
-        super().__init__()
-
-
-class _JsonTuple(tuple, Json):  # type: ignore
-    # noinspection PyUnusedLocal
-    def __init__(self, *args, **kwargs):
-        super().__init__()
-
-
-class _JsonList(list, Json):  # type: ignore
-    def __init__(
-        self,
-        *args,
-        _schema: typing.Any | None = None,
-        **kwargs,
-    ):
-        args = list(args)
-        kwargs = dict(kwargs)
-
-        if args == [None]:
-            args = []
-
-        if kwargs.get("_schema") is None:
-            kwargs.pop("_schema", None)
-
-        if not args and _schema is not None:
-            args = [_schema]
-
-        super().__init__(*args, **kwargs)
-
-
-class _JsonDict(dict, Json):  # type: ignore
-    def __init__(
-        self,
-        *args,
-        _schema: typing.Any | None = None,
-        **kwargs,
-    ):
-        args = list(args)
-        kwargs = dict(kwargs)
-
-        if args == [None]:
-            args = []
-
-        if kwargs.get("_schema") is None:
-            kwargs.pop("_schema", None)
-
-        if not args and _schema is not None:
-            args = [_schema]
-
-        super().__init__(*args, **kwargs)
-
-
 class _JsonEncoder(json.JSONEncoder):
     @typing.override
     def default(self, o: typing.Any) -> typing.Any:
@@ -908,22 +734,6 @@ class _JsonEncoder(json.JSONEncoder):
         if dataclasses.is_dataclass(o):
             return dataclasses.asdict(o)
         return super().default(o)
-
-    @typing.override
-    def encode(self, o: typing.Any) -> str:
-        if isinstance(o, _JsonBool):
-            o = bool(o)
-        return super().encode(o)
-
-    @typing.override
-    def iterencode(
-        self,
-        o: typing.Any,
-        _one_shot: bool = False,
-    ) -> typing.Iterator[str]:
-        if isinstance(o, _JsonBool):
-            o = bool(o)
-        return super().iterencode(o, _one_shot)
 
 
 class Position(_TypedDict, Serializable):
@@ -1401,9 +1211,9 @@ dict[str, type | NotImplemented | Field] \
     "StartActions": DynamicMap,
     "Translator": DynamicMap,
     "Wikipedia": DynamicMap,
-    "buy.asin.response.data": Json,
-    "next.in.series.info.data": Json,
-    "price.info.data": Json,
+    "buy.asin.response.data": Utf8Str,
+    "next.in.series.info.data": Utf8Str,
+    "price.info.data": Utf8Str,
     "erl": Position,
     "lpr": LPR,
     "fpr": Field(_fpr),
@@ -1523,7 +1333,6 @@ ALL_OBJECT_TYPES: typing.Final[tuple[type, ...]] = (
     IntMap,
     DynamicMap,
     DateTime,
-    Json,
     LPR,
     Position,
     TimeZoneOffset,
