@@ -6,6 +6,7 @@ import copy
 import dataclasses
 import inspect
 import json
+import pathlib
 import typing
 import warnings
 
@@ -1497,6 +1498,23 @@ class Store(ObjectMap):
             *args,
             **kwargs,
         )
+
+
+def load_file(file: str | pathlib.Path) -> Store:
+    if isinstance(file, str):
+        file = pathlib.Path(file)
+
+    with file.open("rb") as f:
+        csr = Cursor(f.read())
+        # noinspection PyProtectedMember
+        return Store._create(csr)
+
+
+def dump_bytes(o: Store) -> bytes:
+    csr = Cursor()
+    # noinspection PyProtectedMember
+    o._write(csr)
+    return csr.dump()
 
 
 ALL_OBJECT_TYPES: typing.Final[tuple[type, ...]] = (
