@@ -1,5 +1,5 @@
 # krdsrw
-Read and write in Amazon Kindle sidecar file format. These are the the files in the `.sdr` folders you see in your Kindle's `ms0:/documents` folder.
+Read and write in Amazon Kindle sidecar file format. These are the files in the `.sdr` folders you see in your Kindle's `ms0:/documents` folder.
 
 ## Developing
 ```bash
