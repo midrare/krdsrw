@@ -1,25 +1,20 @@
-import typing
 import pathlib
+import typing
 
 import pytest
 
-from krdsrw.basics import Basic
 from krdsrw.basics import Bool
 from krdsrw.basics import Double
 from krdsrw.basics import Float
 from krdsrw.basics import Int
-from krdsrw.basics import Long
 from krdsrw.basics import Utf8Str
 from krdsrw.cursor import Cursor
 from krdsrw.objects import Array
 from krdsrw.objects import DynamicMap
 from krdsrw.objects import Field
-from krdsrw.objects import Index
 from krdsrw.objects import IntMap
 from krdsrw.objects import Json
 from krdsrw.objects import LPR
-from krdsrw.objects import Mapping
-from krdsrw.objects import ObjectMap
 from krdsrw.objects import Position
 from krdsrw.objects import Protoform
 from krdsrw.objects import Record
@@ -147,55 +142,55 @@ class TestJson:
 
 class TestArray:
     def test_instantiate(self):
-        sch = Array._schema(Int)
+        sch = Array._schema(Protoform(Int))
         o = Array(_schema=sch)  # no error
         assert o is not None
 
     def test_append_type_check_allow(self):
-        sch = Array._schema(Int)
+        sch = Array._schema(Protoform(Int))
         o = Array(_schema=sch)
         o.append(1337)
         assert o[0] == 1337
 
     def test_append_type_check_disallow(self):
-        sch = Array._schema(Int)
+        sch = Array._schema(Protoform(Int))
         o = Array(_schema=sch)
         with pytest.raises(ValueError):
             o.append("foo")
 
     def test_insert_type_check_allow(self):
-        sch = Array._schema(Int)
+        sch = Array._schema(Protoform(Int))
         o = Array(_schema=sch)
         o.insert(0, 1337)
         assert o[0] == 1337
 
     def test_insert_type_check_disallow(self):
-        sch = Array._schema(Int)
+        sch = Array._schema(Protoform(Int))
         o = Array(_schema=sch)
         with pytest.raises(ValueError):
             o.insert(0, "foo")
 
     def test_extend_type_check_allow(self):
-        sch = Array._schema(Int)
+        sch = Array._schema(Protoform(Int))
         o = Array(_schema=sch)
         o.extend([0, 1, 2, 3, 4])
         assert o == [0, 1, 2, 3, 4]
 
     def test_extend_type_check_disallow(self):
-        sch = Array._schema(Int)
+        sch = Array._schema(Protoform(Int))
         o = Array(_schema=sch)
         with pytest.raises(ValueError):
             o.extend(["a", "b", "c", "d", "e"])
 
     def test_copy_contents(self):
-        sch = Array._schema(Int)
+        sch = Array._schema(Protoform(Int))
         o = Array(_schema=sch)
         o.extend([0, 1, 2, 3, 4])
         o2 = o.copy()
         assert isinstance(o2, Array) and o2 == o
 
     def test_count(self):
-        sch = Array._schema(Int)
+        sch = Array._schema(Protoform(Int))
         o = Array(_schema=sch)
         o.extend([0, 1, 2, 3, 4])
         assert o.count(2) == 1
@@ -207,12 +202,12 @@ class TestArray:
             + b"\x01\x00\x00\x00\x0b"
             + b"\x01\x00\x00\x00\x0c"
         )
-        sch = Array._schema(Int)
+        sch = Array._schema(Protoform(Int))
         o = Array._create(csr, _schema=sch)
         assert o == [0x0A, 0x0B, 0x0C]
 
     def test_write(self):
-        sch = Array._schema(Int)
+        sch = Array._schema(Protoform(Int))
         o = Array(_schema=sch)
         o.extend([0x0A, 0x0B, 0x0C])
         csr = Cursor()
@@ -226,23 +221,23 @@ class TestArray:
         )
 
     def test_elmt_cls(self):
-        sch = Array._schema(Int)
+        sch = Array._schema(Protoform(Int))
         o = Array(_schema=sch)
         assert o.elmt_schema_cls == Int
 
     def test_elmt_schema(self):
-        sch = Array._schema(Int, schema_id="abc")
+        sch = Array._schema(Protoform(Int), schema_id="abc")
         o = Array(_schema=sch)
         assert o.elmt_schema_id == "abc"
 
     def test_make_element(self):
-        sch = Array._schema(Int)
+        sch = Array._schema(Protoform(Int))
         arr = Array(_schema=sch)
         o = arr.make_element(1337)
         assert o == 1337
 
     def test_make_and_append(self):
-        sch = Array._schema(Int)
+        sch = Array._schema(Protoform(Int))
         arr = Array(_schema=sch)
         o = arr.make_and_append(1337)
         assert o == 1337
@@ -439,15 +434,21 @@ class TestIntMap:
         sch = IntMap._schema(
             {
                 "apple": Field(
-                    Protoform(Array, Array._schema(Int, schema_id="x")),
+                    Protoform(
+                        Array, Array._schema(Protoform(Int), schema_id="x")
+                    ),
                     "name.a",
                 ),
                 "banana": Field(
-                    Protoform(Array, Array._schema(Int, schema_id="y")),
+                    Protoform(
+                        Array, Array._schema(Protoform(Int), schema_id="y")
+                    ),
                     "name.b",
                 ),
                 "pear": Field(
-                    Protoform(Array, Array._schema(Int, schema_id="z")),
+                    Protoform(
+                        Array, Array._schema(Protoform(Int), schema_id="z")
+                    ),
                     "name.c",
                 ),
             }
@@ -459,15 +460,21 @@ class TestIntMap:
         sch = IntMap._schema(
             {
                 "apple": Field(
-                    Protoform(Array, Array._schema(Int, schema_id="x")),
+                    Protoform(
+                        Array, Array._schema(Protoform(Int), schema_id="x")
+                    ),
                     "name.a",
                 ),
                 "banana": Field(
-                    Protoform(Array, Array._schema(Int, schema_id="y")),
+                    Protoform(
+                        Array, Array._schema(Protoform(Int), schema_id="y")
+                    ),
                     "name.b",
                 ),
                 "pear": Field(
-                    Protoform(Array, Array._schema(Int, schema_id="z")),
+                    Protoform(
+                        Array, Array._schema(Protoform(Int), schema_id="z")
+                    ),
                     "name.c",
                 ),
             }
