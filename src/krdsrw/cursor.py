@@ -14,6 +14,7 @@ class Cursor:
 
         if isinstance(data, io.BytesIO):
             self._data = data
+            self._data.seek(0)
         elif isinstance(
             data,
             (
