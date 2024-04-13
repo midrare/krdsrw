@@ -1,34 +1,27 @@
-import abc
 import argparse
 import collections
+import copy
 import dataclasses
 import inspect
-import pathlib
 import os
 import re
 import sys
 import typing
 
-from .basics import Basic
-from .basics import Byte
-from .basics import Char
-from .basics import Bool
-from .basics import Short
-from .basics import Int
-from .basics import Long
-from .basics import Float
-from .basics import Double
-from .basics import Utf8Str
-from .objects import DynamicMap
-from .objects import Json
-from .objects import IntMap
-from .objects import ObjectMap
-from .objects import Position
-from .objects import LPR
+from .objects import Field
+from .objects import Store
+from .objects import _store_key_to_field
+
+
+_VOID: object = object()
+
+
+class _Name(str):
+    pass
 
 
 @dataclasses.dataclass
-class Function:
+class _Function:
     name: str
     args: dict[
         str,
@@ -51,8 +44,12 @@ class Function:
 
 
 @dataclasses.dataclass
-class ContainerAPI:
-    pass
+class _Class:
+    name: str
+    parents: list[typing.Self | type] = dataclasses.field(
+        default_factory=list
+    )
+    methods: list[_Function] = dataclasses.field(default_factory=list)
 
 
 def _path_arg(
@@ -100,7 +97,7 @@ def _path_arg(
     return check
 
 
-def _indent(code: str, indent: int) -> str:
+def _indent_code(code: str, indent: int) -> str:
     smallest = None
     for line in code.splitlines():
         m = re.match(r"^(\\h*)", line)
@@ -114,11 +111,13 @@ def _indent(code: str, indent: int) -> str:
 
 def _to_type(type_: type | typing.Literal["*"] | typing.Any) -> str:
     if type_ == "*":
-        return "typing.Any"
+        return _Name("typing.Any")
     if inspect.isclass(type_):
         return type_.__name__
     if type_ is None:
         return "None"
+    if isinstance(type_, _Name):
+        return type_
     if isinstance(type_, str):
         return f"typing.Literal['{type_}']"
     if isinstance(type_, (bool, int, float, bytes)):
@@ -127,33 +126,59 @@ def _to_type(type_: type | typing.Literal["*"] | typing.Any) -> str:
     return str(type_)
 
 
-def _generate_function(sig: Function) -> str:
+def _generate_function_code(func: _Function) -> str:
     result = []
 
-    result.extend(sig.decorators)
-    result.append(f"def {sig.name}(")
+    result.extend(func.decorators)
+    result.append(f"def {func.name}(")
 
-    for i, (key, values) in enumerate(sig.args.items()):
-        if key in ["self", "cls"] and i <= 0:
-            result.append(f"    {key}, \\")
-            continue
+    for i, (key_name, key_values) in enumerate(func.args.items()):
+        if not isinstance(key_values, (tuple, list)):
+            key_values = [key_values]
 
-        assert isinstance(values, (tuple, list))
-        values_ = [_to_type(e) for e in values]
-        result.append(f"    {key}{': \\' if values_ else ','}")
-        for i, value in enumerate(values_):
-            pipe = "| " if i > 0 else ""
-            cont = " \\" if i < len(values_) - 1 else ","
-            result.append(f"    {pipe}{value}{cont}")
+        assert isinstance(key_values, (tuple, list))
+        key_values = list(key_values)
+        if None in key_values:
+            key_values.remove(None)
+            key_values.append(None)
 
-    arrow = "-> " if sig.ret and sig.ret != [None] else ""
-    result.append(f") {arrow}\\")
-    if sig.ret and sig.ret != [None]:
-        for i, ret in enumerate(sig.ret):
-            pipe = "| " if i > 0 else ""
-            result.append(f"    {pipe}{_to_type(ret)} \\")
+        line = f"    {key_name}"
+        values_ = [_to_type(e) for e in key_values if e is not _VOID]
+        is_first = True
+        for i2, value in enumerate(values_):
+            pipe = ": " if is_first else " | "
+            line += f"{pipe}{value}"
+            is_first = False
 
-    result.append(":")
+        line += ","
+        result.append(line)
+
+    if not func.ret or func.ret == [None]:
+        result.append("):")
+    else:
+        line = f") ->"
+
+        ret_types = copy.copy(func.ret)
+        if not isinstance(ret_types, (tuple, list)):
+            ret_types = [ret_types]
+
+        if None in ret_types:
+            ret_types.remove(None)
+            ret_types.append(None)
+        ret_types = _flatten(ret_types)
+
+        is_first = True
+        for i, ret in enumerate(ret_types):
+            if ret is _VOID:
+                continue
+
+            line += " | " if not is_first else " "
+            line += _to_type(ret)
+            is_first = False
+
+        line += ":"
+        result.append(line)
+
     result.append("    ...\n")
     return "\n".join(result) + ("\n" if result else "")
 
@@ -171,91 +196,13 @@ def _flatten(o: typing.Any) -> list[typing.Any]:
     return result
 
 
-def _generate_map(cls_: type | str, fields: list[Index]) -> str:
-    sigs = []
-    for field in fields:
-        if field.is_readable:
-            sigs.append(
-                Function(
-                    "__getitem__",
-                    {
-                        "self": True,
-                        "key": field.key,
-                    },
-                    field.value,
-                )
-            )
-            sigs.append(
-                Function(
-                    "__contains__",
-                    {
-                        "self": True,
-                        "key": field.key,
-                    },
-                    [bool],
-                )
-            )
-            sigs.append(
-                Function(
-                    "get",
-                    {
-                        "self": True,
-                        "key": field.key,
-                        "default": [None, "*"],
-                    },
-                    field.value,
-                )
-            )
-
-        if field.is_writable:
-            sigs.append(
-                Function(
-                    "__setitem__",
-                    {
-                        "self": True,
-                        "key": field.key,
-                        "value": field.value,
-                    },
-                    [None],
-                )
-            )
-            sigs.append(
-                Function(
-                    "setdefault",
-                    {
-                        "self": True,
-                        "key": field.key,
-                        "default": [None] + _flatten(field.value),
-                    },
-                    [None] + _flatten(field.value),
-                )
-            )
-
-        if field.is_deletable:
-            sigs.append(
-                Function(
-                    "__delitem__",
-                    {
-                        "self": True,
-                        "key": field.key,
-                    },
-                    [None],
-                )
-            )
-            sigs.append(
-                Function(
-                    "pop",
-                    {
-                        "self": True,
-                        "key": field.key,
-                        "default": [None] + _flatten(field.value),
-                    },
-                    [None] + _flatten(field.value),
-                )
-            )
+def _generate_class_code(cls_: _Class, indent: int = 4) -> str:
+    parents = cls_.parents or []
+    if not isinstance(parents, list):
+        parents = [parents]
 
     fn_to_sigs = collections.defaultdict(list)
-    for sig in sigs:
+    for sig in cls_.methods:
         fn_to_sigs[sig.name].append(sig)
 
     for sigs in fn_to_sigs.values():
@@ -263,34 +210,285 @@ def _generate_map(cls_: type | str, fields: list[Index]) -> str:
             for sig in sigs:
                 sig.decorators.append("@typing.overload")
 
-    code = f"class {cls_.__name__ if inspect.isclass(cls_) else cls_}:"
+            base_fn = copy.deepcopy(sigs[0])
+            base_fn.args.clear()
+            base_fn.args.update(
+                {
+                    "self": _VOID,
+                    "*args": _VOID,
+                    "**kwargs": _VOID,
+                }
+            )
+            base_fn.ret.clear()
+            base_fn.ret.append(["*"])
+            base_fn.decorators.clear()
+
+            sigs.append(base_fn)
+
+    parents_ = ""
+    if parents:
+        parents_ = f"({', '.join(t.__name__ for t in parents)})"
+
+    code = f"class {cls_.name}{parents_}:"
     for sigs in fn_to_sigs.values():
         for sig in sigs:
             code += "\n"
-            code += _indent(_generate_function(sig), 4)
+            code += _indent_code(_generate_function_code(sig), indent)
 
     return code
 
 
-def _get_imports(fields: list[Index]) -> set[type]:
-    result = set()
+def _generate_cls_name_from_key_path(key_path: list[str]) -> None | _Name:
+    split = []
 
-    for field in fields:
-        for e in _flatten(field.key) + _flatten(field.value):
-            if e is None:
-                continue
-            if inspect.isclass(e):
-                result.add(e)
+    for e in key_path or []:
+        split.extend(re.split(r"[_\\.]+|(?<=[a-z])(?=[A-Z])", e))
+
+    caps = (s.lower().capitalize() for s in split)
+    if not caps:
+        return None
+
+    return _Name("_" + "".join(caps))
+
+
+def _generate_cls_name(
+    field: Field,
+    path: None | list[str] = None,
+) -> type | _Name:
+    if field.proto.name:
+        return _Name(field.proto.name)
+
+    if (
+        not issubclass(field.proto.cls_, (bool, int, float, str, bytes))
+        and field.proto.schema
+    ):
+        return _Name(_generate_cls_name_from_key_path(path))
+
+    return field.proto.cls_
+
+
+def _generate_array_methods(
+    index: Field,
+    path: list[str],
+) -> list[_Function]:
+    value = _generate_cls_name(index, path)
+
+    # noinspection PyListCreation
+    result = []
+
+    # result.append(
+    #     _Function(
+    #         "__getitem__",
+    #         {"self": _VOID, "key": [key]},
+    #         [value],
+    #     )
+    # )
+    #
+    # result.append(
+    #     _Function(
+    #         "__contains__",
+    #         {"self": _VOID, "o": [key]},
+    #         [bool],
+    #     )
+    # )
+
+    result.append(
+        _Function(
+            "__setitem__",
+            {
+                "self": _VOID,
+                "i": [typing.SupportsIndex],
+                "o": [int, float, str, value],
+            },
+            [None],
+        )
+    )
+
+    result.append(
+        _Function(
+            "__setitem__",
+            {
+                "self": _VOID,
+                "i": [slice],
+                "o": [
+                    _Name(f"typing.Iterable[int| float| str| {str(value)}]")
+                ],
+            },
+            [None],
+        )
+    )
+
+    result.append(
+        _Function(
+            "__add__",
+            {
+                "self": _VOID,
+                "other": [
+                    _Name(f"typing.Sequence[int | float | str | value]")
+                ],
+            },
+            ["self"],
+        )
+    )
 
     return result
 
 
-def _generate_imports(fields: list[Index]) -> str:
+def _generate_map_methods(
+    field: Field,
+    path: list[str],
+) -> list[_Function]:
+    if field is NotImplemented:
+        return []
+
+    key = path[-1]
+    value = _generate_cls_name(field, path)
+
+    # noinspection PyListCreation
+    result = []
+
+    result.append(
+        _Function(
+            "__getitem__",
+            {"self": _VOID, "key": [key]},
+            [value],
+        )
+    )
+    result.append(
+        _Function(
+            "__contains__",
+            {"self": _VOID, "key": [key]},
+            [bool],
+        )
+    )
+    result.append(
+        _Function(
+            "get",
+            {"self": _VOID, "key": [key], "default": [None, "*"]},
+            [value],
+        )
+    )
+
+    result.append(
+        _Function(
+            "__setitem__",
+            {"self": _VOID, "key": [key], "value": [value]},
+            [None],
+        )
+    )
+    result.append(
+        _Function(
+            "setdefault",
+            {
+                "self": _VOID,
+                "key": [key],
+                "default": [None, value],
+            },
+            [None, value],
+        )
+    )
+
+    if not field.required:
+        result.append(
+            _Function(
+                "__delitem__",
+                {"self": _VOID, "key": [key]},
+                [None],
+            )
+        )
+        result.append(
+            _Function(
+                "pop",
+                {
+                    "self": _VOID,
+                    "key": [key],
+                    "default": [None, "*"],
+                },
+                [None, value],
+            )
+        )
+
+    return result
+
+
+def _generate_array_class(
+    index: Field,
+    name: None | str = None,
+    path: None | list[str] = None,
+) -> _Class:
+    if not name:
+        name = _generate_cls_name_from_key_path(path)
+    assert name, "could not determine class name"
+    result = _Class(name)
+    result.methods.extend(_generate_array_methods(index, path))
+    return result
+
+
+def _generate_map_class(
+    fields: dict[str, Field],
+    name: None | str = None,
+    path: None | list[str] = None,
+) -> _Class:
+    if not name:
+        name = _generate_cls_name_from_key_path(path)
+    assert name, "could not determine class name"
+    result = _Class(name)
+
+    for key, field in fields.items():
+        kp = (path or []) + [key]
+        result.methods.extend(_generate_map_methods(field, kp))
+
+    return result
+
+
+def _generate_map_classes(
+    fields: dict[str, Field],
+    name: None | str = None,
+    _path: None | list[str] = None,
+) -> list[_Class]:
+    if not name:
+        name = _generate_cls_name_from_key_path(_path)
+
+    assert name, "could not determine class name"
+    result = [_generate_map_class(_store_key_to_field, name)]
+
+    for key, field in fields.items():
+        kp = (_path or []) + [key]
+
+        if issubclass(field.proto.cls_, dict) and field.proto.schema:
+            result.append(
+                _generate_map_class(
+                    field.proto.schema, name=field.proto.name, path=kp
+                )
+            )
+        elif issubclass(field.proto.cls_, list):
+            result.append(
+                _generate_array_class(
+                    field.proto.schema, name=field.proto.name, path=kp
+                )
+            )
+
+    return result
+
+
+def _get_imports(fields: list[Field]) -> set[type]:
+    result = set()
+
+    for field in fields:
+        if field.proto.cls_ is None:
+            continue
+        if inspect.isclass(field.proto.cls_):
+            result.add(field.proto.cls_)
+
+    return result
+
+
+def _generate_imports(fields: list[Field]) -> str:
     result = []
 
     for im in _get_imports(fields):
         absname = ".".join([im.__module__, im.__qualname__])
-        modname = re.sub(r"(^src\.|\.[^\.]+$)", "", absname)
+        modname = re.sub(r"(^src\.|\.[^\\.]+$)", "", absname)
         tail = re.sub(r"^.+\.", "", absname)
         # m = re.match(r'([^\\.\\s]+)\\s*$', im)
         # assert m is not None
@@ -321,62 +519,29 @@ def _main(argv: list[str]) -> int:
         f.write("# MODIFY THIS FILE. ALL CHANGES WILL BE UNDONE.\n")
         f.write("\n")
         f.write("# NOLINTBEGIN\n")
-        f.write("# @formatter:off\n")
         f.write("# autopep8: off\n")
+        f.write("# @formatter: off\n")
+        f.write("# fmt: off\n")
         f.write("# yapf: disable\n")
+        f.write("\n")
+        f.write("from __future__ import annotations\n")
         f.write("import typing\n")
         f.write("\n")
         f.write("from .basics import *  # type: ignore  # pyright: ignore\n")
         f.write("from .objects import *  # type: ignore  # pyright: ignore\n")
-        f.write("\n")
-
-        fields = [
-            Index("dictionary", Utf8Str),
-            Index("sync_lpr", Bool),
-            Index("dict.prefs.v2", DynamicMap),
-            Index("EndActions", DynamicMap),
-            Index("ReaderMetrics", DynamicMap),
-            Index("StartActions", DynamicMap),
-            Index("Translator", Utf8Str),
-            Index("Wikipedia", Utf8Str),
-            Index("buy.asin.response.data", Json),
-            Index("next.in.series.info.data", Json),
-            Index("price.info.data", Json),
-            Index("erl", Position),
-            Index("lpr", LPR),
-            Index("fpr", PageReadPos),
-            Index("updated_lpr", PageReadPos),
-            # Field('apnx.key', APNXKey),
-            # Field('fixed.layout.data', FixedLayoutData),
-            # Field('sharing.limits', SharingLimits),
-            # Field('language.store', LanguageStore),
-            # Field('periodicals.view.state', PeriodicalsViewState),
-            # Field('purchase.state.data', PurchaseStateData),
-            # Field('timer.model', TimerModel),
-            # Field('timer.data.store', TimerDataStore),
-            # Field('timer.data.store.v2', TimerDataStoreV2),
-            # Field('book.info.store', BookInfoStore),
-            # Field('page.history.store', Array[PageHistoryStoreElement]),
-            # Field('reader.state.preferences', ReaderStatePreferences),
-            # Field('font.prefs', FontPrefs),
-            # Field('annotation.cache.object', AnnotationCacheObject),
-            # Field('annotation.personal.bookmark', AnnotationPersonalElement,),
-            # Field('annotation.personal.highlight', AnnotationPersonalElement,),
-            # Field('annotation.personal.note', AnnotationPersonalElement,),
-            # Field('annotation.personal.clip_article', AnnotationPersonalElement,),
-            # Field('whisperstore.migration.status', WhisperstoreMigrationStatus,),
-            # Field('timer.average.distribution.normal', TimerAverageCalculatorDistributionNormal,),
-            # Field('timer.average.calculator.outliers', TimerAverageCalculatorOutliers,),
-        ]
-
-        f.write(_generate_imports(fields))
         f.write("\n\n")
-        f.write(_generate_map(ObjectMap, fields))
-        f.write("\n")
 
-        f.write("# autopep8: on\n")
+        clss = _generate_map_classes(_store_key_to_field, "Store2")
+        for cls_ in clss:
+            code = _generate_class_code(cls_)
+            f.write(code)
+            f.write("\n\n")
+
+        f.write("\n\n")
         f.write("# yapf: enable\n")
+        f.write("# fmt: on\n")
         f.write("# @formatter: on\n")
+        f.write("# autopep8: on\n")
         f.write("# NOLINTEND\n")
 
     return 0
