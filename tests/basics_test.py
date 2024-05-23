@@ -31,46 +31,55 @@ from krdsrw.cursor import Cursor
 def test_bool_cmp():
     o = Bool(True)
     assert o == True
+    assert (True == o) == True
 
 
 def test_byte_cmp():
     o = Byte(0xAB)
     assert o == 0xAB
+    assert (0xAB == o) == True
 
 
 def test_char_cmp():
     o = Char(0xAB)
     assert o == 0xAB
+    assert (0xAB == o) == True
 
 
 def test_short_cmp():
     o = Short(1337)
     assert o == 1337
+    assert (1337 == o) == True
 
 
 def test_int_cmp():
     o = Int(1337)
     assert o == 1337
+    assert (1337 == o) == True
 
 
 def test_long_cmp():
     o = Long(1337)
     assert o == 1337
+    assert (1337 == o) == True
 
 
 def test_float_cmp():
     o = Float(12.34)
     assert o == 12.34
+    assert (12.34 == o) == True
 
 
 def test_double_cmp():
     o = Double(12.34)
     assert o == 12.34
+    assert (12.34 == o) == True
 
 
 def test_utf8str_cmp():
     o = Utf8Str("foo")
     assert o == "foo"
+    assert ("foo" == o) == True
 
 
 def test_cursor_read_bool():
