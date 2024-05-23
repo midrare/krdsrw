@@ -1,0 +1,3 @@
+{
+    "PATH": "${rootdir}/.venv/Scripts${:;}${ENV:PATH}"
+}
