@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import abc
 import base64
 import copy
@@ -843,7 +841,7 @@ class TimeZoneOffset(IntBase, Serializable):
         *args,
         _schema: None | int = None,
         **kwargs,
-    ) -> TimeZoneOffset:
+    ) -> typing.Self:
         if not args and _schema is not None:
             args = [_schema]
         assert "_schema" not in kwargs, "invalid argument"
@@ -1165,9 +1163,8 @@ _apnx = Protoform(Record, Record._schema({
 
 # noinspection PyProtectedMember
 # NOTE if you update this schema map update the type hints too
-_store_key_to_field: \
-dict[str, type | NotImplemented | Field] \
-= ObjectMap._schema({  # noqa
+_store_key_to_field: dict[str, type | Field] \
+= ObjectMap._schema({  # noqa # pyright: ignore[reportAssignmentType]
     "clock.data.store": NotImplemented,
     "dictionary": Utf8Str,
     "lpu": NotImplemented,
